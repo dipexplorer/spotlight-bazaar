@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
-import { Store, MapPin, Grid, Layers, ShieldCheck, Sparkles } from "lucide-react";
-import { BusinessStorefront, CategoryId } from "@/types";
+import { Store, MapPin, Grid, Layers, ShieldCheck, Box } from "lucide-react";
+import { BusinessStorefront, CategoryId, City } from "@/types";
 import { CATEGORIES } from "@/lib/constants/categories";
 import { INITIAL_CITIES } from "@/lib/constants/initialCities";
 import { createStorefrontIcon } from "@/components/map/markerUtils";
 import { StorefrontDrawer } from "@/components/map/StorefrontDrawer";
+import { ThreeMapCanvas } from "@/components/map3d/ThreeMapCanvas";
 
 interface InteractiveCanvasProps {
   initialStorefronts: BusinessStorefront[];
@@ -28,7 +29,7 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
   const [mapCenter, setMapCenter] = useState<[number, number]>([22.5, 82.5]);
   const [mapZoom, setMapZoom] = useState<number>(5);
   const [activeStorefront, setActiveStorefront] = useState<BusinessStorefront | null>(null);
-  const [viewMode, setViewMode] = useState<"map" | "grid">("map");
+  const [viewMode, setViewMode] = useState<"3d" | "2d" | "grid">("3d");
 
   // Fetch updated edge snapshot from /api/boot on mount
   useEffect(() => {
@@ -36,7 +37,7 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
       .then((res) => res.json())
       .then((data) => {
         if (data.storefronts && data.storefronts.length > 0) {
-          // If live API returns more businesses, update
+          setStorefronts(data.storefronts);
         }
       })
       .catch(() => {});
@@ -44,9 +45,18 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
 
   const filteredStorefronts = storefronts.filter((s) => {
     const matchesCategory = selectedCategory === "all" || s.category_id === selectedCategory;
-    const matchesCity = selectedCity === "all" || s.city_name.toLowerCase() === selectedCity.toLowerCase();
+    const matchesCity =
+      selectedCity === "all" ||
+      (Boolean(s?.city_name) && s.city_name.toLowerCase() === selectedCity.toLowerCase());
     return matchesCategory && matchesCity;
   });
+
+  const selectedCityObject =
+    selectedCity === "all"
+      ? null
+      : INITIAL_CITIES.find(
+          (c) => c.name && c.name.toLowerCase() === selectedCity.toLowerCase()
+        ) || null;
 
   const handleCitySelect = (cityName: string) => {
     setSelectedCity(cityName);
@@ -54,7 +64,9 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
       setMapCenter([22.5, 82.5]);
       setMapZoom(5);
     } else {
-      const city = INITIAL_CITIES.find((c) => c.name.toLowerCase() === cityName.toLowerCase());
+      const city = INITIAL_CITIES.find(
+        (c) => c.name && c.name.toLowerCase() === cityName.toLowerCase()
+      );
       if (city) {
         setMapCenter([city.lat, city.lon]);
         setMapZoom(13);
@@ -62,14 +74,19 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
     }
   };
 
+  const handleCitySelectFrom3D = (city: City) => {
+    if (city?.name) {
+      handleCitySelect(city.name);
+    }
+  };
+
   const handleMarkerClick = (storefront: BusinessStorefront) => {
     setActiveStorefront(storefront);
-    // Offset center slightly to account for the bottom sheet
     setMapCenter([storefront.lat - 0.008, storefront.lon]);
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-[#09090b]">
+    <div className="relative w-full h-full flex flex-col bg-[#070a13]">
       {/* Top Floating Controls Bar */}
       <div className="absolute top-3 inset-x-3 sm:top-4 sm:inset-x-4 z-20 flex flex-col gap-2 max-w-4xl mx-auto pointer-events-none">
         {/* City & View Switcher */}
@@ -87,7 +104,12 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
               All India ({storefronts.length})
             </button>
             {INITIAL_CITIES.map((c) => {
-              const count = storefronts.filter((s) => s.city_name.toLowerCase() === c.name.toLowerCase()).length;
+              const count = storefronts.filter(
+                (s) =>
+                  s?.city_name &&
+                  c?.name &&
+                  s.city_name.toLowerCase() === c.name.toLowerCase()
+              ).length;
               return (
                 <button
                   key={c.id}
@@ -109,31 +131,46 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
             })}
           </div>
 
-          {/* Map vs Grid Toggle */}
-          <div className="flex items-center p-1 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800/90 shadow-2xl shrink-0">
+          {/* 3D vs 2D vs Grid Toggle */}
+          <div className="flex items-center p-1 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800/90 shadow-2xl shrink-0 gap-0.5">
             <button
-              onClick={() => setViewMode("map")}
-              className={`p-2 rounded-xl text-xs font-medium transition-all ${
-                viewMode === "map"
-                  ? "bg-neutral-800 text-white shadow-sm"
-                  : "text-neutral-400 hover:text-white"
+              onClick={() => setViewMode("3d")}
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
+                viewMode === "3d"
+                  ? "bg-rose-600 text-white shadow-sm"
+                  : "text-neutral-400 hover:text-white hover:bg-neutral-900"
               }`}
-              title="Map View"
-              aria-label="Switch to Map View"
+              title="3D India Terrain View"
+              aria-label="Switch to 3D View"
             >
-              <Layers className="w-4 h-4" />
+              <Box className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">3D India</span>
+            </button>
+            <button
+              onClick={() => setViewMode("2d")}
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
+                viewMode === "2d"
+                  ? "bg-rose-600 text-white shadow-sm"
+                  : "text-neutral-400 hover:text-white hover:bg-neutral-900"
+              }`}
+              title="2D Map View"
+              aria-label="Switch to 2D Map View"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">2D Map</span>
             </button>
             <button
               onClick={() => setViewMode("grid")}
-              className={`p-2 rounded-xl text-xs font-medium transition-all ${
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
                 viewMode === "grid"
-                  ? "bg-neutral-800 text-white shadow-sm"
-                  : "text-neutral-400 hover:text-white"
+                  ? "bg-rose-600 text-white shadow-sm"
+                  : "text-neutral-400 hover:text-white hover:bg-neutral-900"
               }`}
               title="Grid View"
               aria-label="Switch to Grid View"
             >
-              <Grid className="w-4 h-4" />
+              <Grid className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Grid</span>
             </button>
           </div>
         </div>
@@ -166,9 +203,20 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
         </div>
       </div>
 
-      {/* VIEW: MAP */}
-      {viewMode === "map" ? (
-        <div className="w-full h-full min-h-[78vh] relative">
+      {/* VIEWPORT AREA */}
+      {viewMode === "3d" ? (
+        /* VIEW 1: 3D INTERACTIVE INDIA TERRAIN */
+        <div className="w-full h-full min-h-[82vh] relative">
+          <ThreeMapCanvas
+            cities={INITIAL_CITIES}
+            storefronts={filteredStorefronts}
+            selectedCity={selectedCityObject}
+            onCitySelect={handleCitySelectFrom3D}
+          />
+        </div>
+      ) : viewMode === "2d" ? (
+        /* VIEW 2: 2D LEAFLET STREET MAP */
+        <div className="w-full h-full min-h-[82vh] relative">
           <MapContainer
             center={mapCenter}
             zoom={mapZoom}
@@ -197,8 +245,8 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
           </MapContainer>
         </div>
       ) : (
-        /* VIEW: CURATED GRID */
-        <div className="w-full max-w-5xl mx-auto p-4 pt-28 pb-32 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 animate-fade-in">
+        /* VIEW 3: CURATED GRID */
+        <div className="w-full max-w-5xl mx-auto p-4 pt-32 pb-32 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 animate-fade-in">
           {filteredStorefronts.length === 0 ? (
             <div className="col-span-full py-20 text-center text-xs text-neutral-500">
               No storefronts found in this filter selection.

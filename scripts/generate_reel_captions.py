@@ -57,4 +57,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     generate_day_n_reel(args.day, args.count, args.city)
-
