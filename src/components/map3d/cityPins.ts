@@ -165,9 +165,13 @@ export function buildCityPins(
     sprite.scale.set(22, 7.5, 1);
     pinGroup.add(sprite);
 
-    // 4. Invisible Click Target Sphere for fast Raycasting
-    const hitGeo = new THREE.SphereGeometry(10, 8, 8);
-    const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+    // 4. Click Target Sphere for fast Raycasting (transparent so raycaster hits it)
+    const hitGeo = new THREE.SphereGeometry(14, 8, 8);
+    const hitMat = new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    });
     const hitSphere = new THREE.Mesh(hitGeo, hitMat);
     hitSphere.position.set(0, beaconHeight / 2, 0);
     hitSphere.name = "hit_target";

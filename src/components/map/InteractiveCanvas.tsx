@@ -74,9 +74,11 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
     }
   };
 
-  const handleCitySelectFrom3D = (city: City) => {
+  const handleCitySelectFrom3D = (city: City | null) => {
     if (city?.name) {
       handleCitySelect(city.name);
+    } else {
+      handleCitySelect("all");
     }
   };
 
@@ -87,12 +89,54 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
 
   return (
     <div className="relative w-full h-full flex flex-col bg-[#070a13]">
-      {/* Top Floating Controls Bar */}
-      <div className="absolute top-3 inset-x-3 sm:top-4 sm:inset-x-4 z-20 flex flex-col gap-2 max-w-4xl mx-auto pointer-events-none">
-        {/* City & View Switcher */}
-        <div className="flex items-center justify-between gap-2 pointer-events-auto">
+      {/* View Switcher Floating Pill (Always Accessible Top-Right) */}
+      <div className="absolute top-4 right-20 z-30 flex items-center p-1 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800/90 shadow-2xl gap-0.5 pointer-events-auto">
+        <button
+          onClick={() => setViewMode("3d")}
+          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+            viewMode === "3d"
+              ? "bg-rose-600 text-white shadow-sm"
+              : "text-neutral-400 hover:text-white hover:bg-neutral-900"
+          }`}
+          title="3D India Terrain & Bazaar Street"
+          aria-label="Switch to 3D View"
+        >
+          <Box className="w-3.5 h-3.5" />
+          <span className="hidden md:inline">3D India</span>
+        </button>
+        <button
+          onClick={() => setViewMode("2d")}
+          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+            viewMode === "2d"
+              ? "bg-rose-600 text-white shadow-sm"
+              : "text-neutral-400 hover:text-white hover:bg-neutral-900"
+          }`}
+          title="2D Map View"
+          aria-label="Switch to 2D Map View"
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span className="hidden md:inline">2D Map</span>
+        </button>
+        <button
+          onClick={() => setViewMode("grid")}
+          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+            viewMode === "grid"
+              ? "bg-rose-600 text-white shadow-sm"
+              : "text-neutral-400 hover:text-white hover:bg-neutral-900"
+          }`}
+          title="Grid View"
+          aria-label="Switch to Grid View"
+        >
+          <Grid className="w-3.5 h-3.5" />
+          <span className="hidden md:inline">Grid</span>
+        </button>
+      </div>
+
+      {/* 2D & Grid View Controls (Only visible in 2D or Grid mode to avoid 3D clutter) */}
+      {viewMode !== "3d" && (
+        <div className="absolute top-3 inset-x-3 sm:top-4 sm:inset-x-4 z-20 flex flex-col gap-2 max-w-4xl mx-auto pointer-events-none">
           {/* City Selector Strip */}
-          <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-1.5 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800/90 shadow-2xl max-w-full no-scrollbar">
+          <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-1.5 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800/90 shadow-2xl max-w-full pointer-events-auto no-scrollbar">
             <button
               onClick={() => handleCitySelect("all")}
               className={`px-3 py-1.5 rounded-xl text-xs font-medium shrink-0 transition-all ${
@@ -131,106 +175,63 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
             })}
           </div>
 
-          {/* 3D vs 2D vs Grid Toggle */}
-          <div className="flex items-center p-1 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800/90 shadow-2xl shrink-0 gap-0.5">
+          {/* Category Pills Strip */}
+          <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-1.5 rounded-2xl bg-neutral-950/80 backdrop-blur-xl border border-neutral-800/80 shadow-2xl pointer-events-auto no-scrollbar">
             <button
-              onClick={() => setViewMode("3d")}
-              className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
-                viewMode === "3d"
-                  ? "bg-rose-600 text-white shadow-sm"
-                  : "text-neutral-400 hover:text-white hover:bg-neutral-900"
-              }`}
-              title="3D India Terrain View"
-              aria-label="Switch to 3D View"
-            >
-              <Box className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">3D India</span>
-            </button>
-            <button
-              onClick={() => setViewMode("2d")}
-              className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
-                viewMode === "2d"
-                  ? "bg-rose-600 text-white shadow-sm"
-                  : "text-neutral-400 hover:text-white hover:bg-neutral-900"
-              }`}
-              title="2D Map View"
-              aria-label="Switch to 2D Map View"
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">2D Map</span>
-            </button>
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
-                viewMode === "grid"
-                  ? "bg-rose-600 text-white shadow-sm"
-                  : "text-neutral-400 hover:text-white hover:bg-neutral-900"
-              }`}
-              title="Grid View"
-              aria-label="Switch to Grid View"
-            >
-              <Grid className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Grid</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Category Pills Strip */}
-        <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-1.5 rounded-2xl bg-neutral-950/80 backdrop-blur-xl border border-neutral-800/80 shadow-2xl pointer-events-auto no-scrollbar">
-          <button
-            onClick={() => setSelectedCategory("all")}
-            className={`px-3 py-1 rounded-xl text-xs font-medium shrink-0 transition-all ${
-              selectedCategory === "all"
-                ? "bg-neutral-800 text-white shadow-sm"
-                : "text-neutral-400 hover:text-white hover:bg-neutral-900"
-            }`}
-          >
-            All Categories
-          </button>
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1 rounded-xl text-xs font-medium shrink-0 transition-all flex items-center gap-1.5 ${
-                selectedCategory === cat.id
+              onClick={() => setSelectedCategory("all")}
+              className={`px-3 py-1 rounded-xl text-xs font-medium shrink-0 transition-all ${
+                selectedCategory === "all"
                   ? "bg-neutral-800 text-white shadow-sm"
                   : "text-neutral-400 hover:text-white hover:bg-neutral-900"
               }`}
             >
-              <span>{cat.name}</span>
+              All Categories
             </button>
-          ))}
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-3 py-1 rounded-xl text-xs font-medium shrink-0 transition-all flex items-center gap-1.5 ${
+                  selectedCategory === cat.id
+                    ? "bg-neutral-800 text-white shadow-sm"
+                    : "text-neutral-400 hover:text-white hover:bg-neutral-900"
+                }`}
+              >
+                <span>{cat.name}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* VIEWPORT AREA */}
       {viewMode === "3d" ? (
-        /* VIEW 1: 3D INTERACTIVE INDIA TERRAIN */
-        <div className="w-full h-full min-h-[82vh] relative">
+        /* VIEW 1: 3D INTERACTIVE INDIA TERRAIN & BAZAAR STREET */
+        <div className="w-full h-full min-h-[88vh] relative">
           <ThreeMapCanvas
             cities={INITIAL_CITIES}
             storefronts={filteredStorefronts}
             selectedCity={selectedCityObject}
             onCitySelect={handleCitySelectFrom3D}
+            onStorefrontSelect={handleMarkerClick}
           />
         </div>
       ) : viewMode === "2d" ? (
         /* VIEW 2: 2D LEAFLET STREET MAP */
-        <div className="w-full h-full min-h-[82vh] relative">
+        <div className="w-full h-full min-h-[88vh] relative">
           <MapContainer
             center={mapCenter}
             zoom={mapZoom}
             scrollWheelZoom={true}
             className="w-full h-full"
+            style={{ background: "#0a0a0c" }}
           >
-            <MapCameraController center={mapCenter} zoom={mapZoom} />
-
             <TileLayer
               attribution='&copy; <a href="https://carto.com/">CARTO</a>'
               url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-              subdomains="abcd"
               maxZoom={19}
             />
+            <MapCameraController center={mapCenter} zoom={mapZoom} />
 
             {filteredStorefronts.map((storefront) => (
               <Marker
@@ -245,65 +246,44 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
           </MapContainer>
         </div>
       ) : (
-        /* VIEW 3: CURATED GRID */
-        <div className="w-full max-w-5xl mx-auto p-4 pt-32 pb-32 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 animate-fade-in">
-          {filteredStorefronts.length === 0 ? (
-            <div className="col-span-full py-20 text-center text-xs text-neutral-500">
-              No storefronts found in this filter selection.
-            </div>
-          ) : (
-            filteredStorefronts.map((s) => (
+        /* VIEW 3: CURATED DIRECTORY GRID */
+        <div className="w-full h-full min-h-[88vh] p-6 pt-24 overflow-y-auto max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {filteredStorefronts.map((storefront) => (
               <div
-                key={s.id}
-                onClick={() => handleMarkerClick(s)}
-                className="group p-4 rounded-3xl bg-neutral-950 border border-neutral-850 hover:border-neutral-700 transition-all cursor-pointer flex flex-col justify-between shadow-lg shadow-black/60 hover:shadow-xl"
+                key={storefront.id}
+                onClick={() => handleMarkerClick(storefront)}
+                className="group p-4 rounded-2xl bg-neutral-900/60 hover:bg-neutral-850/80 border border-neutral-800 hover:border-neutral-700 transition-all cursor-pointer flex flex-col justify-between"
               >
                 <div>
-                  <div className="aspect-[16/10] rounded-2xl overflow-hidden bg-neutral-900 mb-3 border border-neutral-800/80">
-                    {s.logo_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={s.logo_url}
-                        alt={s.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-neutral-600">
-                        <Store className="w-6 h-6" />
-                      </div>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h3 className="font-semibold text-sm text-white group-hover:text-rose-400 transition-colors">
+                      {storefront.name}
+                    </h3>
+                    {storefront.is_verified && (
+                      <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
                     )}
                   </div>
-
-                  <div className="flex items-center justify-between gap-1 mb-1">
-                    <h3 className="text-sm font-bold text-white group-hover:text-rose-400 transition-colors truncate">
-                      {s.name}
-                    </h3>
-                    {s.is_verified && <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
-                  </div>
-
-                  {s.tagline && (
-                    <p className="text-xs text-neutral-400 line-clamp-2 leading-relaxed mb-3">
-                      {s.tagline}
-                    </p>
-                  )}
+                  <p className="text-xs text-neutral-400 line-clamp-2 mb-3">
+                    {storefront.tagline}
+                  </p>
                 </div>
-
-                <div className="flex items-center justify-between pt-3 border-t border-neutral-900 text-xs">
-                  <span className="text-neutral-400 flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-rose-500" />
-                    {s.city_name}
+                <div className="flex items-center justify-between text-[11px] pt-3 border-t border-neutral-800/60 text-neutral-400">
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-neutral-500" />
+                    <span>{storefront.city_name}</span>
                   </span>
-                  <span className="font-semibold text-amber-400 tabular-nums">
-                    {s.starting_price || "Rates on Request"}
+                  <span className="font-semibold text-amber-400 font-mono">
+                    {storefront.starting_price || "Direct"}
                   </span>
                 </div>
               </div>
-            ))
-          )}
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Storefront Slide-up Drawer */}
+      {/* Storefront Slide-Over Drawer */}
       <StorefrontDrawer
         storefront={activeStorefront}
         onClose={() => setActiveStorefront(null)}
