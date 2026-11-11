@@ -6,7 +6,10 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { City, BusinessStorefront } from "@/types";
 import { buildIndiaLandMeshes, buildRiversMeshes } from "./indiaGeometry";
 import { buildCityPins, CityPinObject } from "./cityPins";
-import { buildBazaarStreet, BazaarStorefrontMesh } from "./bazaarStreet";
+import { buildBazaarStreet } from "./bazaarStreet";
+import { TrafficSystem } from "./trafficSystem";
+import { PedestrianSystem } from "./pedestrianSystem";
+import { StorefrontMeshResult } from "./cartoonStorefront";
 import { toWorld } from "./projection";
 import {
   Sun,
@@ -61,7 +64,10 @@ export function ThreeMapCanvas({
   const controlsRef = useRef<OrbitControls | null>(null);
   const cityPinsRef = useRef<CityPinObject[]>([]);
   const currentBazaarGroupRef = useRef<THREE.Group | null>(null);
-  const bazaarStorefrontsRef = useRef<BazaarStorefrontMesh[]>([]);
+  const trafficRef = useRef<TrafficSystem | null>(null);
+  const pedestriansRef = useRef<PedestrianSystem | null>(null);
+  const hitBoxesRef = useRef<THREE.Mesh[]>([]);
+  const plotsRef = useRef<StorefrontMeshResult[]>([]);
   const dirLightRef = useRef<THREE.DirectionalLight | null>(null);
   const ambientLightRef = useRef<THREE.AmbientLight | null>(null);
 
@@ -90,10 +96,10 @@ export function ThreeMapCanvas({
     const [x, z] = toWorld(city.lon, city.lat);
     if (walk) {
       // First-person street level
-      targetCamPosRef.current = new THREE.Vector3(x, 4.8, z + 2);
-      targetLookAtRef.current = new THREE.Vector3(x, 4.8, z + 48);
+      targetCamPosRef.current = new THREE.Vector3(x, 4.2, z + 4);
+      targetLookAtRef.current = new THREE.Vector3(x, 4.2, z + 50);
     } else {
-      // Atmospheric drone angle
+      // Atmospheric drone high-street view
       targetCamPosRef.current = new THREE.Vector3(x, 26, z - 32);
       targetLookAtRef.current = new THREE.Vector3(x, 8, z + 28);
     }
@@ -109,29 +115,24 @@ export function ThreeMapCanvas({
   const focusStorefront = useCallback(
     (storefront: BusinessStorefront) => {
       if (!selectedCity) return;
-      const [originX, originZ] = toWorld(selectedCity.lon, selectedCity.lat);
-
-      // Find storefront index
-      const idx = bazaarStorefrontsRef.current.findIndex(
-        (b) => b.storefrontData.id === storefront.id
+      const plot = plotsRef.current.find(
+        (p) => p.storefrontData?.id === storefront.id
       );
 
-      if (idx !== -1) {
-        const isLeft = idx % 2 === 0;
-        const pairIndex = Math.floor(idx / 2);
-        const zPos = pairIndex * 24 + 12;
-        const xPos = isLeft ? -15 : 15;
+      if (plot) {
+        const worldPos = new THREE.Vector3();
+        plot.mesh.getWorldPosition(worldPos);
+        const isLeft = plot.mesh.position.x < 0;
 
-        // Position camera directly in front of this shop
         targetCamPosRef.current = new THREE.Vector3(
-          originX + (isLeft ? 6 : -6),
-          8,
-          originZ + zPos
+          worldPos.x + (isLeft ? 8 : -8),
+          6.5,
+          worldPos.z
         );
         targetLookAtRef.current = new THREE.Vector3(
-          originX + xPos,
-          7,
-          originZ + zPos
+          worldPos.x,
+          4.5,
+          worldPos.z
         );
       }
 
@@ -157,22 +158,34 @@ export function ThreeMapCanvas({
     const scene = sceneRef.current;
     if (!scene) return;
 
-    // Clean up existing bazaar street if any
+    // Clean up existing bazaar street & traffic simulations
+    if (trafficRef.current) {
+      trafficRef.current.dispose();
+      trafficRef.current = null;
+    }
+    if (pedestriansRef.current) {
+      pedestriansRef.current.dispose();
+      pedestriansRef.current = null;
+    }
     if (currentBazaarGroupRef.current) {
       scene.remove(currentBazaarGroupRef.current);
       currentBazaarGroupRef.current = null;
-      bazaarStorefrontsRef.current = [];
+      hitBoxesRef.current = [];
+      plotsRef.current = [];
     }
 
     if (selectedCity) {
-      // Build and mount the 3D Bazaar Street for this city
-      const { group: bazaarGroup, storefrontMeshes } = buildBazaarStreet(
+      // Build and mount the 3D Cartoon-Block Bazaar Street with Living Traffic
+      const { group: bazaarGroup, hitBoxes, traffic, pedestrians, plots } = buildBazaarStreet(
         selectedCity,
         storefronts
       );
       scene.add(bazaarGroup);
       currentBazaarGroupRef.current = bazaarGroup;
-      bazaarStorefrontsRef.current = storefrontMeshes;
+      trafficRef.current = traffic;
+      pedestriansRef.current = pedestrians;
+      hitBoxesRef.current = hitBoxes;
+      plotsRef.current = plots;
 
       flyToCityStreet(selectedCity, isWalkModeRef.current);
     } else {
@@ -326,7 +339,6 @@ export function ThreeMapCanvas({
     };
 
     const handlePointerUp = (event: PointerEvent) => {
-      // If user dragged the camera (orbit/pan), ignore click
       const dragDist = Math.hypot(event.clientX - downX, event.clientY - downY);
       if (dragDist > 8) return;
 
@@ -336,33 +348,30 @@ export function ThreeMapCanvas({
 
       raycaster.setFromCamera(pointer, camera);
 
-      // Check Storefront hits first (recursive through all building meshes)
-      if (bazaarStorefrontsRef.current.length > 0) {
-        const sfIntersects = raycaster.intersectObjects(
-          bazaarStorefrontsRef.current,
-          true
-        );
+      // Check Storefront hits first (direct check against invisible hit boxes)
+      if (hitBoxesRef.current.length > 0) {
+        const sfIntersects = raycaster.intersectObjects(hitBoxesRef.current, false);
         if (sfIntersects.length > 0) {
-          let obj: THREE.Object3D | null = sfIntersects[0].object;
-          while (obj && !("storefrontData" in obj) && obj.parent) {
-            obj = obj.parent;
+          const hit = sfIntersects[0].object as THREE.Mesh & {
+            storefrontData?: BusinessStorefront;
+          };
+
+          if (hit.storefrontData && onStorefrontSelectRef.current) {
+            onStorefrontSelectRef.current(hit.storefrontData);
+            return;
           }
-          if (obj && "storefrontData" in obj) {
-            const bldgGroup = obj as unknown as BazaarStorefrontMesh;
-            if (bldgGroup?.storefrontData && onStorefrontSelectRef.current) {
-              onStorefrontSelectRef.current(bldgGroup.storefrontData);
-              return;
-            }
+
+          if (hit.name && hit.name.includes("plot_")) {
+            // Free plot clicked -> take to registration
+            window.location.href = "/register";
+            return;
           }
         }
       }
 
-      // Check City Pin hits (recursive through pin beacon, sprite & ground disc)
+      // Check City Pin hits
       if (cityPinsRef.current.length > 0) {
-        const pinIntersects = raycaster.intersectObjects(
-          cityPinsRef.current,
-          true
-        );
+        const pinIntersects = raycaster.intersectObjects(cityPinsRef.current, true);
         if (pinIntersects.length > 0) {
           let obj: THREE.Object3D | null = pinIntersects[0].object;
           while (obj && !("cityData" in obj) && obj.parent) {
@@ -405,7 +414,7 @@ export function ThreeMapCanvas({
 
     window.addEventListener("resize", handleResize);
 
-    // 11. Animation Loop with WASD Walking Physics
+    // 11. Animation Loop with Traffic & Pedestrian Updates
     let lastTime = performance.now();
 
     const animate = () => {
@@ -413,6 +422,16 @@ export function ThreeMapCanvas({
       const now = performance.now();
       const delta = Math.min((now - lastTime) / 1000, 0.1);
       lastTime = now;
+
+      // Update Living Traffic Simulation (Moving Autos, Scooters, Cars)
+      if (trafficRef.current) {
+        trafficRef.current.update(delta);
+      }
+
+      // Update Living Pedestrians Simulation (Walking Citizens & Shoppers)
+      if (pedestriansRef.current) {
+        pedestriansRef.current.update(delta);
+      }
 
       // WASD Walking Physics when in street view
       if (selectedCityRef.current) {
@@ -483,9 +502,7 @@ export function ThreeMapCanvas({
   const q = (searchQuery || "").trim().toLowerCase();
 
   const searchResultsCities = q
-    ? cities.filter(
-        (c) => Boolean(c?.name) && c.name.toLowerCase().includes(q)
-      )
+    ? cities.filter((c) => Boolean(c?.name) && c.name.toLowerCase().includes(q))
     : [];
 
   const searchResultsShops = q
@@ -540,12 +557,12 @@ export function ThreeMapCanvas({
           <div className="w-12 h-12 rounded-full border-2 border-rose-500/20 border-t-rose-500 animate-spin mb-3" />
           <p className="text-xs text-neutral-400 font-mono tracking-wider flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-rose-500" />
-            <span>INITIALIZING 3D INDIA TERRAIN & BAZAAR STREETS...</span>
+            <span>INITIALIZING 3D INDIA TERRAIN & LIVING STREETS...</span>
           </p>
         </div>
       )}
 
-      {/* TOP BAR: Back Button + Omnibox Search + Day/Night Toggle (Inspired by indiaagain.live) */}
+      {/* TOP BAR: Back Button + Omnibox Search + Day/Night Toggle */}
       <div className="absolute top-4 inset-x-4 z-20 flex items-center justify-between gap-3 pointer-events-none">
         {/* Left: Return to India Orbit button when city is open */}
         <div className="flex items-center gap-2 pointer-events-auto">
@@ -696,7 +713,7 @@ export function ThreeMapCanvas({
         </div>
       </div>
 
-      {/* BOTTOM CENTER: Town Card & Walk Mode Bar (Direct Inspiration from indiaagain.live) */}
+      {/* BOTTOM CENTER: Town Card & Walk Mode Bar */}
       <div className="absolute bottom-6 inset-x-4 z-20 flex flex-col items-center gap-2.5 pointer-events-none">
         {selectedCity ? (
           /* City Street Level Card */
@@ -709,25 +726,25 @@ export function ThreeMapCanvas({
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-white tracking-tight">
-                      {selectedCity.name} Bazaar
+                      {selectedCity.name} Living Bazaar
                     </span>
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-400">
                       24° Clear
                     </span>
                   </div>
                   <span className="text-[11px] text-neutral-400">
-                    {cityStorefronts.length} Active Storefronts · Tap any shop to chat on WhatsApp
+                    {cityStorefronts.length} Active Businesses · Autos & Pedestrians on Street
                   </span>
                 </div>
               </div>
 
-              {/* Quick Link to Register Storefront */}
+              {/* Quick Link to Claim Free Plot */}
               <a
                 href="/register"
                 className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white text-xs font-medium transition-colors"
               >
                 <Plus className="w-3.5 h-3.5 text-rose-500" />
-                <span>Add Shop</span>
+                <span>Claim Plot ₹0</span>
               </a>
             </div>
 
@@ -765,7 +782,7 @@ export function ThreeMapCanvas({
           <div className="p-2.5 px-4 rounded-2xl bg-neutral-950/85 backdrop-blur-xl border border-neutral-800/80 shadow-2xl flex items-center gap-3 pointer-events-auto">
             <span className="text-xs text-neutral-400 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-              <span>Tap any glowing city pin to enter its 3D High Street</span>
+              <span>Tap any glowing city pin to enter its Living 3D High Street</span>
             </span>
           </div>
         )}
