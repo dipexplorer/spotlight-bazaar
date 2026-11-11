@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { CATEGORIES } from "@/lib/constants/categories";
-import { SEED_STOREFRONTS } from "@/lib/data/seedStorefronts";
+import { getStorefronts } from "@/lib/data/seedStorefronts";
 import { createServerClient } from "@/lib/supabase/server";
 import { BootPayload, BusinessStorefront } from "@/types";
 
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const supabase = createServerClient();
-  let storefrontsList = SEED_STOREFRONTS;
+  let storefrontsList = getStorefronts();
 
   if (supabase) {
     try {
@@ -47,26 +47,14 @@ export async function GET() {
     count: categoryCounts.get(c.id) || 0,
   }));
 
-  // Compact payload structure inspired by India Again's low-bandwidth schema
-  const payload: BootPayload = {
+  // Return full business storefronts so drawers and 3D street have complete data
+  const payload = {
     day: 1,
     total_storefronts: storefrontsList.length,
     total_cities: distinctCities,
     categories,
     featured_ids: storefrontsList.filter((s) => s.is_featured).map((s) => s.id),
-    storefronts: storefrontsList.map((s) => [
-      s.id,
-      s.slug,
-      s.name,
-      s.category_id,
-      s.city_name,
-      s.lat,
-      s.lon,
-      s.starting_price || "",
-      s.logo_url || (s.portfolio && s.portfolio[0]?.image_url) || "",
-      s.is_verified,
-      new Date(s.created_at).getTime(),
-    ]),
+    storefronts: storefrontsList,
   };
 
   return NextResponse.json(payload, {

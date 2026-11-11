@@ -118,12 +118,20 @@ export function ShareCardModal({ storefront, isOpen, onClose }: ShareCardModalPr
 
         {/* Action CTAs */}
         <div className="w-full flex flex-col gap-2 mt-5">
+          {/* Fly to 3D Bazaar Street */}
+          <Link
+            href={`/?city=${storefront.city_name ? storefront.city_name.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "all"}&shop=${storefront.slug}&new=1`}
+            className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-950/40"
+          >
+            <span>🚀 Fly to My Shop on 3D High Street</span>
+          </Link>
+
           <Link
             href={`/b/${storefront.slug}?new=true`}
-            className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-[0.99] text-white font-medium text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-rose-950/40"
+            className="w-full py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white font-medium text-xs flex items-center justify-center gap-2 transition-all"
           >
-            <span>View My Live Storefront</span>
-            <ArrowRight className="w-4 h-4" />
+            <span>View Full Portfolio Page</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </Link>
 
           <button

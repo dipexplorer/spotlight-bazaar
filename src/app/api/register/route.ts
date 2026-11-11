@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { addLocalStorefront } from "@/lib/data/seedStorefronts";
+import { BusinessStorefront } from "@/types";
 
 export async function POST(req: NextRequest) {
   try {
@@ -98,6 +100,39 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+
+    // Keep in local registry for immediate 3D High Street live rendering
+    const localStorefront: BusinessStorefront = {
+      id: businessId,
+      slug,
+      name: name.trim(),
+      tagline: tagline ? tagline.trim() : "",
+      description: description ? description.trim() : "",
+      category_id,
+      city_name: city_name.trim(),
+      state_name: state_name ? state_name.trim() : "India",
+      pincode: pincode || "",
+      lat: Number(lat) || 26.1445,
+      lon: Number(lon) || 91.7362,
+      whatsapp_phone: cleanPhone,
+      instagram_handle: instagram_handle ? instagram_handle.replace(/^@/, "").trim() : "",
+      starting_price: starting_price || "",
+      logo_url: Array.isArray(portfolio_images) && portfolio_images[0] ? portfolio_images[0] : "",
+      is_verified: true,
+      is_featured: true,
+      total_views: 1,
+      total_leads: 0,
+      portfolio: Array.isArray(portfolio_images)
+        ? portfolio_images.slice(0, 6).map((imgUrl: string, idx: number) => ({
+            id: `p-${businessId}-${idx}`,
+            business_id: businessId,
+            image_url: imgUrl,
+            sort_order: idx + 1,
+          }))
+        : [],
+      created_at: new Date().toISOString(),
+    };
+    addLocalStorefront(localStorefront);
 
     return NextResponse.json(
       {

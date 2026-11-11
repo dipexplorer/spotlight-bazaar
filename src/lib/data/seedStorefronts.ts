@@ -156,3 +156,20 @@ export const SEED_STOREFRONTS: BusinessStorefront[] = [
   },
 ];
 
+export const STOREFRONTS_REGISTRY: BusinessStorefront[] = [...SEED_STOREFRONTS];
+
+export function getStorefronts(): BusinessStorefront[] {
+  return STOREFRONTS_REGISTRY;
+}
+
+export function addLocalStorefront(storefront: BusinessStorefront) {
+  const existingIndex = STOREFRONTS_REGISTRY.findIndex(
+    (s) => s.id === storefront.id || s.slug === storefront.slug
+  );
+  if (existingIndex >= 0) {
+    STOREFRONTS_REGISTRY[existingIndex] = storefront;
+  } else {
+    STOREFRONTS_REGISTRY.unshift(storefront);
+  }
+}
+

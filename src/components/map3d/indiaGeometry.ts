@@ -18,18 +18,18 @@ export function buildIndiaLandMeshes(landData: IndiaLandData): THREE.Group {
   const group = new THREE.Group();
   group.name = "india_land_group";
 
-  // Top surface material (Dark Cyber-Obsidian / Slate)
+  // Top surface material: Lush Indian topographic terrain green (inspired by India Again relief)
   const topMaterial = new THREE.MeshStandardMaterial({
-    color: 0x111927,
-    roughness: 0.7,
-    metalness: 0.15,
+    color: 0x2d6a3f, // Rich emerald-forest terrain green
+    roughness: 0.85,
+    metalness: 0.05,
   });
 
-  // Bevel & side walls material (Dark Charcoal border with slight sheen)
+  // Bevel & coastal cliff walls: Coastal rock & earth
   const sideMaterial = new THREE.MeshStandardMaterial({
-    color: 0x090f18,
-    roughness: 0.85,
-    metalness: 0.3,
+    color: 0x1b4332, // Dark moss-slate earth
+    roughness: 0.9,
+    metalness: 0.12,
   });
 
   const materials = [topMaterial, sideMaterial];

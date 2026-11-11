@@ -69,18 +69,6 @@ export interface BootPayload {
     count: number;
   }[];
   featured_ids: string[];
-  storefronts: [
-    id: string,
-    slug: string,
-    name: string,
-    category_id: CategoryId,
-    city_name: string,
-    lat: number,
-    lon: number,
-    starting_price: string,
-    thumb_url: string,
-    is_verified: boolean,
-    timestamp: number
-  ][];
+  storefronts: BusinessStorefront[];
 }
 

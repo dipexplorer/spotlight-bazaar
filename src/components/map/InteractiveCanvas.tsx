@@ -36,12 +36,53 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
     fetch("/api/boot")
       .then((res) => res.json())
       .then((data) => {
-        if (data.storefronts && data.storefronts.length > 0) {
-          setStorefronts(data.storefronts);
+        if (data.storefronts && Array.isArray(data.storefronts) && data.storefronts.length > 0) {
+          if (typeof data.storefronts[0] === "object" && !Array.isArray(data.storefronts[0])) {
+            setStorefronts(data.storefronts);
+          }
         }
       })
       .catch(() => {});
   }, []);
+
+  // Handle URL deep-linking: ?city=guwahati&shop=studio-prism&new=1
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const cityParam = params.get("city");
+    const shopSlug = params.get("shop");
+    const isNew = params.get("new");
+
+    if (cityParam) {
+      const matched = INITIAL_CITIES.find(
+        (c) =>
+          c.slug.toLowerCase() === cityParam.toLowerCase() ||
+          c.name.toLowerCase() === cityParam.toLowerCase()
+      );
+      if (matched) {
+        handleCitySelect(matched.name);
+      }
+    }
+
+    if (shopSlug && storefronts.length > 0) {
+      const targetShop = storefronts.find(
+        (s) => s.slug.toLowerCase() === shopSlug.toLowerCase()
+      );
+      if (targetShop) {
+        setActiveStorefront(targetShop);
+      }
+    }
+
+    if (isNew === "1") {
+      import("canvas-confetti").then((m) => {
+        m.default({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 },
+        });
+      });
+    }
+  }, [storefronts]);
 
   const filteredStorefronts = storefronts.filter((s) => {
     const matchesCategory = selectedCategory === "all" || s.category_id === selectedCategory;
@@ -210,8 +251,9 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
         <div className="w-full h-full min-h-[88vh] relative">
           <ThreeMapCanvas
             cities={INITIAL_CITIES}
-            storefronts={filteredStorefronts}
+            storefronts={storefronts}
             selectedCity={selectedCityObject}
+            activeStorefront={activeStorefront}
             onCitySelect={handleCitySelectFrom3D}
             onStorefrontSelect={handleMarkerClick}
           />

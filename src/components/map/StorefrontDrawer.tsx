@@ -1,8 +1,19 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Store, MapPin, ShieldCheck, ArrowRight, MessageCircle, X } from "lucide-react";
+import confetti from "canvas-confetti";
+import {
+  Store,
+  MapPin,
+  ShieldCheck,
+  ArrowRight,
+  MessageCircle,
+  X,
+  Heart,
+  Share2,
+  Check,
+} from "lucide-react";
 import { BusinessStorefront } from "@/types";
 import { CATEGORY_MAP } from "@/lib/constants/categories";
 import { getWhatsAppUrl } from "@/lib/utils";
@@ -13,6 +24,19 @@ interface StorefrontDrawerProps {
 }
 
 export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps) {
+  const [wavesCount, setWavesCount] = useState<number>(0);
+  const [hasWaved, setHasWaved] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Sync waves count on storefront change
+  useEffect(() => {
+    if (storefront) {
+      setWavesCount(storefront.total_views || 1);
+      setHasWaved(false);
+      setCopiedLink(false);
+    }
+  }, [storefront]);
+
   // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -39,6 +63,43 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
     }
     const url = getWhatsAppUrl(storefront.whatsapp_phone, storefront.name);
     window.open(url, "_blank");
+  };
+
+  const handleWave = () => {
+    if (hasWaved) return;
+    setHasWaved(true);
+    setWavesCount((prev) => prev + 1);
+
+    confetti({
+      particleCount: 40,
+      spread: 60,
+      origin: { y: 0.8 },
+    });
+
+    try {
+      fetch("/api/analytics/lead-click", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storefront_id: storefront.id,
+          event_type: "wave",
+        }),
+        keepalive: true,
+      });
+    } catch {
+      // Ignore
+    }
+  };
+
+  const handleShareLink = () => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const citySlug = storefront.city_name ? storefront.city_name.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "all";
+    const shareUrl = `${origin}/?city=${citySlug}&shop=${storefront.slug}`;
+
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    });
   };
 
   return (
@@ -97,13 +158,31 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
               </div>
             </div>
 
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-full bg-neutral-900 text-neutral-400 hover:text-white transition-colors"
-              aria-label="Close storefront preview"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Copy Shareable 3D Street Link */}
+              <button
+                type="button"
+                onClick={handleShareLink}
+                title="Copy 3D Street Link"
+                className="p-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white transition-colors"
+                aria-label="Share 3D Street Link"
+              >
+                {copiedLink ? (
+                  <Check className="w-4 h-4 text-emerald-400" />
+                ) : (
+                  <Share2 className="w-4 h-4" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white transition-colors"
+                aria-label="Close storefront preview"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Tagline */}
@@ -113,14 +192,35 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
             </p>
           )}
 
-          {/* Rate Highlight Card */}
-          <div className="flex items-center justify-between p-3 rounded-2xl bg-neutral-900/70 border border-neutral-800/90">
-            <span className="text-xs text-neutral-400">
-              Starting Package
-            </span>
-            <span className="text-sm font-semibold text-amber-400 tabular-nums">
-              {storefront.starting_price || "Rates on Request"}
-            </span>
+          {/* Rate & Live Wave Bar (Inspired by indiaagain.live social interaction) */}
+          <div className="flex items-center justify-between gap-2 p-3 rounded-2xl bg-neutral-900/70 border border-neutral-800/90">
+            <div className="flex flex-col">
+              <span className="text-[11px] text-neutral-400">Starting Rate</span>
+              <span className="text-sm font-semibold text-amber-400 tabular-nums">
+                {storefront.starting_price || "Rates on Request"}
+              </span>
+            </div>
+
+            {/* Social Wave / Like Button */}
+            <button
+              type="button"
+              onClick={handleWave}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                hasWaved
+                  ? "bg-rose-500/10 border-rose-500/30 text-rose-400"
+                  : "bg-neutral-800 hover:bg-neutral-750 border-neutral-700 text-white"
+              }`}
+            >
+              <Heart
+                className={`w-3.5 h-3.5 ${
+                  hasWaved ? "fill-rose-500 text-rose-500 animate-bounce" : "text-neutral-400"
+                }`}
+              />
+              <span>{hasWaved ? "Waved!" : "Wave"}</span>
+              <span className="text-[11px] font-mono text-neutral-400 tabular-nums">
+                ({wavesCount})
+              </span>
+            </button>
           </div>
 
           {/* Action CTAs */}
@@ -129,11 +229,12 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
               href={`/b/${storefront.slug}`}
               className="flex-1 py-3 px-4 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-100 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-rose-500"
             >
-              <span>View Portfolio</span>
+              <span>Full Portfolio</span>
               <ArrowRight className="w-3.5 h-3.5 text-neutral-400" />
             </Link>
 
             <button
+              type="button"
               onClick={handleWhatsApp}
               className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-emerald-950/40 focus-visible:ring-2 focus-visible:ring-emerald-400"
             >

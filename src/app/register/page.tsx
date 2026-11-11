@@ -43,6 +43,23 @@ export default function RegisterPage() {
   const [createdStorefront, setCreatedStorefront] = useState<BusinessStorefront | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
+  // Read pre-selected city from URL params (e.g. /register?city=guwahati&plot=2)
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const cityParam = params.get("city");
+    if (cityParam) {
+      const matched = INITIAL_CITIES.find(
+        (c) =>
+          c.slug.toLowerCase() === cityParam.toLowerCase() ||
+          c.name.toLowerCase() === cityParam.toLowerCase()
+      );
+      if (matched) {
+        setCity(matched.name);
+      }
+    }
+  }, []);
+
   // Step 1 Validation
   const canProceedStep1 = name.trim().length >= 2 && city.trim().length > 0;
 

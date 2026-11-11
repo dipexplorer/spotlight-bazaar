@@ -24,12 +24,14 @@ import {
   Eye,
   ChevronRight,
   Plus,
+  Rocket,
 } from "lucide-react";
 
 interface ThreeMapCanvasProps {
   cities: City[];
   storefronts: BusinessStorefront[];
   selectedCity: City | null;
+  activeStorefront?: BusinessStorefront | null;
   onCitySelect: (city: City | null) => void;
   onStorefrontSelect?: (storefront: BusinessStorefront) => void;
 }
@@ -38,6 +40,7 @@ export function ThreeMapCanvas({
   cities,
   storefronts,
   selectedCity,
+  activeStorefront,
   onCitySelect,
   onStorefrontSelect,
 }: ThreeMapCanvasProps) {
@@ -45,8 +48,10 @@ export function ThreeMapCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const [loading, setLoading] = useState(true);
-  const [isNight, setIsNight] = useState(true);
+  const [isNight, setIsNight] = useState(false); // Default to radiant daylight like India Again
+  const [isSceneReady, setIsSceneReady] = useState(false);
   const [isWalkMode, setIsWalkMode] = useState(false);
+  const [isCinematicPlaying, setIsCinematicPlaying] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [showShopsDrawer, setShowShopsDrawer] = useState(false);
@@ -56,6 +61,10 @@ export function ThreeMapCanvas({
   onCitySelectRef.current = onCitySelect;
   const onStorefrontSelectRef = useRef(onStorefrontSelect);
   onStorefrontSelectRef.current = onStorefrontSelect;
+  const citiesRef = useRef(cities);
+  citiesRef.current = cities;
+  const storefrontsRef = useRef(storefronts);
+  storefrontsRef.current = storefronts;
 
   // Three.js References
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -63,6 +72,7 @@ export function ThreeMapCanvas({
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const cityPinsRef = useRef<CityPinObject[]>([]);
+  const pinsGroupRef = useRef<THREE.Group | null>(null);
   const currentBazaarGroupRef = useRef<THREE.Group | null>(null);
   const trafficRef = useRef<TrafficSystem | null>(null);
   const pedestriansRef = useRef<PedestrianSystem | null>(null);
@@ -70,6 +80,8 @@ export function ThreeMapCanvas({
   const plotsRef = useRef<StorefrontMeshResult[]>([]);
   const dirLightRef = useRef<THREE.DirectionalLight | null>(null);
   const ambientLightRef = useRef<THREE.AmbientLight | null>(null);
+  const hemiLightRef = useRef<THREE.HemisphereLight | null>(null);
+  const oceanMeshRef = useRef<THREE.Mesh | null>(null);
 
   // Animation & Camera Tween State
   const targetCamPosRef = useRef<THREE.Vector3 | null>(null);
@@ -95,19 +107,19 @@ export function ThreeMapCanvas({
   const flyToCityStreet = useCallback((city: City, walk: boolean = false) => {
     const [x, z] = toWorld(city.lon, city.lat);
     if (walk) {
-      // First-person street level
-      targetCamPosRef.current = new THREE.Vector3(x, 4.2, z + 4);
-      targetLookAtRef.current = new THREE.Vector3(x, 4.2, z + 50);
+      // First-person street level on sidewalk
+      targetCamPosRef.current = new THREE.Vector3(x - 11, 5.8, z + 12);
+      targetLookAtRef.current = new THREE.Vector3(x - 11, 5.8, z + 65);
     } else {
-      // Atmospheric drone high-street view
-      targetCamPosRef.current = new THREE.Vector3(x, 26, z - 32);
-      targetLookAtRef.current = new THREE.Vector3(x, 8, z + 28);
+      // Atmospheric drone high-street view: elevated to cleanly look down the central boulevard
+      targetCamPosRef.current = new THREE.Vector3(x, 26, z - 24);
+      targetLookAtRef.current = new THREE.Vector3(x, 6, z + 38);
     }
   }, []);
 
   const resetCamera = useCallback(() => {
-    targetCamPosRef.current = new THREE.Vector3(0, 560, 520);
-    targetLookAtRef.current = new THREE.Vector3(0, 0, 0);
+    targetCamPosRef.current = new THREE.Vector3(0, 1380, 780);
+    targetLookAtRef.current = new THREE.Vector3(0, 0, 20);
     setIsWalkMode(false);
   }, []);
 
@@ -143,6 +155,13 @@ export function ThreeMapCanvas({
     [selectedCity]
   );
 
+  // Auto-focus storefront when passed via prop (e.g. from deep-link ?shop=slug)
+  useEffect(() => {
+    if (activeStorefront && selectedCity && plotsRef.current.length > 0) {
+      focusStorefront(activeStorefront);
+    }
+  }, [activeStorefront, selectedCity, focusStorefront]);
+
   // Toggle First-Person Street Walk Mode
   const toggleWalkMode = useCallback(() => {
     if (!selectedCity) return;
@@ -153,10 +172,51 @@ export function ThreeMapCanvas({
     });
   }, [selectedCity, flyToCityStreet]);
 
-  // Synchronize when selectedCity changes: Spawn / Remove 3D Bazaar Street
+  // Space-to-Street Cinematic 10-Second Fly-In Sweep (Inspired by India Again)
+  const playCinematicFlyIn = useCallback(() => {
+    if (!selectedCity) return;
+    setIsCinematicPlaying(true);
+    setIsWalkMode(false);
+
+    const [x, z] = toWorld(selectedCity.lon, selectedCity.lat);
+
+    // Phase 1: High Orbit over India (0s)
+    targetCamPosRef.current = new THREE.Vector3(x * 0.25, 950, 480);
+    targetLookAtRef.current = new THREE.Vector3(x * 0.2, 0, 0);
+
+    // Phase 2: Hypersonic dive into cloud layer above city (1.8s)
+    setTimeout(() => {
+      targetCamPosRef.current = new THREE.Vector3(x, 65, z - 95);
+      targetLookAtRef.current = new THREE.Vector3(x, 12, z + 25);
+    }, 1800);
+
+    // Phase 3: High-speed street sweep past moving traffic (3.8s)
+    setTimeout(() => {
+      targetCamPosRef.current = new THREE.Vector3(x, 26, z - 24);
+      targetLookAtRef.current = new THREE.Vector3(x, 6, z + 38);
+    }, 3800);
+
+    // Phase 4: Focus on first business plot and fire celebration confetti (6.5s)
+    setTimeout(() => {
+      const firstShop = cityStorefronts[0];
+      if (firstShop) {
+        focusStorefront(firstShop);
+      }
+      setIsCinematicPlaying(false);
+      import("canvas-confetti").then((m) => {
+        m.default({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.7 },
+        });
+      });
+    }, 6500);
+  }, [selectedCity, cityStorefronts, focusStorefront]);
+
+  // Synchronize when selectedCity changes or scene becomes ready: Spawn / Remove 3D Bazaar Street
   useEffect(() => {
     const scene = sceneRef.current;
-    if (!scene) return;
+    if (!scene || !isSceneReady) return;
 
     // Clean up existing bazaar street & traffic simulations
     if (trafficRef.current) {
@@ -174,24 +234,51 @@ export function ThreeMapCanvas({
       plotsRef.current = [];
     }
 
-    if (selectedCity) {
-      // Build and mount the 3D Cartoon-Block Bazaar Street with Living Traffic
-      const { group: bazaarGroup, hitBoxes, traffic, pedestrians, plots } = buildBazaarStreet(
-        selectedCity,
-        storefronts
-      );
-      scene.add(bazaarGroup);
-      currentBazaarGroupRef.current = bazaarGroup;
-      trafficRef.current = traffic;
-      pedestriansRef.current = pedestrians;
-      hitBoxesRef.current = hitBoxes;
-      plotsRef.current = plots;
+    // Hide macro city pins when viewing high street so beacons don't block the town
+    if (pinsGroupRef.current) {
+      pinsGroupRef.current.visible = !selectedCity;
+    }
 
-      flyToCityStreet(selectedCity, isWalkModeRef.current);
+    if (selectedCity) {
+      try {
+        console.log("[Spotlight 3D] Building Bazaar Street for:", selectedCity.name);
+        const { group: bazaarGroup, hitBoxes, traffic, pedestrians, plots } = buildBazaarStreet(
+          selectedCity,
+          storefronts
+        );
+        console.log("[Spotlight 3D] Bazaar Street built successfully with", plots.length, "plots");
+        scene.add(bazaarGroup);
+        currentBazaarGroupRef.current = bazaarGroup;
+        trafficRef.current = traffic;
+        pedestriansRef.current = pedestrians;
+        hitBoxesRef.current = hitBoxes;
+        plotsRef.current = plots;
+
+        flyToCityStreet(selectedCity, isWalkModeRef.current);
+      } catch (err) {
+        console.error("[Spotlight 3D] Failed to build Bazaar Street:", err);
+      }
     } else {
       resetCamera();
     }
-  }, [selectedCity, storefronts, flyToCityStreet, resetCamera]);
+  }, [selectedCity, storefronts, isSceneReady, flyToCityStreet, resetCamera]);
+
+  // Synchronize City Hotspot Pins on national map when storefronts or active status changes
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene || !isSceneReady || selectedCity) return;
+
+    if (pinsGroupRef.current) {
+      scene.remove(pinsGroupRef.current);
+      pinsGroupRef.current = null;
+    }
+
+    const { group: pinsGroup, cityPins } = buildCityPins(cities, storefronts);
+    pinsGroup.visible = true;
+    scene.add(pinsGroup);
+    pinsGroupRef.current = pinsGroup;
+    cityPinsRef.current = cityPins;
+  }, [storefronts, selectedCity, isSceneReady, cities]);
 
   // Toggle Day/Night Lighting
   const toggleLighting = useCallback(() => {
@@ -200,23 +287,35 @@ export function ThreeMapCanvas({
       if (dirLightRef.current && ambientLightRef.current && sceneRef.current) {
         if (next) {
           // Night Mode: Atmospheric midnight indigo, cyan moonlight
-          dirLightRef.current.intensity = 0.65;
+          dirLightRef.current.intensity = 0.75;
           dirLightRef.current.color.setHex(0x38bdf8);
-          ambientLightRef.current.intensity = 0.55;
+          ambientLightRef.current.intensity = 0.5;
           ambientLightRef.current.color.setHex(0x0f172a);
-          sceneRef.current.background = new THREE.Color(0x070a13);
+          sceneRef.current.background = new THREE.Color(0x060913);
           if (sceneRef.current.fog) {
-            (sceneRef.current.fog as THREE.FogExp2).color.setHex(0x070a13);
+            (sceneRef.current.fog as THREE.FogExp2).color.setHex(0x060913);
+          }
+          if (oceanMeshRef.current) {
+            (oceanMeshRef.current.material as THREE.MeshStandardMaterial).color.setHex(0x050c18);
+          }
+          if (hemiLightRef.current) {
+            hemiLightRef.current.intensity = 0.2;
           }
         } else {
-          // Day Mode: Warm sun, open sky
-          dirLightRef.current.intensity = 1.6;
+          // Day Mode: Warm Indian sun, radiant sky
+          dirLightRef.current.intensity = 2.0;
           dirLightRef.current.color.setHex(0xfff7ed);
-          ambientLightRef.current.intensity = 0.85;
-          ambientLightRef.current.color.setHex(0x334155);
-          sceneRef.current.background = new THREE.Color(0x131d2a);
+          ambientLightRef.current.intensity = 0.95;
+          ambientLightRef.current.color.setHex(0xbae6fd);
+          sceneRef.current.background = new THREE.Color(0x0e2439);
           if (sceneRef.current.fog) {
-            (sceneRef.current.fog as THREE.FogExp2).color.setHex(0x131d2a);
+            (sceneRef.current.fog as THREE.FogExp2).color.setHex(0x0e2439);
+          }
+          if (oceanMeshRef.current) {
+            (oceanMeshRef.current.material as THREE.MeshStandardMaterial).color.setHex(0x0f4068);
+          }
+          if (hemiLightRef.current) {
+            hemiLightRef.current.intensity = 0.65;
           }
         }
       }
@@ -233,17 +332,27 @@ export function ThreeMapCanvas({
     let isDisposed = false;
     let animId: number;
 
-    // 1. Scene
+    // 1. Scene: Atmospheric deep blue horizon
     const scene = new THREE.Scene();
     sceneRef.current = scene;
-    scene.background = new THREE.Color(0x070a13);
-    scene.fog = new THREE.FogExp2(0x070a13, 0.0006);
+    scene.background = new THREE.Color(0x0e2439);
+    scene.fog = new THREE.FogExp2(0x0e2439, 0.00035);
 
-    // 2. Camera
+    // 2. Camera: Position at selected city if deep-linked, or national orbit
     const aspect = container.clientWidth / container.clientHeight;
     const camera = new THREE.PerspectiveCamera(40, aspect, 2, 4000);
-    camera.position.set(0, 560, 520);
+    if (selectedCityRef.current) {
+      const [initX, initZ] = toWorld(selectedCityRef.current.lon, selectedCityRef.current.lat);
+      camera.position.set(initX, 26, initZ - 24);
+    } else {
+      camera.position.set(0, 1380, 780);
+    }
     cameraRef.current = camera;
+
+    if (typeof window !== "undefined") {
+      (window as any).__scene = scene;
+      (window as any).__camera = camera;
+    }
 
     // 3. Renderer
     const renderer = new THREE.WebGLRenderer({
@@ -263,17 +372,30 @@ export function ThreeMapCanvas({
     controls.dampingFactor = 0.05;
     controls.maxPolarAngle = Math.PI / 2.15;
     controls.minDistance = 6;
-    controls.maxDistance = 1200;
-    controls.target.set(0, 0, 0);
+    controls.maxDistance = 3000;
+    if (selectedCityRef.current) {
+      const [initX, initZ] = toWorld(selectedCityRef.current.lon, selectedCityRef.current.lat);
+      controls.target.set(initX, 6, initZ + 38);
+    } else {
+      controls.target.set(0, 0, 20);
+    }
     controlsRef.current = controls;
 
-    // 5. Lights
-    const ambientLight = new THREE.AmbientLight(0x0f172a, 0.55);
+    if (typeof window !== "undefined") {
+      (window as any).__controls = controls;
+    }
+
+    // 5. Lights (Calibrated for warm Indian daylight radiant illumination)
+    const ambientLight = new THREE.AmbientLight(0xbae6fd, 0.95);
     scene.add(ambientLight);
     ambientLightRef.current = ambientLight;
 
-    const dirLight = new THREE.DirectionalLight(0x38bdf8, 0.65);
-    dirLight.position.set(180, 450, 200);
+    const hemiLight = new THREE.HemisphereLight(0xbae6fd, 0x365314, 0.65);
+    scene.add(hemiLight);
+    hemiLightRef.current = hemiLight;
+
+    const dirLight = new THREE.DirectionalLight(0xfff7ed, 2.0);
+    dirLight.position.set(220, 500, 240);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048;
     dirLight.shadow.mapSize.height = 2048;
@@ -286,18 +408,19 @@ export function ThreeMapCanvas({
     scene.add(dirLight);
     dirLightRef.current = dirLight;
 
-    // 6. Deep Ocean Floor Mesh
+    // 6. Deep Ocean Floor Mesh (Rich Marine Blue inspired by India Again)
     const oceanGeo = new THREE.PlaneGeometry(3500, 3500);
     const oceanMat = new THREE.MeshStandardMaterial({
-      color: 0x050914,
-      roughness: 0.95,
-      metalness: 0.1,
+      color: 0x0f4068,
+      roughness: 0.35,
+      metalness: 0.4,
     });
     const ocean = new THREE.Mesh(oceanGeo, oceanMat);
     ocean.rotation.x = -Math.PI / 2;
     ocean.position.y = -0.5;
     ocean.receiveShadow = true;
     scene.add(ocean);
+    oceanMeshRef.current = ocean;
 
     // 7. Load India Land & Rivers Data
     Promise.all([
@@ -315,11 +438,14 @@ export function ThreeMapCanvas({
         const riversGroup = buildRiversMeshes(riversData);
         scene.add(riversGroup);
 
-        // Build City Hotspots
-        const { group: pinsGroup, cityPins } = buildCityPins(cities, storefronts);
+        // Build City Hotspots (hidden if already in a city street)
+        const { group: pinsGroup, cityPins } = buildCityPins(citiesRef.current, storefrontsRef.current);
+        pinsGroup.visible = !selectedCityRef.current;
         scene.add(pinsGroup);
+        pinsGroupRef.current = pinsGroup;
         cityPinsRef.current = cityPins;
 
+        setIsSceneReady(true);
         setLoading(false);
       })
       .catch((err) => {
@@ -465,6 +591,17 @@ export function ThreeMapCanvas({
         }
       }
 
+      // Gently pulse glowing golden city discs on macro India map (inspired by India Again bubbles)
+      if (!selectedCityRef.current && cityPinsRef.current.length > 0) {
+        const pulse = 1 + Math.sin(now * 0.0035) * 0.12;
+        cityPinsRef.current.forEach((pin) => {
+          const disc = pin.children[0];
+          if (disc) {
+            disc.scale.set(pulse, pulse, 1);
+          }
+        });
+      }
+
       // Smooth Camera Interpolation (flyTo)
       if (targetCamPosRef.current && targetLookAtRef.current) {
         const factor = Math.min(delta * 3.5, 1);
@@ -487,6 +624,7 @@ export function ThreeMapCanvas({
     // Cleanup
     return () => {
       isDisposed = true;
+      setIsSceneReady(false);
       cancelAnimationFrame(animId);
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("keydown", handleKeyDown);
@@ -496,7 +634,7 @@ export function ThreeMapCanvas({
       controls.dispose();
       renderer.dispose();
     };
-  }, [cities, storefronts]);
+  }, []);
 
   // Autocomplete search filtering safely guarded against missing fields
   const q = (searchQuery || "").trim().toLowerCase();
@@ -541,7 +679,7 @@ export function ThreeMapCanvas({
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full min-h-[500px] overflow-hidden bg-[#070a13]"
+      className="relative w-full h-full min-h-[500px] overflow-hidden bg-[#0e2439]"
     >
       <canvas
         ref={canvasRef}
@@ -553,7 +691,7 @@ export function ThreeMapCanvas({
 
       {/* Loading Overlay */}
       {loading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#070a13] z-20 transition-opacity duration-500">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0e2439] z-20 transition-opacity duration-500">
           <div className="w-12 h-12 rounded-full border-2 border-rose-500/20 border-t-rose-500 animate-spin mb-3" />
           <p className="text-xs text-neutral-400 font-mono tracking-wider flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-rose-500" />
@@ -716,74 +854,117 @@ export function ThreeMapCanvas({
       {/* BOTTOM CENTER: Town Card & Walk Mode Bar */}
       <div className="absolute bottom-6 inset-x-4 z-20 flex flex-col items-center gap-2.5 pointer-events-none">
         {selectedCity ? (
-          /* City Street Level Card */
-          <div className="w-full max-w-lg p-3.5 rounded-3xl bg-neutral-950/90 backdrop-blur-2xl border border-neutral-800/90 shadow-2xl flex flex-col gap-3 pointer-events-auto">
+          /* City Street Level Card (Modeled after India Again town view) */
+          <div className="w-full max-w-lg p-4 rounded-3xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800/90 shadow-2xl flex flex-col gap-3 pointer-events-auto">
+            {/* Top Info Header */}
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-rose-600/10 border border-rose-500/30 flex items-center justify-center text-rose-500">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
                   <Store className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-white tracking-tight">
-                      {selectedCity.name} Living Bazaar
-                    </span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-400">
-                      24° Clear
+                    <span className="text-sm font-bold text-white tracking-tight">
+                      {selectedCity.name} · 24° Clear {isNight ? "night" : "day"}
                     </span>
                   </div>
                   <span className="text-[11px] text-neutral-400">
-                    {cityStorefronts.length} Active Businesses · Autos & Pedestrians on Street
+                    {cityStorefronts.length} verified shops · Autos & Pedestrians on street
                   </span>
                 </div>
               </div>
 
-              {/* Quick Link to Claim Free Plot */}
-              <a
-                href="/register"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white text-xs font-medium transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5 text-rose-500" />
-                <span>Claim Plot ₹0</span>
-              </a>
+              {/* Street Milestone Badge */}
+              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-neutral-900 border border-neutral-800 text-[11px] text-neutral-300">
+                <span>🏗️ Bazaar Growth: 85% &gt;</span>
+              </div>
             </div>
 
-            {/* Action Buttons Row */}
-            <div className="flex items-center gap-2 pt-1 border-t border-neutral-800/80">
-              {/* Primary Walk Mode Toggle Button */}
+            {/* Primary Action Row: Giant Orange Button + Walk Toggle */}
+            <div className="flex items-center gap-2">
+              <a
+                href={`/register?city=${selectedCity.slug}`}
+                className="flex-1 py-3 px-5 rounded-2xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-950/40"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Claim Free Plot ₹0 / Open My Shop</span>
+              </a>
+
               <button
                 type="button"
                 onClick={toggleWalkMode}
-                className={`flex-1 py-2.5 px-4 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                className={`py-3 px-4 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
                   isWalkMode
-                    ? "bg-amber-500 hover:bg-amber-400 text-neutral-950 shadow-lg shadow-amber-950/40"
-                    : "bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-950/40"
+                    ? "bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-950/40"
+                    : "bg-neutral-800 hover:bg-neutral-750 text-white border border-neutral-700"
                 }`}
               >
                 <Footprints className="w-4 h-4" />
-                <span>{isWalkMode ? "Switch to Drone View" : "Walk Street (WASD)"}</span>
+                <span>{isWalkMode ? "Drone View" : "🚶 Walk (WASD)"}</span>
+              </button>
+            </div>
+
+            {/* Secondary Actions Row */}
+            <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-neutral-800/80 text-[11px]">
+              <button
+                type="button"
+                onClick={playCinematicFlyIn}
+                disabled={isCinematicPlaying}
+                className="flex-1 py-1.5 px-2.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-rose-500/20 hover:from-amber-500/30 hover:to-rose-500/30 text-amber-300 hover:text-amber-200 flex items-center justify-center gap-1.5 transition-colors border border-amber-500/30 font-medium"
+              >
+                <Rocket className="w-3.5 h-3.5 text-amber-400" />
+                <span>{isCinematicPlaying ? "Flying..." : "Cinematic Tour"}</span>
               </button>
 
-              {/* View Shops Drawer Button */}
-              {cityStorefronts.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowShopsDrawer(!showShopsDrawer)}
-                  className="py-2.5 px-4 rounded-2xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-white text-xs font-semibold flex items-center gap-2 transition-colors"
-                >
-                  <Eye className="w-3.5 h-3.5 text-neutral-400" />
-                  <span>Shops ({cityStorefronts.length})</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setShowShopsDrawer(!showShopsDrawer)}
+                className="flex-1 py-1.5 px-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-300 hover:text-white flex items-center justify-center gap-1.5 transition-colors border border-neutral-800/80"
+              >
+                <Eye className="w-3.5 h-3.5 text-neutral-400" />
+                <span>Directory ({cityStorefronts.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof navigator !== "undefined" && navigator.clipboard) {
+                    navigator.clipboard.writeText(window.location.href);
+                    alert("3D Bazaar Street link copied!");
+                  }
+                }}
+                className="flex-1 py-1.5 px-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-300 hover:text-white flex items-center justify-center gap-1.5 transition-colors border border-neutral-800/80"
+              >
+                <span>🔗 Share</span>
+              </button>
+
+              <a
+                href={`/register?city=${selectedCity.slug}`}
+                className="flex-1 py-1.5 px-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-amber-400 hover:text-amber-300 flex items-center justify-center gap-1.5 transition-colors border border-neutral-800/80 font-medium"
+              >
+                <span>🎨 Paint</span>
+              </a>
             </div>
           </div>
         ) : (
-          /* National Orbit Level Card */
-          <div className="p-2.5 px-4 rounded-2xl bg-neutral-950/85 backdrop-blur-xl border border-neutral-800/80 shadow-2xl flex items-center gap-3 pointer-events-auto">
-            <span className="text-xs text-neutral-400 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-              <span>Tap any glowing city pin to enter its Living 3D High Street</span>
-            </span>
+          /* National Orbit Level Card (Modeled after India Again macro view) */
+          <div className="p-3 px-5 rounded-3xl bg-neutral-950/90 backdrop-blur-2xl border border-neutral-800/90 shadow-2xl flex flex-col sm:flex-row items-center gap-3 pointer-events-auto">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+              <span className="text-xs text-neutral-300 font-medium">
+                Tap any glowing amber hub to explore its Living 3D High Street
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <a
+                href="/register"
+                className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-950/30 transition-all"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Claim Plot ₹0</span>
+              </a>
+            </div>
           </div>
         )}
 

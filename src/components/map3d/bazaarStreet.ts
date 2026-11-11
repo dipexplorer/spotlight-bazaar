@@ -52,10 +52,10 @@ export function buildBazaarStreet(
   const streetLength = (pairsCount + 1) * plotSpacing;
 
   // 1. Surrounding Landscape Ground (Lush Indian terrain around the town)
-  const terrainGeo = new THREE.PlaneGeometry(360, streetLength + 160, 16, 16);
+  const terrainGeo = new THREE.PlaneGeometry(550, streetLength + 350, 16, 16);
   const terrainMat = new THREE.MeshStandardMaterial({
-    color: 0x11231a, // Dark forest green
-    roughness: 0.95,
+    color: 0x2d6a3f, // Rich Indian valley green
+    roughness: 0.9,
     metalness: 0.05,
   });
   const terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
@@ -65,26 +65,26 @@ export function buildBazaarStreet(
   group.add(terrainMesh);
 
   // 2. Scenic River along the town periphery (Brahmaputra / Ganga)
-  const riverGeo = new THREE.PlaneGeometry(75, streetLength + 220);
+  const riverGeo = new THREE.PlaneGeometry(120, streetLength + 450);
   const riverMat = new THREE.MeshStandardMaterial({
-    color: 0x075985, // Deep river blue
+    color: 0x1d609a, // Deep river blue
     roughness: 0.15,
-    metalness: 0.85,
+    metalness: 0.75,
   });
   const riverMesh = new THREE.Mesh(riverGeo, riverMat);
   riverMesh.rotation.x = -Math.PI / 2;
-  riverMesh.position.set(135, 0.02, streetLength / 2 - plotSpacing);
+  riverMesh.position.set(155, 0.02, streetLength / 2 - plotSpacing);
   group.add(riverMesh);
 
-  // River Bank Sand Trim
-  const bankGeo = new THREE.PlaneGeometry(8, streetLength + 220);
+  // River Bank Sand Trim (Golden river sand & silt)
+  const bankGeo = new THREE.PlaneGeometry(14, streetLength + 450);
   const bankMat = new THREE.MeshStandardMaterial({
-    color: 0x3f3629,
-    roughness: 0.9,
+    color: 0xd97706, // Golden river sand
+    roughness: 0.95,
   });
   const bankMesh = new THREE.Mesh(bankGeo, bankMat);
   bankMesh.rotation.x = -Math.PI / 2;
-  bankMesh.position.set(94, 0.03, streetLength / 2 - plotSpacing);
+  bankMesh.position.set(92, 0.03, streetLength / 2 - plotSpacing);
   group.add(bankMesh);
 
   // 3. Background Rolling Low-Poly Hills
@@ -309,27 +309,31 @@ function buildLowPolyTree(): THREE.Group {
  */
 function buildBackgroundHills(streetLength: number): THREE.Group {
   const hills = new THREE.Group();
-  const hillMat = new THREE.MeshStandardMaterial({
-    color: 0x144e32,
-    roughness: 0.9,
-    metalness: 0.1,
-    flatShading: true,
-  });
 
   const hillPositions = [
-    { x: 170, z: -40, r: 28, h: 24 },
-    { x: 190, z: 40, r: 36, h: 28 },
-    { x: 165, z: 120, r: 32, h: 22 },
-    { x: 185, z: 200, r: 34, h: 26 },
-    { x: -130, z: -60, r: 26, h: 20 },
-    { x: -150, z: 80, r: 34, h: 24 },
-    { x: -140, z: 170, r: 30, h: 22 },
+    { x: 210, z: -50, r: 42, h: 26, color: 0x255d37 },
+    { x: 230, z: 40, r: 48, h: 32, color: 0x2d6a3f },
+    { x: 205, z: 140, r: 44, h: 28, color: 0x387a4a },
+    { x: 225, z: 230, r: 46, h: 30, color: 0x255d37 },
+    { x: 250, z: 320, r: 52, h: 34, color: 0x1e4a2c },
+    { x: -170, z: -70, r: 40, h: 24, color: 0x2d6a3f },
+    { x: -190, z: 70, r: 48, h: 30, color: 0x387a4a },
+    { x: -180, z: 190, r: 44, h: 28, color: 0x255d37 },
+    { x: -200, z: 310, r: 50, h: 32, color: 0x1e4a2c },
   ];
 
   hillPositions.forEach((pos) => {
-    const coneGeo = new THREE.ConeGeometry(pos.r, pos.h, 7);
-    const hillMesh = new THREE.Mesh(coneGeo, hillMat);
-    hillMesh.position.set(pos.x, pos.h / 2, pos.z);
+    // Low-poly hemisphere dome for smooth organic Indian rolling hills
+    const domeGeo = new THREE.SphereGeometry(pos.r, 9, 6, 0, Math.PI * 2, 0, Math.PI * 0.5);
+    domeGeo.scale(1, pos.h / pos.r, 1);
+    const mat = new THREE.MeshStandardMaterial({
+      color: pos.color,
+      roughness: 0.92,
+      metalness: 0.05,
+      flatShading: true,
+    });
+    const hillMesh = new THREE.Mesh(domeGeo, mat);
+    hillMesh.position.set(pos.x, 0, pos.z);
     hills.add(hillMesh);
   });
 
@@ -393,15 +397,19 @@ function buildInteractivePlotBadge(
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.minFilter = THREE.LinearFilter;
-  const planeGeo = new THREE.PlaneGeometry(6.5, 1.8);
-  const planeMat = new THREE.MeshBasicMaterial({
+  texture.magFilter = THREE.LinearFilter;
+
+  // Use THREE.Sprite so the badge always faces the camera directly with no mirroring
+  const spriteMat = new THREE.SpriteMaterial({
     map: texture,
     transparent: true,
-    side: THREE.DoubleSide,
+    depthTest: true,
+    depthWrite: false,
   });
 
-  const badgeMesh = new THREE.Mesh(planeGeo, planeMat);
-  badgeGroup.add(badgeMesh);
+  const badgeSprite = new THREE.Sprite(spriteMat);
+  badgeSprite.scale.set(7.5, 2.0, 1);
+  badgeGroup.add(badgeSprite);
 
   return badgeGroup;
 }
