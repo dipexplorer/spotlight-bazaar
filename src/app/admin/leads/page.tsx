@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Store, Eye, MessageCircle, ShieldCheck, MapPin, ArrowUpRight, TrendingUp } from "lucide-react";
-import { SEED_STOREFRONTS } from "@/lib/data/seedStorefronts";
+import { getStorefronts } from "@/lib/data/seedStorefronts";
 import { createServerClient } from "@/lib/supabase/server";
 import { CATEGORIES } from "@/lib/constants/categories";
 import { BusinessStorefront } from "@/types";
@@ -27,7 +27,7 @@ async function getAdminData(): Promise<BusinessStorefront[]> {
       // Fallback
     }
   }
-  return SEED_STOREFRONTS;
+  return getStorefronts();
 }
 
 export default async function AdminLeadsPage() {

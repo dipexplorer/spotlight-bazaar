@@ -76,6 +76,14 @@ export function ThreeMapCanvas({
   const [customizingStorefront, setCustomizingStorefront] = useState<BusinessStorefront | null>(null);
   const [isSoundMuted, setIsSoundMuted] = useState(bazaarAudio.getMuted());
   const [speedBoostUntil, setSpeedBoostUntil] = useState(0);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage((curr) => (curr === msg ? null : curr));
+    }, 2800);
+  }, []);
 
   // India Again Inspired Features: Quick Talk, Proximity Dialogue, Avatar & Gamification
   const [showQuickTalkModal, setShowQuickTalkModal] = useState(false);
@@ -878,7 +886,7 @@ export function ThreeMapCanvas({
                 setSearchOpen(true);
               }}
               onFocus={() => setSearchOpen(true)}
-              placeholder="Search city, shop, or category... (e.g. Guwahati, Studio Prism)"
+              placeholder="Search Nerqiva Studio, Guwahati, or services..."
               className="w-full pl-10 pr-4 py-2 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800/90 text-white text-xs placeholder:text-neutral-500 focus:outline-none focus:border-rose-500/80 focus:ring-1 focus:ring-rose-500/80 shadow-2xl transition-all"
             />
           </div>
@@ -1024,6 +1032,15 @@ export function ThreeMapCanvas({
         </div>
       </div>
 
+      {/* TOAST NOTIFICATION PILL */}
+      {toastMessage && (
+        <div className="absolute top-18 sm:top-20 inset-x-0 z-40 flex justify-center pointer-events-none animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="px-4 py-2 rounded-2xl bg-neutral-950/95 backdrop-blur-2xl border border-amber-500/40 text-amber-300 text-xs font-semibold shadow-2xl flex items-center gap-2">
+            <span>{toastMessage}</span>
+          </div>
+        </div>
+      )}
+
       {/* BOTTOM CENTER: Town Card & Walk Mode Bar */}
       <div className="absolute bottom-3 sm:bottom-4 inset-x-4 z-20 flex flex-col items-center gap-2 pointer-events-none">
         {/* Nearby Storefront Proximity Dialogue Trigger (India Again talking business) */}
@@ -1097,6 +1114,40 @@ export function ThreeMapCanvas({
               >
                 <Coffee className="w-3.5 h-3.5" />
                 <span>Chai</span>
+              </button>
+
+              {/* Paint Storefront */}
+              <button
+                type="button"
+                onClick={() => {
+                  const targetShop = nearbyStorefront || activeStorefront || cityStorefronts[0] || storefronts[0];
+                  if (targetShop) {
+                    setCustomizingStorefront(targetShop);
+                  } else {
+                    showToast("No storefront available to paint");
+                  }
+                }}
+                className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-amber-400 border border-neutral-800 text-xs font-semibold flex items-center gap-1.5 transition-all"
+              >
+                <Paintbrush className="w-3.5 h-3.5" />
+                <span>Paint</span>
+              </button>
+
+              {/* Share */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof navigator !== "undefined" && navigator.clipboard) {
+                    navigator.clipboard.writeText(window.location.href);
+                    showToast("🔗 3D Bazaar Street link copied to clipboard!");
+                  } else {
+                    showToast("🔗 3D Bazaar Street link ready!");
+                  }
+                }}
+                className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-300 border border-neutral-800 text-xs font-semibold flex items-center gap-1.5 transition-all"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span>Share</span>
               </button>
 
               {/* Stop Walking */}
@@ -1189,7 +1240,9 @@ export function ThreeMapCanvas({
                   onClick={() => {
                     if (typeof navigator !== "undefined" && navigator.clipboard) {
                       navigator.clipboard.writeText(window.location.href);
-                      alert("3D Bazaar Street link copied!");
+                      showToast("🔗 3D Bazaar Street link copied to clipboard!");
+                    } else {
+                      showToast("🔗 3D Bazaar Street: " + (typeof window !== "undefined" ? window.location.href : ""));
                     }
                   }}
                   className="flex-1 py-1.5 px-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-300 hover:text-white flex items-center justify-center gap-1.5 transition-colors border border-neutral-800 font-medium"
@@ -1201,9 +1254,11 @@ export function ThreeMapCanvas({
                 <button
                   type="button"
                   onClick={() => {
-                    const targetShop = activeStorefront || cityStorefronts[0];
+                    const targetShop = activeStorefront || cityStorefronts[0] || storefronts[0];
                     if (targetShop) {
                       setCustomizingStorefront(targetShop);
+                    } else {
+                      showToast("No storefront available to paint");
                     }
                   }}
                   className="flex-1 py-1.5 px-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-amber-400 hover:text-amber-300 flex items-center justify-center gap-1.5 transition-colors border border-neutral-800 font-medium"

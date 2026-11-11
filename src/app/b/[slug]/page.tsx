@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { Suspense } from "react";
-import { SEED_STOREFRONTS } from "@/lib/data/seedStorefronts";
+import { getStorefronts } from "@/lib/data/seedStorefronts";
 import { createServerClient } from "@/lib/supabase/server";
 import { BusinessStorefront } from "@/types";
 import { StorefrontView } from "@/components/storefront/StorefrontView";
@@ -33,8 +33,8 @@ async function getStorefront(slug: string): Promise<BusinessStorefront | null> {
     }
   }
 
-  // Fallback to seed data
-  const seed = SEED_STOREFRONTS.find((s) => s.slug === slug);
+  // Fallback to in-memory/seed data
+  const seed = getStorefronts().find((s) => s.slug === slug);
   return seed || null;
 }
 

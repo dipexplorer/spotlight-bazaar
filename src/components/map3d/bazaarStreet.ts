@@ -39,14 +39,11 @@ export function buildBazaarStreet(
       s.city_name.toLowerCase() === city.name.toLowerCase()
   );
 
-  // If fewer than 4 shops in this city, pad with showcase businesses
-  const activeBusinesses =
-    cityStorefronts.length >= 2
-      ? cityStorefronts
-      : [...cityStorefronts, ...storefronts.slice(0, Math.max(0, 4 - cityStorefronts.length))];
+  // Strictly only real registered businesses in this city (zero fake duplicates)
+  const activeBusinesses = cityStorefronts;
 
-  // Total plot slots: active businesses + 1 under construction plot + 1 free claimable plot
-  const totalPlots = Math.max(activeBusinesses.length + 2, 8);
+  // Total plot slots: active businesses + under construction + free claimable plots
+  const totalPlots = Math.max(activeBusinesses.length + 3, 6);
   const pairsCount = Math.ceil(totalPlots / 2);
   const plotSpacing = 22;
   const streetLength = (pairsCount + 1) * plotSpacing;

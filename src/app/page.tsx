@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Plus } from "lucide-react";
-import { SEED_STOREFRONTS } from "@/lib/data/seedStorefronts";
+import { getStorefronts } from "@/lib/data/seedStorefronts";
 import { createServerClient } from "@/lib/supabase/server";
 import { BusinessStorefront } from "@/types";
 import { MapWrapper } from "@/components/map/MapWrapper";
@@ -27,7 +27,7 @@ async function getInitialStorefronts(): Promise<BusinessStorefront[]> {
       // Fallback to seeds
     }
   }
-  return SEED_STOREFRONTS;
+  return getStorefronts();
 }
 
 export default async function Home() {

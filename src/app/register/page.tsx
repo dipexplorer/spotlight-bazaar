@@ -263,7 +263,7 @@ export default function RegisterPage() {
                   autoCapitalize="words"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Studio Prism, Cafe Nirvana, Rohan Photography"
+                  placeholder="e.g. Nerqiva Studio, Cafe Guwahati, Assam Crafts"
                   className="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 focus:border-rose-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/20 text-sm text-white placeholder:text-neutral-500 transition-colors"
                 />
               </div>
