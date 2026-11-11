@@ -212,7 +212,7 @@ export default function RegisterPage() {
       {/* Progress Bar */}
       <div className="w-full max-w-xl h-1 bg-neutral-900 overflow-hidden my-3 rounded-full">
         <div
-          className="h-full bg-rose-600 transition-all duration-300 ease-out"
+          className="h-full bg-amber-500 transition-all duration-300 ease-out"
           style={{ width: `${(step / 4) * 100}%` }}
         />
       </div>
@@ -230,6 +230,20 @@ export default function RegisterPage() {
           {/* STEP 1: IDENTITY */}
           {step === 1 && (
             <div className="flex flex-col gap-5 animate-fade-in">
+              {/* Mascot Brand Welcome */}
+              <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-neutral-900 border border-neutral-800 mb-1">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/brand/mascot.jpg"
+                  alt="Spotlight Bazaar Mascot"
+                  className="w-12 h-12 rounded-xl object-cover shrink-0 border border-neutral-700 shadow-md"
+                />
+                <div className="flex flex-col">
+                  <span className="text-xs font-semibold text-white">Spotlight Bazaar · High Street Plot</span>
+                  <span className="text-[11px] text-neutral-400">Claim your 3D storefront. Zero commission, direct customer contact.</span>
+                </div>
+              </div>
+
               <div>
                 <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">
                   What is your business called?

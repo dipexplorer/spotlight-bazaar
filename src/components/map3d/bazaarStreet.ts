@@ -28,9 +28,9 @@ export function buildBazaarStreet(
   const group = new THREE.Group();
   group.name = `bazaar_street_${city.slug}`;
 
-  // Center the town street at city's 3D coordinates
+  // Center the town street at city's 3D coordinates (elevated above India relief land mesh to eliminate z-fighting)
   const [originX, originZ] = toWorld(city.lon, city.lat);
-  group.position.set(originX, 4.6, originZ);
+  group.position.set(originX, 6.2, originZ);
 
   // Filter storefronts active in this city
   const cityStorefronts = storefronts.filter(
@@ -199,7 +199,7 @@ export function buildBazaarStreet(
     group.add(badge);
   }
 
-  // 10. Street Lamps & Neem Trees along both sidewalks
+  // 10. Street Lamps, Overhead Cables, Neem Trees & Parked Scooters
   for (let z = 0; z < streetLength; z += plotSpacing) {
     const leftLamp = buildStreetLamp();
     leftLamp.position.set(-(roadWidth / 2 + 1.2), 0, z);
@@ -210,6 +210,42 @@ export function buildBazaarStreet(
     rightLamp.rotation.y = Math.PI;
     group.add(rightLamp);
 
+    // Overhead catenary electrical cables connecting street lamps (Authentic Indian Bazaar aesthetic)
+    if (z + plotSpacing < streetLength) {
+      // Left side cable with realistic catenary sag
+      const leftSag = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(-(roadWidth / 2 + 1.2) + 1.4, 8.8, z),
+        new THREE.Vector3(-(roadWidth / 2 + 1.2) + 1.4, 7.9, z + plotSpacing / 2),
+        new THREE.Vector3(-(roadWidth / 2 + 1.2) + 1.4, 8.8, z + plotSpacing)
+      );
+      const leftCableGeo = new THREE.BufferGeometry().setFromPoints(leftSag.getPoints(14));
+      const cableMat = new THREE.LineBasicMaterial({ color: 0x1c1917, linewidth: 2 });
+      const leftCable = new THREE.Line(leftCableGeo, cableMat);
+      group.add(leftCable);
+
+      // Right side cable
+      const rightSag = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(roadWidth / 2 + 1.2 - 1.4, 8.8, z),
+        new THREE.Vector3(roadWidth / 2 + 1.2 - 1.4, 7.9, z + plotSpacing / 2),
+        new THREE.Vector3(roadWidth / 2 + 1.2 - 1.4, 8.8, z + plotSpacing)
+      );
+      const rightCableGeo = new THREE.BufferGeometry().setFromPoints(rightSag.getPoints(14));
+      const rightCable = new THREE.Line(rightCableGeo, cableMat);
+      group.add(rightCable);
+
+      // Mid-street diagonal cross-cable at alternating junctions
+      if (Math.floor(z / plotSpacing) % 2 === 0) {
+        const crossSag = new THREE.QuadraticBezierCurve3(
+          new THREE.Vector3(-(roadWidth / 2 + 1.2) + 1.4, 8.8, z),
+          new THREE.Vector3(0, 8.0, z + plotSpacing / 2),
+          new THREE.Vector3(roadWidth / 2 + 1.2 - 1.4, 8.8, z + plotSpacing)
+        );
+        const crossGeo = new THREE.BufferGeometry().setFromPoints(crossSag.getPoints(16));
+        const crossCable = new THREE.Line(crossGeo, cableMat);
+        group.add(crossCable);
+      }
+    }
+
     // Trees
     if (z + 11 < streetLength) {
       const leftTree = buildLowPolyTree(theme);
@@ -219,6 +255,21 @@ export function buildBazaarStreet(
       const rightTree = buildLowPolyTree(theme);
       rightTree.position.set(roadWidth / 2 + sidewalkWidth - 1.2, 0, z + 11);
       group.add(rightTree);
+    }
+
+    // Parked Indian Scooters (Chetak / Activa style) along curb
+    if (z + 6 < streetLength) {
+      const scooterLeft = buildParkedScooter(z % 3);
+      scooterLeft.position.set(-(roadWidth / 2 + 0.6), 0.12, z + 6);
+      scooterLeft.rotation.y = Math.PI / 2 + (Math.random() * 0.2 - 0.1);
+      group.add(scooterLeft);
+
+      if (z % 2 === 0) {
+        const scooterRight = buildParkedScooter((z + 1) % 3);
+        scooterRight.position.set(roadWidth / 2 + 0.6, 0.12, z + 7);
+        scooterRight.rotation.y = -Math.PI / 2 + (Math.random() * 0.2 - 0.1);
+        group.add(scooterRight);
+      }
     }
   }
 
@@ -763,38 +814,38 @@ function buildInteractivePlotBadge(
   ctx.fill();
 
   let borderColor = "#38bdf8";
-  let title = "STOREFRONT";
-  let sub = "VERIFIED";
+  let title = "Storefront";
+  let sub = "Verified";
 
   if (isEmptyPlot) {
     borderColor = "#f59e0b";
-    title = "+ CLAIM FREE PLOT";
-    sub = "START ONBOARDING";
+    title = "Plot Available";
+    sub = "Reserve Storefront";
   } else if (isConstruction) {
     borderColor = "#eab308";
-    title = "UNDER CONSTRUCTION";
-    sub = "OPENING SOON";
+    title = "Under Construction";
+    sub = "Opening Soon";
   } else if (business) {
     borderColor = business.is_verified ? "#10b981" : "#e11d48";
-    title = business.name.length > 18 ? business.name.slice(0, 17) + "…" : business.name;
-    sub = business.starting_price || "DIRECT WHATSAPP";
+    title = business.name.length > 20 ? business.name.slice(0, 19) + "…" : business.name;
+    sub = business.starting_price || "Direct WhatsApp";
   }
 
   // Border
   ctx.strokeStyle = borderColor;
-  ctx.lineWidth = 3.5;
+  ctx.lineWidth = 3;
   ctx.stroke();
 
   // Title
-  ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  ctx.font = "600 22px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "center";
   ctx.fillText(title, 150, 36);
 
   // Subtitle / Price
-  ctx.font = "600 18px ui-monospace, SFMono-Regular, Menlo, monospace";
+  ctx.font = "500 16px ui-monospace, SFMono-Regular, Menlo, monospace";
   ctx.fillStyle = borderColor;
-  ctx.fillText(sub, 150, 62);
+  ctx.fillText(sub, 150, 60);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.minFilter = THREE.LinearFilter;
@@ -816,10 +867,11 @@ function buildInteractivePlotBadge(
 }
 
 /**
- * Builds an authentic Indian street lamp post
+ * Builds an authentic Indian street lamp post with Day/Night emissive switch
  */
 function buildStreetLamp(): THREE.Group {
   const lamp = new THREE.Group();
+  lamp.name = "street_lamp";
 
   const poleGeo = new THREE.CylinderGeometry(0.14, 0.18, 9, 8);
   const poleMat = new THREE.MeshStandardMaterial({
@@ -841,20 +893,105 @@ function buildStreetLamp(): THREE.Group {
   head.position.set(1.4, 8.6, 0);
   lamp.add(head);
 
-  // Bulb
+  // Bulb (Standard material with warm amber emissive)
   const bulb = new THREE.Mesh(
     new THREE.SphereGeometry(0.22, 8, 8),
-    new THREE.MeshBasicMaterial({ color: 0xfef08a })
+    new THREE.MeshStandardMaterial({
+      color: 0xfef08a,
+      emissive: 0xfacc15,
+      emissiveIntensity: 0.2, // Default day mode: low/off glow
+      roughness: 0.3,
+    })
   );
+  bulb.name = "lamp_bulb";
   bulb.position.set(1.4, 8.35, 0);
   lamp.add(bulb);
 
-  // Warm Amber Point Light
-  const pointLight = new THREE.PointLight(0xf59e0b, 1.2, 26);
+  // Warm Amber 2700K Point Light (Tungsten street lighting)
+  const pointLight = new THREE.PointLight(0xf59e0b, 0, 28);
+  pointLight.name = "lamp_light";
   pointLight.position.set(1.4, 8.2, 0);
   lamp.add(pointLight);
 
   return lamp;
+}
+
+/**
+ * Builds a low-poly parked Indian scooter (Bajaj Chetak / Honda Activa style)
+ */
+function buildParkedScooter(variant = 0): THREE.Group {
+  const scooter = new THREE.Group();
+  scooter.name = "parked_scooter";
+
+  const colors = [0x0284c7, 0xd97706, 0x16a34a]; // Blue, Saffron Ochre, Mint Green
+  const bodyColor = colors[variant % colors.length];
+
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color: bodyColor,
+    roughness: 0.5,
+    metalness: 0.3,
+  });
+  const blackMat = new THREE.MeshStandardMaterial({
+    color: 0x18181b,
+    roughness: 0.8,
+  });
+  const chromeMat = new THREE.MeshStandardMaterial({
+    color: 0xe2e8f0,
+    metalness: 0.9,
+    roughness: 0.2,
+  });
+
+  // Main chassis / footboard
+  const footboard = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.14, 1.4), blackMat);
+  footboard.position.y = 0.28;
+  scooter.add(footboard);
+
+  // Rear cowl / engine cover
+  const cowl = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.5, 0.8), bodyMat);
+  cowl.position.set(0, 0.52, -0.3);
+  scooter.add(cowl);
+
+  // Seat
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.16, 0.75), blackMat);
+  seat.position.set(0, 0.82, -0.28);
+  scooter.add(seat);
+
+  // Front apron / shield
+  const apron = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.75, 0.12), bodyMat);
+  apron.position.set(0, 0.65, 0.5);
+  apron.rotation.x = -0.15;
+  scooter.add(apron);
+
+  // Handlebars
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.7, 6), chromeMat);
+  bar.rotation.z = Math.PI / 2;
+  bar.position.set(0, 1.05, 0.45);
+  scooter.add(bar);
+
+  // Headlight
+  const light = new THREE.Mesh(
+    new THREE.SphereGeometry(0.1, 6, 6),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 })
+  );
+  light.position.set(0, 1.05, 0.54);
+  scooter.add(light);
+
+  // Wheels (Front & Rear)
+  const wheelGeo = new THREE.CylinderGeometry(0.24, 0.24, 0.14, 10);
+  const frontWheel = new THREE.Mesh(wheelGeo, blackMat);
+  frontWheel.rotation.z = Math.PI / 2;
+  frontWheel.position.set(0, 0.24, 0.6);
+  scooter.add(frontWheel);
+
+  const rearWheel = new THREE.Mesh(wheelGeo, blackMat);
+  rearWheel.rotation.z = Math.PI / 2;
+  rearWheel.position.set(0, 0.24, -0.5);
+  scooter.add(rearWheel);
+
+  // Kickstand lean (subtle realistic angle)
+  scooter.rotation.z = 0.08;
+
+  return scooter;
 }
 
 /**
@@ -1019,15 +1156,15 @@ function buildCuttingChaiStall(
   ctx.roundRect(4, 4, 292, 72, 18);
   ctx.fill();
   ctx.strokeStyle = "#f59e0b";
-  ctx.lineWidth = 3.5;
+  ctx.lineWidth = 3;
   ctx.stroke();
-  ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.font = "600 22px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "center";
-  ctx.fillText("☕ CUTTING CHAI", 150, 36);
-  ctx.font = "600 18px ui-monospace, monospace";
+  ctx.fillText("Cutting Chai Stall", 150, 36);
+  ctx.font = "500 16px ui-monospace, SFMono-Regular, Menlo, monospace";
   ctx.fillStyle = "#fbbf24";
-  ctx.fillText("TAP FOR 2X SPEED", 150, 62);
+  ctx.fillText("Assam Cardamom Brew", 150, 60);
 
   const tex = new THREE.CanvasTexture(canvas);
   const spriteMat = new THREE.SpriteMaterial({ map: tex, transparent: true });
@@ -1099,15 +1236,15 @@ function buildCricketPitch(
   ctx.roundRect(4, 4, 312, 72, 18);
   ctx.fill();
   ctx.strokeStyle = "#10b981";
-  ctx.lineWidth = 3.5;
+  ctx.lineWidth = 3;
   ctx.stroke();
-  ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.font = "600 22px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "center";
-  ctx.fillText("🏏 COMMUNITY CRICKET", 160, 36);
-  ctx.font = "600 18px ui-monospace, monospace";
+  ctx.fillText("Community Cricket", 160, 36);
+  ctx.font = "500 16px ui-monospace, SFMono-Regular, Menlo, monospace";
   ctx.fillStyle = "#34d399";
-  ctx.fillText("HIT A SIX ACROSS RIVER!", 160, 62);
+  ctx.fillText("Riverbank Match Pitch", 160, 60);
 
   const tex = new THREE.CanvasTexture(canvas);
   const spriteMat = new THREE.SpriteMaterial({ map: tex, transparent: true });

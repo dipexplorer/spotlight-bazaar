@@ -30,6 +30,7 @@ import {
   Paintbrush,
   Coffee,
   Trophy,
+  Share2,
 } from "lucide-react";
 import { VirtualJoystick } from "./VirtualJoystick";
 import { ChaiStallModal } from "./ChaiStallModal";
@@ -73,6 +74,9 @@ export function ThreeMapCanvas({
 
   const speedBoostUntilRef = useRef(0);
   speedBoostUntilRef.current = speedBoostUntil;
+
+  const isNightRef = useRef(isNight);
+  isNightRef.current = isNight;
 
   const joystickVecRef = useRef({ forward: 0, strafe: 0 });
 
@@ -126,14 +130,15 @@ export function ThreeMapCanvas({
   // Smooth Camera FlyTo: Drone Street View vs National Orbit
   const flyToCityStreet = useCallback((city: City, walk: boolean = false) => {
     const [x, z] = toWorld(city.lon, city.lat);
+    const streetBaseY = 6.2;
     if (walk) {
       // First-person street level on sidewalk
-      targetCamPosRef.current = new THREE.Vector3(x - 11, 5.8, z + 12);
-      targetLookAtRef.current = new THREE.Vector3(x - 11, 5.8, z + 65);
+      targetCamPosRef.current = new THREE.Vector3(x - 11, streetBaseY + 1.8, z + 12);
+      targetLookAtRef.current = new THREE.Vector3(x - 11, streetBaseY + 1.8, z + 65);
     } else {
       // Atmospheric drone high-street view: elevated to cleanly look down the central boulevard
-      targetCamPosRef.current = new THREE.Vector3(x, 26, z - 24);
-      targetLookAtRef.current = new THREE.Vector3(x, 6, z + 38);
+      targetCamPosRef.current = new THREE.Vector3(x, streetBaseY + 22, z - 24);
+      targetLookAtRef.current = new THREE.Vector3(x, streetBaseY + 2, z + 38);
     }
   }, []);
 
@@ -158,12 +163,12 @@ export function ThreeMapCanvas({
 
         targetCamPosRef.current = new THREE.Vector3(
           worldPos.x + (isLeft ? 8 : -8),
-          6.5,
+          worldPos.y + 2.5,
           worldPos.z
         );
         targetLookAtRef.current = new THREE.Vector3(
           worldPos.x,
-          4.5,
+          worldPos.y + 1.2,
           worldPos.z
         );
       }
@@ -199,6 +204,7 @@ export function ThreeMapCanvas({
     setIsWalkMode(false);
 
     const [x, z] = toWorld(selectedCity.lon, selectedCity.lat);
+    const streetBaseY = 6.2;
 
     // Phase 1: High Orbit over India (0s)
     targetCamPosRef.current = new THREE.Vector3(x * 0.25, 950, 480);
@@ -206,14 +212,14 @@ export function ThreeMapCanvas({
 
     // Phase 2: Hypersonic dive into cloud layer above city (1.8s)
     setTimeout(() => {
-      targetCamPosRef.current = new THREE.Vector3(x, 65, z - 95);
-      targetLookAtRef.current = new THREE.Vector3(x, 12, z + 25);
+      targetCamPosRef.current = new THREE.Vector3(x, streetBaseY + 60, z - 95);
+      targetLookAtRef.current = new THREE.Vector3(x, streetBaseY + 8, z + 25);
     }, 1800);
 
     // Phase 3: High-speed street sweep past moving traffic (3.8s)
     setTimeout(() => {
-      targetCamPosRef.current = new THREE.Vector3(x, 26, z - 24);
-      targetLookAtRef.current = new THREE.Vector3(x, 6, z + 38);
+      targetCamPosRef.current = new THREE.Vector3(x, streetBaseY + 22, z - 24);
+      targetLookAtRef.current = new THREE.Vector3(x, streetBaseY + 2, z + 38);
     }, 3800);
 
     // Phase 4: Focus on first business plot and fire celebration confetti (6.5s)
@@ -232,6 +238,59 @@ export function ThreeMapCanvas({
       });
     }, 6500);
   }, [selectedCity, cityStorefronts, focusStorefront]);
+
+  // Update physical environmental lighting & streetlamps (Genuine Indian Day vs Night simulation)
+  const updateEnvironmentLighting = useCallback((night: boolean) => {
+    if (dirLightRef.current && ambientLightRef.current && sceneRef.current) {
+      if (night) {
+        // Night Mode: Atmospheric deep Indian midnight, warm streetlamps, cyan moonlight
+        dirLightRef.current.intensity = 0.35;
+        dirLightRef.current.color.setHex(0x38bdf8);
+        ambientLightRef.current.intensity = 0.25;
+        ambientLightRef.current.color.setHex(0x0a101f);
+        sceneRef.current.background = new THREE.Color(0x080d1a);
+        if (sceneRef.current.fog) {
+          (sceneRef.current.fog as THREE.FogExp2).color.setHex(0x050914);
+        }
+        if (oceanMeshRef.current) {
+          (oceanMeshRef.current.material as THREE.MeshStandardMaterial).color.setHex(0x040812);
+        }
+        if (hemiLightRef.current) {
+          hemiLightRef.current.intensity = 0.15;
+        }
+      } else {
+        // Day Mode: Warm Indian morning sun, radiant sky inspired by India Again
+        dirLightRef.current.intensity = 2.4;
+        dirLightRef.current.color.setHex(0xfff7ed);
+        ambientLightRef.current.intensity = 1.05;
+        ambientLightRef.current.color.setHex(0xdbeafe);
+        sceneRef.current.background = new THREE.Color(0x38bdf8);
+        if (sceneRef.current.fog) {
+          (sceneRef.current.fog as THREE.FogExp2).color.setHex(0xbae6fd);
+        }
+        if (oceanMeshRef.current) {
+          (oceanMeshRef.current.material as THREE.MeshStandardMaterial).color.setHex(0x0f4068);
+        }
+        if (hemiLightRef.current) {
+          hemiLightRef.current.intensity = 0.75;
+        }
+      }
+    }
+
+    // Toggle warm tungsten streetlamp illumination on high street
+    if (currentBazaarGroupRef.current) {
+      currentBazaarGroupRef.current.traverse((child) => {
+        if (child instanceof THREE.PointLight && child.name === "lamp_light") {
+          child.intensity = night ? 2.0 : 0;
+        }
+        if (child instanceof THREE.Mesh && child.name === "lamp_bulb") {
+          if (child.material instanceof THREE.MeshStandardMaterial) {
+            child.material.emissiveIntensity = night ? 2.2 : 0.15;
+          }
+        }
+      });
+    }
+  }, []);
 
   // Synchronize when selectedCity changes or scene becomes ready: Spawn / Remove 3D Bazaar Street
   useEffect(() => {
@@ -274,6 +333,7 @@ export function ThreeMapCanvas({
         hitBoxesRef.current = hitBoxes;
         plotsRef.current = plots;
 
+        updateEnvironmentLighting(isNightRef.current);
         flyToCityStreet(selectedCity, isWalkModeRef.current);
       } catch (err) {
         console.error("[Spotlight 3D] Failed to build Bazaar Street:", err);
@@ -281,7 +341,7 @@ export function ThreeMapCanvas({
     } else {
       resetCamera();
     }
-  }, [selectedCity, storefronts, isSceneReady, flyToCityStreet, resetCamera]);
+  }, [selectedCity, storefronts, isSceneReady, flyToCityStreet, resetCamera, updateEnvironmentLighting]);
 
   // Synchronize City Hotspot Pins on national map when storefronts or active status changes
   useEffect(() => {
@@ -304,44 +364,10 @@ export function ThreeMapCanvas({
   const toggleLighting = useCallback(() => {
     setIsNight((prev) => {
       const next = !prev;
-      if (dirLightRef.current && ambientLightRef.current && sceneRef.current) {
-        if (next) {
-          // Night Mode: Atmospheric midnight indigo, cyan moonlight
-          dirLightRef.current.intensity = 0.75;
-          dirLightRef.current.color.setHex(0x38bdf8);
-          ambientLightRef.current.intensity = 0.5;
-          ambientLightRef.current.color.setHex(0x0f172a);
-          sceneRef.current.background = new THREE.Color(0x060913);
-          if (sceneRef.current.fog) {
-            (sceneRef.current.fog as THREE.FogExp2).color.setHex(0x060913);
-          }
-          if (oceanMeshRef.current) {
-            (oceanMeshRef.current.material as THREE.MeshStandardMaterial).color.setHex(0x050c18);
-          }
-          if (hemiLightRef.current) {
-            hemiLightRef.current.intensity = 0.2;
-          }
-        } else {
-          // Day Mode: Warm Indian sun, radiant sky
-          dirLightRef.current.intensity = 2.0;
-          dirLightRef.current.color.setHex(0xfff7ed);
-          ambientLightRef.current.intensity = 0.95;
-          ambientLightRef.current.color.setHex(0xbae6fd);
-          sceneRef.current.background = new THREE.Color(0x0e2439);
-          if (sceneRef.current.fog) {
-            (sceneRef.current.fog as THREE.FogExp2).color.setHex(0x0e2439);
-          }
-          if (oceanMeshRef.current) {
-            (oceanMeshRef.current.material as THREE.MeshStandardMaterial).color.setHex(0x0f4068);
-          }
-          if (hemiLightRef.current) {
-            hemiLightRef.current.intensity = 0.65;
-          }
-        }
-      }
+      updateEnvironmentLighting(next);
       return next;
     });
-  }, []);
+  }, [updateEnvironmentLighting]);
 
   // Main Three.js Lifecycle
   useEffect(() => {
@@ -352,18 +378,18 @@ export function ThreeMapCanvas({
     let isDisposed = false;
     let animId: number;
 
-    // 1. Scene: Atmospheric deep blue horizon
+    // 1. Scene: Atmospheric sunny sky horizon (India Again aesthetic)
     const scene = new THREE.Scene();
     sceneRef.current = scene;
-    scene.background = new THREE.Color(0x0e2439);
-    scene.fog = new THREE.FogExp2(0x0e2439, 0.00035);
+    scene.background = new THREE.Color(0x38bdf8);
+    scene.fog = new THREE.FogExp2(0xbae6fd, 0.00035);
 
     // 2. Camera: Position at selected city if deep-linked, or national orbit
     const aspect = container.clientWidth / container.clientHeight;
     const camera = new THREE.PerspectiveCamera(40, aspect, 2, 4000);
     if (selectedCityRef.current) {
       const [initX, initZ] = toWorld(selectedCityRef.current.lon, selectedCityRef.current.lat);
-      camera.position.set(initX, 26, initZ - 24);
+      camera.position.set(initX, 28.2, initZ - 24);
     } else {
       camera.position.set(0, 1380, 780);
     }
@@ -719,7 +745,7 @@ export function ThreeMapCanvas({
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full min-h-[500px] overflow-hidden bg-[#0e2439]"
+      className="relative w-full h-full overflow-hidden bg-[#38bdf8]"
     >
       <canvas
         ref={canvasRef}
@@ -884,14 +910,20 @@ export function ThreeMapCanvas({
               type="button"
               onClick={toggleLighting}
               title={
-                isNight ? "Switch to Day Sunlight" : "Switch to Night Cyber Lights"
+                isNight ? "Switch to Sunny Day" : "Switch to Indian Night"
               }
-              className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors"
+              className="px-2.5 py-1.5 rounded-xl text-neutral-300 hover:text-white hover:bg-neutral-900 transition-colors flex items-center gap-1.5"
             >
               {isNight ? (
-                <Moon className="w-4 h-4 text-cyan-400" />
+                <>
+                  <Moon className="w-4 h-4 text-cyan-400" />
+                  <span className="hidden sm:inline text-[11px] font-medium text-cyan-300">Night</span>
+                </>
               ) : (
-                <Sun className="w-4 h-4 text-amber-400" />
+                <>
+                  <Sun className="w-4 h-4 text-amber-400" />
+                  <span className="hidden sm:inline text-[11px] font-medium text-amber-300">Day</span>
+                </>
               )}
             </button>
             <button
@@ -907,129 +939,149 @@ export function ThreeMapCanvas({
       </div>
 
       {/* BOTTOM CENTER: Town Card & Walk Mode Bar */}
-      <div className="absolute bottom-6 inset-x-4 z-20 flex flex-col items-center gap-2.5 pointer-events-none">
+      <div className="absolute bottom-3 sm:bottom-4 inset-x-4 z-20 flex flex-col items-center gap-2 pointer-events-none">
         {selectedCity ? (
-          /* City Street Level Card (Modeled after India Again town view) */
-          <div className="w-full max-w-lg p-4 rounded-3xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800/90 shadow-2xl flex flex-col gap-3 pointer-events-auto">
-            {/* Top Info Header */}
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
-                  <Store className="w-4 h-4" />
-                </div>
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-white tracking-tight">
-                      {selectedCity.name} · 24° Clear {isNight ? "night" : "day"}
-                    </span>
-                  </div>
-                  <span className="text-[11px] text-neutral-400">
-                    {cityStorefronts.length} verified shops · Autos & Pedestrians on street
+          isWalkMode ? (
+            /* First-Person Walk Mode Compact Floating HUD */
+            <div className="flex items-center gap-3 p-2 px-4 rounded-2xl bg-neutral-950/90 backdrop-blur-2xl border border-neutral-800 shadow-2xl pointer-events-auto">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="flex items-center gap-2 text-xs font-semibold text-white">
+                <span>Walking {selectedCity.name} High Street</span>
+                {Date.now() < speedBoostUntil && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-mono border border-amber-500/30">
+                    2x Pace
                   </span>
-                </div>
+                )}
               </div>
-
-              {/* Street Milestone Badge */}
-              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-neutral-900 border border-neutral-800 text-[11px] text-neutral-300">
-                <span>🏗️ Bazaar Growth: 85% &gt;</span>
-              </div>
-            </div>
-
-            {/* Primary Action Row: Giant Orange Button + Walk Toggle */}
-            <div className="flex items-center gap-2">
-              <a
-                href={`/register?city=${selectedCity.slug}`}
-                className="flex-1 py-3 px-5 rounded-2xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-950/40"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Claim Free Plot ₹0 / Open My Shop</span>
-              </a>
-
               <button
                 type="button"
                 onClick={toggleWalkMode}
-                className={`py-3 px-4 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
-                  isWalkMode
-                    ? "bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-950/40"
-                    : "bg-neutral-800 hover:bg-neutral-750 text-white border border-neutral-700"
-                }`}
+                className="ml-2 px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-white text-xs font-semibold transition-all border border-neutral-700"
               >
-                <Footprints className="w-4 h-4" />
-                <span>{isWalkMode ? "Drone View" : "🚶 Walk (WASD)"}</span>
+                Exit Walk
               </button>
             </div>
+          ) : (
+            /* City Street Level Card (Modeled after India Again town view) */
+            <div className="w-full max-w-lg p-3 sm:p-3.5 rounded-3xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800/90 shadow-2xl flex flex-col gap-2.5 pointer-events-auto">
+              {/* Top Info Header */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                    <Store className="w-4 h-4" />
+                  </div>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-white tracking-tight">
+                        {selectedCity.name} High Street
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-neutral-400">
+                      {cityStorefronts.length} verified businesses · Clear {isNight ? "night" : "day"}
+                    </span>
+                  </div>
+                </div>
 
-            {/* Secondary Actions Row */}
-            <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-neutral-800/80 text-[11px]">
-              <button
-                type="button"
-                onClick={playCinematicFlyIn}
-                disabled={isCinematicPlaying}
-                className="flex-1 py-1.5 px-2.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-rose-500/20 hover:from-amber-500/30 hover:to-rose-500/30 text-amber-300 hover:text-amber-200 flex items-center justify-center gap-1.5 transition-colors border border-amber-500/30 font-medium"
-              >
-                <Rocket className="w-3.5 h-3.5 text-amber-400" />
-                <span>{isCinematicPlaying ? "Flying..." : "Cinematic Tour"}</span>
-              </button>
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-neutral-900 border border-neutral-800 text-[11px] text-neutral-400 font-medium">
+                  <span>{isNight ? "Night Mode" : "Day Mode"}</span>
+                </div>
+              </div>
 
-              <button
-                type="button"
-                onClick={() => setShowShopsDrawer(!showShopsDrawer)}
-                className="flex-1 py-1.5 px-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-300 hover:text-white flex items-center justify-center gap-1.5 transition-colors border border-neutral-800/80"
-              >
-                <Eye className="w-3.5 h-3.5 text-neutral-400" />
-                <span>Directory ({cityStorefronts.length})</span>
-              </button>
+              {/* Primary Action Row */}
+              <div className="flex items-center gap-2">
+                <a
+                  href={`/register?city=${selectedCity.slug}`}
+                  className="flex-1 py-2.5 px-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-950/30"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Open a Shop · Claim Plot</span>
+                </a>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (typeof navigator !== "undefined" && navigator.clipboard) {
-                    navigator.clipboard.writeText(window.location.href);
-                    alert("3D Bazaar Street link copied!");
-                  }
-                }}
-                className="flex-1 py-1.5 px-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-300 hover:text-white flex items-center justify-center gap-1.5 transition-colors border border-neutral-800/80"
-              >
-                <span>🔗 Share</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={toggleWalkMode}
+                  className="py-2.5 px-3.5 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 transition-all bg-neutral-900 hover:bg-neutral-800 text-white border border-neutral-800"
+                >
+                  <Footprints className="w-4 h-4 text-neutral-400" />
+                  <span>Walk (WASD)</span>
+                </button>
+              </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  const targetShop = activeStorefront || cityStorefronts[0];
-                  if (targetShop) {
-                    setCustomizingStorefront(targetShop);
-                  }
-                }}
-                className="flex-1 py-1.5 px-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-amber-400 hover:text-amber-300 flex items-center justify-center gap-1.5 transition-colors border border-neutral-800/80 font-medium"
-              >
-                <Paintbrush className="w-3.5 h-3.5 text-amber-400" />
-                <span>Paint</span>
-              </button>
+              {/* Secondary Actions Row */}
+              <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-neutral-800/80 text-[11px]">
+                <button
+                  type="button"
+                  onClick={playCinematicFlyIn}
+                  disabled={isCinematicPlaying}
+                  className="flex-1 py-1.5 px-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-300 hover:text-white flex items-center justify-center gap-1.5 transition-colors border border-neutral-800 font-medium"
+                >
+                  <Rocket className="w-3.5 h-3.5 text-neutral-400" />
+                  <span>{isCinematicPlaying ? "Touring" : "Tour"}</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  bazaarAudio.playChaiPour();
-                  setSpeedBoostUntil(Date.now() + 60000);
-                  setShowChaiModal(true);
-                }}
-                className="py-1.5 px-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-amber-400 hover:text-amber-300 flex items-center justify-center transition-colors border border-neutral-800/80"
-                title="Sip Cutting Chai (2x Speed Boost)"
-              >
-                <Coffee className="w-3.5 h-3.5 text-amber-400" />
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setShowShopsDrawer(!showShopsDrawer)}
+                  className="flex-1 py-1.5 px-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-300 hover:text-white flex items-center justify-center gap-1.5 transition-colors border border-neutral-800 font-medium"
+                >
+                  <Eye className="w-3.5 h-3.5 text-neutral-400" />
+                  <span>Directory ({cityStorefronts.length})</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setShowCricketModal(true)}
-                className="py-1.5 px-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-emerald-400 hover:text-emerald-300 flex items-center justify-center transition-colors border border-neutral-800/80"
-                title="Play Community Cricket"
-              >
-                <Trophy className="w-3.5 h-3.5 text-emerald-400" />
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof navigator !== "undefined" && navigator.clipboard) {
+                      navigator.clipboard.writeText(window.location.href);
+                      alert("3D Bazaar Street link copied!");
+                    }
+                  }}
+                  className="flex-1 py-1.5 px-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-300 hover:text-white flex items-center justify-center gap-1.5 transition-colors border border-neutral-800 font-medium"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-neutral-400" />
+                  <span>Share</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const targetShop = activeStorefront || cityStorefronts[0];
+                    if (targetShop) {
+                      setCustomizingStorefront(targetShop);
+                    }
+                  }}
+                  className="flex-1 py-1.5 px-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-amber-400 hover:text-amber-300 flex items-center justify-center gap-1.5 transition-colors border border-neutral-800 font-medium"
+                >
+                  <Paintbrush className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Paint</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    bazaarAudio.playChaiPour();
+                    setSpeedBoostUntil(Date.now() + 60000);
+                    setShowChaiModal(true);
+                  }}
+                  className="py-1.5 px-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-amber-400 hover:text-amber-300 flex items-center justify-center gap-1.5 transition-colors border border-neutral-800 font-medium"
+                  title="Cutting Chai Stall (2x Speed Boost)"
+                >
+                  <Coffee className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Chai</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowCricketModal(true)}
+                  className="py-1.5 px-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-emerald-400 hover:text-emerald-300 flex items-center justify-center gap-1.5 transition-colors border border-neutral-800 font-medium"
+                  title="Community Cricket Pitch"
+                >
+                  <Trophy className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Cricket</span>
+                </button>
+              </div>
             </div>
-          </div>
+          )
         ) : (
           /* National Orbit Level Card (Modeled after India Again macro view) */
           <div className="p-3 px-5 rounded-3xl bg-neutral-950/90 backdrop-blur-2xl border border-neutral-800/90 shadow-2xl flex flex-col sm:flex-row items-center gap-3 pointer-events-auto">
@@ -1055,11 +1107,11 @@ export function ThreeMapCanvas({
         {/* Controls HUD Tooltip & Speed Boost Indicator */}
         <div className="flex items-center gap-2">
           <div className="px-3.5 py-1.5 rounded-xl bg-neutral-950/70 backdrop-blur-md border border-neutral-800/60 text-[10px] text-neutral-400 font-mono flex items-center gap-2 shadow-lg">
-            <span>W A S D move · Drag look 360° · Scroll zoom · Shift faster</span>
+            <span>WASD move · Drag look 360° · Scroll zoom · Shift faster</span>
           </div>
           {speedBoostUntil > Date.now() && (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500 text-neutral-950 text-[10px] font-bold shadow-lg shadow-amber-500/20 animate-pulse">
-              <span>⚡ 2x Chai Speed Active</span>
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500 text-neutral-950 text-[10px] font-bold shadow-lg shadow-amber-500/20">
+              <span>Chai speed boost active</span>
             </div>
           )}
         </div>

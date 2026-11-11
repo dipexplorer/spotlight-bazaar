@@ -25,40 +25,39 @@ export function ChaiStallModal({ isOpen, onClose, cityName }: ChaiStallModalProp
         </button>
 
         {/* Steaming Chai Icon */}
-        <div className="w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center mb-3 shadow-inner">
-          <Coffee className="w-7 h-7 text-amber-400 animate-bounce" />
+        <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mb-3 shadow-inner">
+          <Coffee className="w-6 h-6 text-amber-400" />
         </div>
 
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-[11px] font-semibold text-amber-400 mb-2">
-          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <span>{cityName} Cutting Chai Stall</span>
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[11px] font-medium text-amber-300 mb-2">
+          <span>{cityName} High Street Stall</span>
         </div>
 
-        <h3 className="text-xl font-bold text-white tracking-tight mb-1">
-          Chai Garam! Ek Cutting!
+        <h3 className="text-lg font-bold text-white tracking-tight mb-1">
+          Fresh Cutting Chai
         </h3>
 
-        <p className="text-xs text-neutral-300 leading-relaxed mb-4">
-          Freshly brewed strong Assam CTC tea with crushed cardamom, ginger, and malai. Served piping hot in authentic glass tumblers.
+        <p className="text-xs text-neutral-400 leading-relaxed mb-4 max-w-xs">
+          Brewed on the sidewalk burner with whole cardamom, crushed ginger, and strong Assam CTC leaf.
         </p>
 
         {/* Perk Card */}
-        <div className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 flex items-center gap-3 text-left mb-5">
-          <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center text-neutral-950 font-bold shrink-0">
-            <Zap className="w-5 h-5 fill-current" />
+        <div className="w-full p-3 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center gap-3 text-left mb-5">
+          <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold shrink-0">
+            <Zap className="w-4 h-4 fill-current" />
           </div>
           <div>
-            <div className="text-xs font-bold text-amber-300">2x Walking Speed Activated!</div>
-            <div className="text-[11px] text-neutral-400">Glide through the 3D high street twice as fast for the next 60 seconds.</div>
+            <div className="text-xs font-semibold text-white">2x Walking Speed</div>
+            <div className="text-[11px] text-neutral-400">Pace boost enabled for 60 seconds.</div>
           </div>
         </div>
 
         <button
           type="button"
           onClick={onClose}
-          className="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-950/40"
+          className="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-950/30"
         >
-          <span>Sip & Continue Strolling 🚶💨</span>
+          <span>Drink Chai & Continue</span>
         </button>
       </div>
     </div>

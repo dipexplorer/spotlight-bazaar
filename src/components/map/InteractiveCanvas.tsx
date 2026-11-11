@@ -136,7 +136,7 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
           onClick={() => setViewMode("3d")}
           className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
             viewMode === "3d"
-              ? "bg-rose-600 text-white shadow-sm"
+              ? "bg-amber-500 text-neutral-950 font-bold shadow-sm"
               : "text-neutral-400 hover:text-white hover:bg-neutral-900"
           }`}
           title="3D India Terrain & Bazaar Street"
@@ -149,7 +149,7 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
           onClick={() => setViewMode("2d")}
           className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
             viewMode === "2d"
-              ? "bg-rose-600 text-white shadow-sm"
+              ? "bg-amber-500 text-neutral-950 font-bold shadow-sm"
               : "text-neutral-400 hover:text-white hover:bg-neutral-900"
           }`}
           title="2D Map View"
@@ -162,14 +162,14 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
           onClick={() => setViewMode("grid")}
           className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
             viewMode === "grid"
-              ? "bg-rose-600 text-white shadow-sm"
+              ? "bg-amber-500 text-neutral-950 font-bold shadow-sm"
               : "text-neutral-400 hover:text-white hover:bg-neutral-900"
           }`}
           title="Grid View"
           aria-label="Switch to Grid View"
         >
           <Grid className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">Grid</span>
+          <span className="hidden md:inline">Directory</span>
         </button>
       </div>
 
@@ -180,9 +180,9 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
           <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-1.5 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800/90 shadow-2xl max-w-full pointer-events-auto no-scrollbar">
             <button
               onClick={() => handleCitySelect("all")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium shrink-0 transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all ${
                 selectedCity === "all"
-                  ? "bg-rose-600 text-white shadow-sm"
+                  ? "bg-amber-500 text-neutral-950 font-bold shadow-sm"
                   : "text-neutral-400 hover:text-white hover:bg-neutral-900"
               }`}
             >
@@ -199,9 +199,9 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
                 <button
                   key={c.id}
                   onClick={() => handleCitySelect(c.name)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium shrink-0 transition-all flex items-center gap-1.5 ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all flex items-center gap-1.5 ${
                     selectedCity.toLowerCase() === c.name.toLowerCase()
-                      ? "bg-rose-600 text-white shadow-sm"
+                      ? "bg-amber-500 text-neutral-950 font-bold shadow-sm"
                       : "text-neutral-400 hover:text-white hover:bg-neutral-900"
                   }`}
                 >
@@ -248,7 +248,7 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
       {/* VIEWPORT AREA */}
       {viewMode === "3d" ? (
         /* VIEW 1: 3D INTERACTIVE INDIA TERRAIN & BAZAAR STREET */
-        <div className="w-full h-full min-h-[88vh] relative">
+        <div className="w-full h-full relative overflow-hidden">
           <ThreeMapCanvas
             cities={INITIAL_CITIES}
             storefronts={storefronts}
@@ -260,7 +260,7 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
         </div>
       ) : viewMode === "2d" ? (
         /* VIEW 2: 2D LEAFLET STREET MAP */
-        <div className="w-full h-full min-h-[88vh] relative">
+        <div className="w-full h-full relative overflow-hidden">
           <MapContainer
             center={mapCenter}
             zoom={mapZoom}
@@ -269,8 +269,8 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
             style={{ background: "#0a0a0c" }}
           >
             <TileLayer
-              attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               maxZoom={19}
             />
             <MapCameraController center={mapCenter} zoom={mapZoom} />

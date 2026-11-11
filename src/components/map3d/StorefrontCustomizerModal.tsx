@@ -35,9 +35,9 @@ const NEON_COLORS = [
 ];
 
 const ROOFTOP_ITEMS = [
-  { id: "sintex", name: "Blue Sintex Tank", icon: "💧" },
-  { id: "solar", name: "Solar Panel Grid", icon: "☀️" },
-  { id: "terrace", name: "Rooftop Garden", icon: "🌿" },
+  { id: "sintex", name: "Sintex Tank", desc: "Black overhead storage" },
+  { id: "solar", name: "Solar Grid", desc: "Rooftop photovoltaic" },
+  { id: "terrace", name: "Terrace Garden", desc: "Potted botanical flora" },
 ];
 
 export function StorefrontCustomizerModal({
@@ -139,7 +139,7 @@ export function StorefrontCustomizerModal({
         {/* 3. Rooftop Accessory */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-neutral-300">
-            Rooftop Installation
+            Rooftop Feature
           </label>
           <div className="grid grid-cols-3 gap-2">
             {ROOFTOP_ITEMS.map((item) => (
@@ -147,16 +147,37 @@ export function StorefrontCustomizerModal({
                 key={item.id}
                 type="button"
                 onClick={() => setRooftop(item.id)}
-                className={`p-2.5 rounded-xl border text-center text-xs font-medium transition-all flex flex-col items-center gap-1 ${
+                className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-0.5 ${
                   rooftop === item.id
-                    ? "bg-rose-500/10 border-rose-500 text-white shadow-sm"
+                    ? "bg-amber-500/10 border-amber-500/40 text-white"
                     : "bg-neutral-900 border-neutral-800 text-neutral-400 hover:border-neutral-700"
                 }`}
               >
-                <span className="text-lg">{item.icon}</span>
-                <span className="text-[10px] leading-tight">{item.name}</span>
+                <span className="text-xs font-semibold text-white">{item.name}</span>
+                <span className="text-[10px] text-neutral-400 leading-tight">{item.desc}</span>
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Live Swatch Preview */}
+        <div className="w-full p-3 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div
+              className="w-9 h-9 rounded-xl border border-white/20 shadow-inner flex items-end justify-center pb-1"
+              style={{ backgroundColor: facadeColor }}
+            >
+              <div
+                className="w-5 h-1.5 rounded-full"
+                style={{ backgroundColor: neonColor, boxShadow: `0 0 8px ${neonColor}` }}
+              />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold text-white">Live Palette</span>
+              <span className="text-[10px] text-neutral-400 font-mono">
+                {FACADE_COLORS.find((c) => c.hex === facadeColor)?.name} + Neon Accent
+              </span>
+            </div>
           </div>
         </div>
 
@@ -164,10 +185,9 @@ export function StorefrontCustomizerModal({
         <button
           type="button"
           onClick={handleSave}
-          className="w-full py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 active:scale-[0.99] text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-rose-950/40 mt-2"
+          className="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-950/30 mt-2"
         >
-          <Sparkles className="w-4 h-4" />
-          <span>Apply Paint & Refresh 3D Plot</span>
+          <span>Save Changes</span>
         </button>
       </div>
     </div>

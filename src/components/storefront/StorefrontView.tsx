@@ -92,15 +92,23 @@ export function StorefrontView({ initialStorefront, slug }: StorefrontViewProps)
       {/* Top Navigation */}
       <header className="max-w-3xl mx-auto p-4 flex items-center justify-between border-b border-neutral-850">
         <Link
-          href="/"
+          href={`/?city=${storefront.city_name.toLowerCase()}&shop=${storefront.slug}`}
           className="inline-flex items-center gap-2 text-xs text-neutral-400 hover:text-white transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Map</span>
+          <span>Back to {storefront.city_name} 3D Street</span>
         </Link>
 
-        <div className="flex items-center gap-2 text-xs text-neutral-400 font-mono">
-          <span>STOREFRONT #{storefront.slug.slice(-4).toUpperCase()}</span>
+        <div className="flex items-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/mascot.jpg"
+            alt="Spotlight"
+            className="w-5 h-5 rounded-md object-cover border border-neutral-700"
+          />
+          <span className="text-xs text-neutral-400 font-mono">
+            {storefront.city_name} High Street
+          </span>
         </div>
       </header>
 
