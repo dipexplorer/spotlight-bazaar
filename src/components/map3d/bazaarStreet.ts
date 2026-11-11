@@ -28,9 +28,8 @@ export function buildBazaarStreet(
   const group = new THREE.Group();
   group.name = `bazaar_street_${city.slug}`;
 
-  // Center the town street at city's 3D coordinates (elevated above India relief land mesh to eliminate z-fighting)
-  const [originX, originZ] = toWorld(city.lon, city.lat);
-  group.position.set(originX, 6.2, originZ);
+  // Center the town street at (0, 0, 0) in its dedicated, immersive local world
+  group.position.set(0, 0, 0);
 
   // Filter storefronts active in this city
   const cityStorefronts = storefronts.filter(
@@ -338,13 +337,13 @@ function buildRegionalLandscape(
 ): THREE.Group {
   const env = new THREE.Group();
 
-  // 1. Terrain Ground
+  // 1. Vast Terrain Ground extending seamlessly towards the horizon
   let terrainColor = 0x2d6a3f; // river_hills: Assam tea green
   if (theme === "coastal_ocean") terrainColor = 0x1e293b; // Marine Drive slate
   else if (theme === "garden_tech") terrainColor = 0x2d6a4f; // Lalbagh park lawn
   else if (theme === "heritage_sandstone") terrainColor = 0x7c2d12; // Delhi red sandstone
 
-  const terrainGeo = new THREE.PlaneGeometry(550, streetLength + 350, 16, 16);
+  const terrainGeo = new THREE.PlaneGeometry(1600, 1600, 32, 32);
   const terrainMat = new THREE.MeshStandardMaterial({
     color: terrainColor,
     roughness: 0.9,
@@ -359,7 +358,7 @@ function buildRegionalLandscape(
   // 2. Periphery feature (River vs Ocean vs Botanical Park vs Mughal Canal)
   if (theme === "river_hills") {
     // Scenic River (Brahmaputra / Ganga)
-    const riverGeo = new THREE.PlaneGeometry(130, streetLength + 450);
+    const riverGeo = new THREE.PlaneGeometry(240, 1600);
     const riverMat = new THREE.MeshStandardMaterial({
       color: 0x1d609a,
       roughness: 0.15,
@@ -367,22 +366,22 @@ function buildRegionalLandscape(
     });
     const riverMesh = new THREE.Mesh(riverGeo, riverMat);
     riverMesh.rotation.x = -Math.PI / 2;
-    riverMesh.position.set(155, 0.02, streetLength / 2 - plotSpacing);
+    riverMesh.position.set(180, 0.02, streetLength / 2 - plotSpacing);
     env.add(riverMesh);
 
     // River Bank Sand Trim
-    const bankGeo = new THREE.PlaneGeometry(16, streetLength + 450);
+    const bankGeo = new THREE.PlaneGeometry(24, 1600);
     const bankMat = new THREE.MeshStandardMaterial({
       color: 0xd97706,
       roughness: 0.95,
     });
     const bankMesh = new THREE.Mesh(bankGeo, bankMat);
     bankMesh.rotation.x = -Math.PI / 2;
-    bankMesh.position.set(88, 0.03, streetLength / 2 - plotSpacing);
+    bankMesh.position.set(58, 0.03, streetLength / 2 - plotSpacing);
     env.add(bankMesh);
   } else if (theme === "coastal_ocean") {
     // Arabian Sea / Bay of Bengal Ocean
-    const oceanGeo = new THREE.PlaneGeometry(160, streetLength + 450);
+    const oceanGeo = new THREE.PlaneGeometry(280, 1600);
     const oceanMat = new THREE.MeshStandardMaterial({
       color: 0x093557, // Deep oceanic blue
       roughness: 0.1,

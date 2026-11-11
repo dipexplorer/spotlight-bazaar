@@ -34,38 +34,8 @@ export default async function Home() {
   const storefronts = await getInitialStorefronts();
 
   return (
-    <main className="flex h-[100dvh] max-h-[100dvh] flex-col bg-[#09090b] text-neutral-100 overflow-hidden">
-      {/* Top Navbar */}
-      <header className="w-full h-14 border-b border-neutral-800 bg-neutral-950/90 backdrop-blur-md px-4 flex items-center justify-between z-30 shrink-0">
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-xl overflow-hidden border border-amber-500/40 shadow-sm shadow-amber-950/30 shrink-0 bg-neutral-900 flex items-center justify-center">
-            <Image
-              src="/brand/mascot.jpg"
-              alt="Spotlight Bazaar Mascot"
-              width={32}
-              height={32}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-              priority
-            />
-          </div>
-          <span className="font-bold tracking-tight text-white text-sm sm:text-base">
-            Spotlight <span className="text-amber-500 font-semibold">Bazaar</span>
-          </span>
-        </Link>
-
-        <div className="flex items-center gap-3">
-          <Link
-            href="/register"
-            className="text-xs font-bold px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 transition-all flex items-center gap-1.5 shadow-md shadow-amber-950/30 active:scale-95"
-          >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Open a Shop</span>
-          </Link>
-        </div>
-      </header>
-
-      {/* Main Interactive Map Container */}
-      <div className="flex-1 w-full relative h-[calc(100dvh-3.5rem)] overflow-hidden">
+    <main className="flex h-[100dvh] max-h-[100dvh] w-full flex-col bg-[#070a13] text-neutral-100 overflow-hidden">
+      <div className="w-full h-full relative overflow-hidden">
         <MapWrapper storefronts={storefronts} />
       </div>
     </main>

@@ -130,52 +130,60 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
 
   return (
     <div className="relative w-full h-full flex flex-col bg-[#070a13]">
-      {/* View Switcher Floating Pill (Always Accessible Top-Right) */}
-      <div className="absolute top-4 right-20 z-30 flex items-center p-1 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800/90 shadow-2xl gap-0.5 pointer-events-auto">
-        <button
-          onClick={() => setViewMode("3d")}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
-            viewMode === "3d"
-              ? "bg-amber-500 text-neutral-950 font-bold shadow-sm"
-              : "text-neutral-400 hover:text-white hover:bg-neutral-900"
-          }`}
-          title="3D India Terrain & Bazaar Street"
-          aria-label="Switch to 3D View"
-        >
-          <Box className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">3D India</span>
-        </button>
-        <button
-          onClick={() => setViewMode("2d")}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
-            viewMode === "2d"
-              ? "bg-amber-500 text-neutral-950 font-bold shadow-sm"
-              : "text-neutral-400 hover:text-white hover:bg-neutral-900"
-          }`}
-          title="2D Map View"
-          aria-label="Switch to 2D Map View"
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">2D Map</span>
-        </button>
-        <button
-          onClick={() => setViewMode("grid")}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
-            viewMode === "grid"
-              ? "bg-amber-500 text-neutral-950 font-bold shadow-sm"
-              : "text-neutral-400 hover:text-white hover:bg-neutral-900"
-          }`}
-          title="Grid View"
-          aria-label="Switch to Grid View"
-        >
-          <Grid className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">Directory</span>
-        </button>
-      </div>
-
-      {/* 2D & Grid View Controls (Only visible in 2D or Grid mode to avoid 3D clutter) */}
+      {/* 2D & Grid View Header Controls (Only rendered in 2D or Grid mode to avoid 3D canvas overlap) */}
       {viewMode !== "3d" && (
-        <div className="absolute top-3 inset-x-3 sm:top-4 sm:inset-x-4 z-20 flex flex-col gap-2 max-w-4xl mx-auto pointer-events-none">
+        <header className="w-full py-2 px-4 bg-neutral-950/95 backdrop-blur-xl border-b border-neutral-800 z-30 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <img
+              src="/mascot.jpg"
+              alt="Spotlight Mascot"
+              className="w-7 h-7 rounded-lg object-cover border border-amber-500/40"
+            />
+            <span className="font-bold text-white text-sm">
+              Spotlight <span className="text-amber-500">Bazaar</span>
+            </span>
+          </div>
+
+          <div className="flex items-center p-1 rounded-2xl bg-neutral-900 border border-neutral-800 gap-0.5">
+            <button
+              onClick={() => setViewMode("3d")}
+              className="px-3 py-1 rounded-xl text-xs font-semibold text-neutral-400 hover:text-white flex items-center gap-1.5 transition-colors"
+            >
+              <Box className="w-3.5 h-3.5 text-amber-400" />
+              <span>3D Globe</span>
+            </button>
+            <button
+              onClick={() => setViewMode("2d")}
+              className={`px-3 py-1 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                viewMode === "2d" ? "bg-amber-500 text-neutral-950 font-bold" : "text-neutral-400 hover:text-white"
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>2D Map</span>
+            </button>
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`px-3 py-1 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                viewMode === "grid" ? "bg-amber-500 text-neutral-950 font-bold" : "text-neutral-400 hover:text-white"
+              }`}
+            >
+              <Grid className="w-3.5 h-3.5" />
+              <span>Directory</span>
+            </button>
+          </div>
+
+          <a
+            href="/register"
+            className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-amber-950/30"
+          >
+            <span>+ Open a Shop</span>
+          </a>
+        </header>
+      )}
+
+      {/* 2D & Grid View Filters Strip */}
+      {viewMode !== "3d" && (
+        <div className="p-3 z-20 flex flex-col gap-2 max-w-4xl mx-auto w-full pointer-events-none">
           {/* City Selector Strip */}
           <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-1.5 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800/90 shadow-2xl max-w-full pointer-events-auto no-scrollbar">
             <button
@@ -247,7 +255,7 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
 
       {/* VIEWPORT AREA */}
       {viewMode === "3d" ? (
-        /* VIEW 1: 3D INTERACTIVE INDIA TERRAIN & BAZAAR STREET */
+        /* VIEW 1: 3D INTERACTIVE INDIA GLOBE & BAZAAR STREET */
         <div className="w-full h-full relative overflow-hidden">
           <ThreeMapCanvas
             cities={INITIAL_CITIES}
@@ -256,6 +264,8 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
             activeStorefront={activeStorefront}
             onCitySelect={handleCitySelectFrom3D}
             onStorefrontSelect={handleMarkerClick}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
           />
         </div>
       ) : viewMode === "2d" ? (
