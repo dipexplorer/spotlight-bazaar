@@ -25,7 +25,17 @@ import {
   ChevronRight,
   Plus,
   Rocket,
+  Volume2,
+  VolumeX,
+  Paintbrush,
+  Coffee,
+  Trophy,
 } from "lucide-react";
+import { VirtualJoystick } from "./VirtualJoystick";
+import { ChaiStallModal } from "./ChaiStallModal";
+import { CricketGameModal } from "./CricketGameModal";
+import { StorefrontCustomizerModal } from "./StorefrontCustomizerModal";
+import { bazaarAudio } from "@/lib/audio/bazaarAudio";
 
 interface ThreeMapCanvasProps {
   cities: City[];
@@ -55,6 +65,16 @@ export function ThreeMapCanvas({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [showShopsDrawer, setShowShopsDrawer] = useState(false);
+  const [showChaiModal, setShowChaiModal] = useState(false);
+  const [showCricketModal, setShowCricketModal] = useState(false);
+  const [customizingStorefront, setCustomizingStorefront] = useState<BusinessStorefront | null>(null);
+  const [isSoundMuted, setIsSoundMuted] = useState(bazaarAudio.getMuted());
+  const [speedBoostUntil, setSpeedBoostUntil] = useState(0);
+
+  const speedBoostUntilRef = useRef(0);
+  speedBoostUntilRef.current = speedBoostUntil;
+
+  const joystickVecRef = useRef({ forward: 0, strafe: 0 });
 
   // Fresh callback references for event listeners
   const onCitySelectRef = useRef(onCitySelect);
@@ -482,7 +502,20 @@ export function ThreeMapCanvas({
             storefrontData?: BusinessStorefront;
           };
 
+          if (hit.name === "landmark_chai_stall") {
+            bazaarAudio.playChaiPour();
+            setSpeedBoostUntil(Date.now() + 60000);
+            setShowChaiModal(true);
+            return;
+          }
+
+          if (hit.name === "landmark_cricket_pitch") {
+            setShowCricketModal(true);
+            return;
+          }
+
           if (hit.storefrontData && onStorefrontSelectRef.current) {
+            bazaarAudio.playStorefrontChime();
             onStorefrontSelectRef.current(hit.storefrontData);
             return;
           }
@@ -562,14 +595,21 @@ export function ThreeMapCanvas({
       // WASD Walking Physics when in street view
       if (selectedCityRef.current) {
         const keys = keysDownRef.current;
-        const forward =
+        const joy = joystickVecRef.current;
+        let forward =
           keys["KeyW"] || keys["ArrowUp"] ? 1 : keys["KeyS"] || keys["ArrowDown"] ? -1 : 0;
-        const strafe =
+        let strafe =
           keys["KeyD"] || keys["ArrowRight"] ? 1 : keys["KeyA"] || keys["ArrowLeft"] ? -1 : 0;
+
+        if (joy.forward !== 0 || joy.strafe !== 0) {
+          forward += joy.forward;
+          strafe += joy.strafe;
+        }
 
         if (forward !== 0 || strafe !== 0) {
           const isShift = keys["ShiftLeft"] || keys["ShiftRight"];
-          const speed = (isShift ? 24 : 12) * delta;
+          const isBoosted = Date.now() < speedBoostUntilRef.current;
+          const speed = (isShift ? 24 : 12) * (isBoosted ? 2.0 : 1.0) * delta;
 
           // Camera forward vector projected on horizontal plane
           const dir = new THREE.Vector3();
@@ -827,6 +867,21 @@ export function ThreeMapCanvas({
           <div className="flex items-center gap-1 p-1 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800/90 shadow-2xl">
             <button
               type="button"
+              onClick={() => {
+                const muted = bazaarAudio.toggleMute();
+                setIsSoundMuted(muted);
+              }}
+              title={isSoundMuted ? "Unmute Indian Bazaar Ambience" : "Mute Sound"}
+              className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors"
+            >
+              {isSoundMuted ? (
+                <VolumeX className="w-4 h-4 text-neutral-500" />
+              ) : (
+                <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse" />
+              )}
+            </button>
+            <button
+              type="button"
               onClick={toggleLighting}
               title={
                 isNight ? "Switch to Day Sunlight" : "Switch to Night Cyber Lights"
@@ -938,12 +993,41 @@ export function ThreeMapCanvas({
                 <span>🔗 Share</span>
               </button>
 
-              <a
-                href={`/register?city=${selectedCity.slug}`}
+              <button
+                type="button"
+                onClick={() => {
+                  const targetShop = activeStorefront || cityStorefronts[0];
+                  if (targetShop) {
+                    setCustomizingStorefront(targetShop);
+                  }
+                }}
                 className="flex-1 py-1.5 px-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-amber-400 hover:text-amber-300 flex items-center justify-center gap-1.5 transition-colors border border-neutral-800/80 font-medium"
               >
-                <span>🎨 Paint</span>
-              </a>
+                <Paintbrush className="w-3.5 h-3.5 text-amber-400" />
+                <span>Paint</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  bazaarAudio.playChaiPour();
+                  setSpeedBoostUntil(Date.now() + 60000);
+                  setShowChaiModal(true);
+                }}
+                className="py-1.5 px-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-amber-400 hover:text-amber-300 flex items-center justify-center transition-colors border border-neutral-800/80"
+                title="Sip Cutting Chai (2x Speed Boost)"
+              >
+                <Coffee className="w-3.5 h-3.5 text-amber-400" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowCricketModal(true)}
+                className="py-1.5 px-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-emerald-400 hover:text-emerald-300 flex items-center justify-center transition-colors border border-neutral-800/80"
+                title="Play Community Cricket"
+              >
+                <Trophy className="w-3.5 h-3.5 text-emerald-400" />
+              </button>
             </div>
           </div>
         ) : (
@@ -968,46 +1052,71 @@ export function ThreeMapCanvas({
           </div>
         )}
 
-        {/* Controls HUD Tooltip */}
-        <div className="px-3.5 py-1.5 rounded-xl bg-neutral-950/70 backdrop-blur-md border border-neutral-800/60 text-[10px] text-neutral-400 font-mono flex items-center gap-2 shadow-lg">
-          <span>W A S D move · Drag look 360° · Scroll zoom · Shift faster</span>
+        {/* Controls HUD Tooltip & Speed Boost Indicator */}
+        <div className="flex items-center gap-2">
+          <div className="px-3.5 py-1.5 rounded-xl bg-neutral-950/70 backdrop-blur-md border border-neutral-800/60 text-[10px] text-neutral-400 font-mono flex items-center gap-2 shadow-lg">
+            <span>W A S D move · Drag look 360° · Scroll zoom · Shift faster</span>
+          </div>
+          {speedBoostUntil > Date.now() && (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500 text-neutral-950 text-[10px] font-bold shadow-lg shadow-amber-500/20 animate-pulse">
+              <span>⚡ 2x Chai Speed Active</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* MOBILE TOUCH D-PAD (Only visible when city is selected on touch screens) */}
-      {selectedCity && (
-        <div className="sm:hidden absolute bottom-28 left-4 z-20 flex flex-col items-center gap-1 pointer-events-auto bg-neutral-950/80 p-2 rounded-2xl border border-neutral-800/80 backdrop-blur-md">
-          <button
-            type="button"
-            onPointerDown={() => handleMobileWalk(1, 0)}
-            className="w-9 h-9 rounded-xl bg-neutral-900 border border-neutral-800 text-white flex items-center justify-center text-xs active:bg-rose-600"
-          >
-            ▲
-          </button>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onPointerDown={() => handleMobileWalk(0, -1)}
-              className="w-9 h-9 rounded-xl bg-neutral-900 border border-neutral-800 text-white flex items-center justify-center text-xs active:bg-rose-600"
-            >
-              ◀
-            </button>
-            <button
-              type="button"
-              onPointerDown={() => handleMobileWalk(-1, 0)}
-              className="w-9 h-9 rounded-xl bg-neutral-900 border border-neutral-800 text-white flex items-center justify-center text-xs active:bg-rose-600"
-            >
-              ▼
-            </button>
-            <button
-              type="button"
-              onPointerDown={() => handleMobileWalk(0, 1)}
-              className="w-9 h-9 rounded-xl bg-neutral-900 border border-neutral-800 text-white flex items-center justify-center text-xs active:bg-rose-600"
-            >
-              ▶
-            </button>
-          </div>
+      {/* MOBILE VIRTUAL JOYSTICK (Smooth analog thumbstick in Walk Mode) */}
+      {selectedCity && isWalkMode && (
+        <div className="absolute bottom-28 left-6 z-30 pointer-events-auto">
+          <VirtualJoystick
+            onMove={(vec) => {
+              joystickVecRef.current = vec;
+            }}
+          />
         </div>
+      )}
+
+      {/* CUTTING CHAI STALL MODAL */}
+      <ChaiStallModal
+        isOpen={showChaiModal}
+        onClose={() => setShowChaiModal(false)}
+        cityName={selectedCity?.name || "Bazaar"}
+      />
+
+      {/* COMMUNITY CRICKET MINI-GAME MODAL */}
+      <CricketGameModal
+        isOpen={showCricketModal}
+        onClose={() => setShowCricketModal(false)}
+        cityName={selectedCity?.name || "Bazaar"}
+      />
+
+      {/* STOREFRONT CUSTOMIZER MODAL */}
+      {customizingStorefront && (
+        <StorefrontCustomizerModal
+          storefront={customizingStorefront}
+          isOpen={Boolean(customizingStorefront)}
+          onClose={() => setCustomizingStorefront(null)}
+          onApply={(customs) => {
+            const plot = plotsRef.current.find(
+              (p) => p.storefrontData?.id === customizingStorefront.id
+            );
+            if (plot) {
+              plot.mesh.traverse((child) => {
+                if (child instanceof THREE.Mesh && child.material) {
+                  if (
+                    child.material instanceof THREE.MeshStandardMaterial &&
+                    child.material.color.getHex() !== 0x1f2937
+                  ) {
+                    child.material.color.set(customs.facadeColor);
+                  }
+                }
+              });
+            }
+            import("canvas-confetti").then((m) => {
+              m.default({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
+            });
+          }}
+        />
       )}
 
       {/* QUICK SHOPS POPUP DRAWER */}
