@@ -31,11 +31,16 @@ import {
   Coffee,
   Trophy,
   Share2,
+  MessageSquare,
+  Coins,
 } from "lucide-react";
 import { VirtualJoystick } from "./VirtualJoystick";
 import { ChaiStallModal } from "./ChaiStallModal";
 import { CricketGameModal } from "./CricketGameModal";
 import { StorefrontCustomizerModal } from "./StorefrontCustomizerModal";
+import { QuickTalkModal } from "./QuickTalkModal";
+import { StorefrontDialogueModal } from "./StorefrontDialogueModal";
+import { createPlayerAvatarSystem, PlayerAvatarSystem } from "./playerAvatarSystem";
 import { bazaarAudio } from "@/lib/audio/bazaarAudio";
 
 interface ThreeMapCanvasProps {
@@ -71,6 +76,17 @@ export function ThreeMapCanvas({
   const [customizingStorefront, setCustomizingStorefront] = useState<BusinessStorefront | null>(null);
   const [isSoundMuted, setIsSoundMuted] = useState(bazaarAudio.getMuted());
   const [speedBoostUntil, setSpeedBoostUntil] = useState(0);
+
+  // India Again Inspired Features: Quick Talk, Proximity Dialogue, Avatar & Gamification
+  const [showQuickTalkModal, setShowQuickTalkModal] = useState(false);
+  const [activeDialogueStorefront, setActiveDialogueStorefront] = useState<BusinessStorefront | null>(null);
+  const [nearbyStorefront, setNearbyStorefront] = useState<BusinessStorefront | null>(null);
+  const nearbyStorefrontRef = useRef<BusinessStorefront | null>(null);
+  nearbyStorefrontRef.current = nearbyStorefront;
+
+  const [userCoins, setUserCoins] = useState(10);
+  const [dayNumber, setDayNumber] = useState(7);
+  const playerAvatarRef = useRef<PlayerAvatarSystem | null>(null);
 
   const speedBoostUntilRef = useRef(0);
   speedBoostUntilRef.current = speedBoostUntil;
@@ -132,9 +148,9 @@ export function ThreeMapCanvas({
     const [x, z] = toWorld(city.lon, city.lat);
     const streetBaseY = 6.2;
     if (walk) {
-      // First-person street level on sidewalk
-      targetCamPosRef.current = new THREE.Vector3(x - 11, streetBaseY + 1.8, z + 12);
-      targetLookAtRef.current = new THREE.Vector3(x - 11, streetBaseY + 1.8, z + 65);
+      // Third-person over-the-shoulder follow position behind controllable avatar
+      targetCamPosRef.current = new THREE.Vector3(x - 8.2, streetBaseY + 3.2, z + 7.5);
+      targetLookAtRef.current = new THREE.Vector3(x - 8.2, streetBaseY + 1.8, z + 26);
     } else {
       // Atmospheric drone high-street view: elevated to cleanly look down the central boulevard
       targetCamPosRef.current = new THREE.Vector3(x, streetBaseY + 22, z - 24);
@@ -306,6 +322,11 @@ export function ThreeMapCanvas({
       pedestriansRef.current.dispose();
       pedestriansRef.current = null;
     }
+    if (playerAvatarRef.current) {
+      playerAvatarRef.current.dispose();
+      scene.remove(playerAvatarRef.current.group);
+      playerAvatarRef.current = null;
+    }
     if (currentBazaarGroupRef.current) {
       scene.remove(currentBazaarGroupRef.current);
       currentBazaarGroupRef.current = null;
@@ -332,6 +353,13 @@ export function ThreeMapCanvas({
         pedestriansRef.current = pedestrians;
         hitBoxesRef.current = hitBoxes;
         plotsRef.current = plots;
+
+        // Instantiate controllable 3D Player Avatar on high-street pedestrian promenade
+        const [cityX, cityZ] = toWorld(selectedCity.lon, selectedCity.lat);
+        const streetBaseY = 6.2;
+        const playerAvatar = createPlayerAvatarSystem(cityX - 8.2, streetBaseY, cityZ + 16, "@spotlight.bazaar");
+        scene.add(playerAvatar.group);
+        playerAvatarRef.current = playerAvatar;
 
         updateEnvironmentLighting(isNightRef.current);
         flyToCityStreet(selectedCity, isWalkModeRef.current);
@@ -416,9 +444,9 @@ export function ThreeMapCanvas({
     const controls = new OrbitControls(camera, canvas);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.maxPolarAngle = Math.PI / 2.15;
-    controls.minDistance = 6;
-    controls.maxDistance = 3000;
+    controls.maxPolarAngle = Math.PI / 2.05;
+    controls.minDistance = 2.5;
+    controls.maxDistance = 2800;
     if (selectedCityRef.current) {
       const [initX, initZ] = toWorld(selectedCityRef.current.lon, selectedCityRef.current.lat);
       controls.target.set(initX, 6, initZ + 38);
@@ -540,9 +568,12 @@ export function ThreeMapCanvas({
             return;
           }
 
-          if (hit.storefrontData && onStorefrontSelectRef.current) {
+          if (hit.storefrontData) {
             bazaarAudio.playStorefrontChime();
-            onStorefrontSelectRef.current(hit.storefrontData);
+            setActiveDialogueStorefront(hit.storefrontData);
+            if (onStorefrontSelectRef.current) {
+              onStorefrontSelectRef.current(hit.storefrontData);
+            }
             return;
           }
 
@@ -576,9 +607,13 @@ export function ThreeMapCanvas({
     canvas.addEventListener("pointerdown", handlePointerDown);
     canvas.addEventListener("pointerup", handlePointerUp);
 
-    // 9. Keyboard WASD Listener for Street Walk
+    // 9. Keyboard WASD Listener for Street Walk & Interaction
     const handleKeyDown = (e: KeyboardEvent) => {
       keysDownRef.current[e.code] = true;
+      if (e.code === "KeyE" && nearbyStorefrontRef.current) {
+        bazaarAudio.playStorefrontChime();
+        setActiveDialogueStorefront(nearbyStorefrontRef.current);
+      }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
       keysDownRef.current[e.code] = false;
@@ -618,7 +653,7 @@ export function ThreeMapCanvas({
         pedestriansRef.current.update(delta);
       }
 
-      // WASD Walking Physics when in street view
+      // WASD / Arrow Walking Physics & Controllable Character Avatar
       if (selectedCityRef.current) {
         const keys = keysDownRef.current;
         const joy = joystickVecRef.current;
@@ -632,28 +667,47 @@ export function ThreeMapCanvas({
           strafe += joy.strafe;
         }
 
-        if (forward !== 0 || strafe !== 0) {
-          const isShift = keys["ShiftLeft"] || keys["ShiftRight"];
-          const isBoosted = Date.now() < speedBoostUntilRef.current;
-          const speed = (isShift ? 24 : 12) * (isBoosted ? 2.0 : 1.0) * delta;
+        const isShift = Boolean(keys["ShiftLeft"] || keys["ShiftRight"]);
 
-          // Camera forward vector projected on horizontal plane
+        if (playerAvatarRef.current) {
+          // Camera forward direction projected onto horizontal plane
           const dir = new THREE.Vector3();
           camera.getWorldDirection(dir);
           dir.y = 0;
           dir.normalize();
+          const cameraYaw = Math.atan2(dir.x, dir.z);
 
-          // Camera right vector
-          const right = new THREE.Vector3();
-          right.crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
+          const prevPos = playerAvatarRef.current.getPosition().clone();
+          playerAvatarRef.current.update(delta, {
+            forward,
+            strafe,
+            sprint: isShift,
+            cameraYaw,
+          });
+          const newPos = playerAvatarRef.current.getPosition();
 
-          // Move camera & controls target together
-          const moveVec = new THREE.Vector3()
-            .addScaledVector(dir, forward * speed)
-            .addScaledVector(right, strafe * speed);
+          // In walk mode, follow avatar smoothly with third-person camera
+          if (isWalkModeRef.current) {
+            const moveDelta = newPos.clone().sub(prevPos);
+            camera.position.add(moveDelta);
+            controls.target.add(moveDelta);
+          }
 
-          camera.position.add(moveVec);
-          controls.target.add(moveVec);
+          // Proximity detection for storefront dialogue trigger
+          if (plotsRef.current.length > 0) {
+            let closest: BusinessStorefront | null = null;
+            let minDist = 7.5;
+            for (const plot of plotsRef.current) {
+              if (plot.storefrontData) {
+                const dist = newPos.distanceTo(plot.badgePosition);
+                if (dist < minDist) {
+                  minDist = dist;
+                  closest = plot.storefrontData;
+                }
+              }
+            }
+            setNearbyStorefront(closest);
+          }
         }
       }
 
@@ -766,19 +820,41 @@ export function ThreeMapCanvas({
         </div>
       )}
 
-      {/* TOP BAR: Back Button + Omnibox Search + Day/Night Toggle */}
+      {/* TOP BAR: Mascot + Back/Stop Button + Omnibox Search + Day/Night & Stats */}
       <div className="absolute top-4 inset-x-4 z-20 flex items-center justify-between gap-3 pointer-events-none">
-        {/* Left: Return to India Orbit button when city is open */}
+        {/* Left: Mascot Brand Pill & Dynamic Action */}
         <div className="flex items-center gap-2 pointer-events-auto">
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800 shadow-2xl">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/mascot.jpg"
+              alt="Spotlight Mascot"
+              className="w-6 h-6 rounded-lg object-cover border border-amber-500/40"
+            />
+            <span className="hidden sm:inline text-xs font-bold text-white tracking-wide">
+              Spotlight Bazaar
+            </span>
+          </div>
+
           {selectedCity ? (
-            <button
-              type="button"
-              onClick={() => onCitySelect(null)}
-              className="px-3.5 py-2 rounded-2xl bg-neutral-950/90 hover:bg-neutral-900 border border-neutral-800/90 text-white text-xs font-semibold flex items-center gap-2 shadow-2xl backdrop-blur-xl transition-all group focus-visible:ring-2 focus-visible:ring-rose-500"
-            >
-              <ArrowLeft className="w-3.5 h-3.5 text-neutral-400 group-hover:text-white transition-colors" />
-              <span>See all of India</span>
-            </button>
+            isWalkMode ? (
+              <button
+                type="button"
+                onClick={toggleWalkMode}
+                className="px-3 py-1.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-2xl transition-all"
+              >
+                <span>← Stop walking</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onCitySelect(null)}
+                className="px-3 py-1.5 rounded-2xl bg-neutral-950/90 hover:bg-neutral-900 border border-neutral-800/90 text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xl backdrop-blur-xl transition-all group"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-neutral-400 group-hover:text-white transition-colors" />
+                <span>See all of India</span>
+              </button>
+            )
           ) : (
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-neutral-950/80 backdrop-blur-xl border border-neutral-800 text-xs font-semibold text-neutral-300">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
@@ -857,6 +933,7 @@ export function ThreeMapCanvas({
                           onCitySelect(targetCity);
                         }
                         focusStorefront(s);
+                        setActiveDialogueStorefront(s);
                         setSearchOpen(false);
                         setSearchQuery("");
                       }}
@@ -888,8 +965,17 @@ export function ThreeMapCanvas({
           )}
         </div>
 
-        {/* Right: Day/Night Mode & Full India Reset */}
-        <div className="flex items-center gap-2 pointer-events-auto">
+        {/* Right: Gamified Stats (India Again style) + Day/Night Mode & Full India Reset */}
+        <div className="flex items-center gap-1.5 pointer-events-auto">
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800 shadow-2xl text-xs font-mono">
+            <span className="text-amber-400 font-bold">🪙 {userCoins}</span>
+            <span className="text-[10px] text-amber-500/80">(+10)</span>
+          </div>
+
+          <div className="hidden sm:flex items-center px-2.5 py-1.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold text-[11px] font-mono shadow-2xl">
+            DAY {dayNumber}
+          </div>
+
           <div className="flex items-center gap-1 p-1 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800/90 shadow-2xl">
             <button
               type="button"
@@ -940,23 +1026,84 @@ export function ThreeMapCanvas({
 
       {/* BOTTOM CENTER: Town Card & Walk Mode Bar */}
       <div className="absolute bottom-3 sm:bottom-4 inset-x-4 z-20 flex flex-col items-center gap-2 pointer-events-none">
+        {/* Nearby Storefront Proximity Dialogue Trigger (India Again talking business) */}
+        {nearbyStorefront && isWalkMode && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-200 flex items-center gap-3 px-4 py-2 rounded-2xl bg-neutral-950/95 backdrop-blur-xl border border-amber-500/50 shadow-2xl pointer-events-auto">
+            <span className="text-lg">🏪</span>
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-white">
+                {nearbyStorefront.name}
+              </span>
+              <span className="text-[10px] text-amber-400 font-mono">
+                Near storefront entrance · Press [E] or tap to talk
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveDialogueStorefront(nearbyStorefront);
+                bazaarAudio.playStorefrontChime();
+              }}
+              className="ml-2 px-3 py-1 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs transition-transform active:scale-95 shadow-md shadow-amber-500/20"
+            >
+              Talk to Owner
+            </button>
+          </div>
+        )}
+
         {selectedCity ? (
           isWalkMode ? (
-            /* First-Person Walk Mode Compact Floating HUD */
-            <div className="flex items-center gap-3 p-2 px-4 rounded-2xl bg-neutral-950/90 backdrop-blur-2xl border border-neutral-800 shadow-2xl pointer-events-auto">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <div className="flex items-center gap-2 text-xs font-semibold text-white">
-                <span>Walking {selectedCity.name} High Street</span>
+            /* First-Person / 3D Avatar Walk Mode Action Bar */
+            <div className="flex items-center gap-2 p-2 px-3 rounded-2xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800 shadow-2xl pointer-events-auto flex-wrap justify-center">
+              <div className="flex items-center gap-2 px-2 py-1 text-xs font-semibold text-white">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Walking {selectedCity.name}</span>
                 {Date.now() < speedBoostUntil && (
                   <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-mono border border-amber-500/30">
                     2x Pace
                   </span>
                 )}
               </div>
+
+              {/* Quick Talk Button */}
+              <button
+                type="button"
+                onClick={() => setShowQuickTalkModal(true)}
+                className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Quick Talk</span>
+              </button>
+
+              {/* Cricket Mini Game */}
+              <button
+                type="button"
+                onClick={() => setShowCricketModal(true)}
+                className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-emerald-400 border border-neutral-800 text-xs font-semibold flex items-center gap-1.5 transition-all"
+              >
+                <Trophy className="w-3.5 h-3.5" />
+                <span>Cricket</span>
+              </button>
+
+              {/* Chai Stall */}
+              <button
+                type="button"
+                onClick={() => {
+                  bazaarAudio.playChaiPour();
+                  setSpeedBoostUntil(Date.now() + 60000);
+                  setShowChaiModal(true);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-amber-400 border border-neutral-800 text-xs font-semibold flex items-center gap-1.5 transition-all"
+              >
+                <Coffee className="w-3.5 h-3.5" />
+                <span>Chai</span>
+              </button>
+
+              {/* Stop Walking */}
               <button
                 type="button"
                 onClick={toggleWalkMode}
-                className="ml-2 px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-white text-xs font-semibold transition-all border border-neutral-700"
+                className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-white text-xs font-semibold transition-all border border-neutral-700"
               >
                 Exit Walk
               </button>
@@ -1009,6 +1156,15 @@ export function ThreeMapCanvas({
 
               {/* Secondary Actions Row */}
               <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-neutral-800/80 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickTalkModal(true)}
+                  className="flex-1 py-1.5 px-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-amber-400 hover:text-amber-300 flex items-center justify-center gap-1.5 transition-colors border border-neutral-800 font-medium"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Talk</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={playCinematicFlyIn}
@@ -1193,6 +1349,7 @@ export function ThreeMapCanvas({
                 type="button"
                 onClick={() => {
                   focusStorefront(shop);
+                  setActiveDialogueStorefront(shop);
                   setShowShopsDrawer(false);
                 }}
                 className="p-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800/80 hover:border-rose-500/50 flex items-center justify-between text-left transition-all group"
@@ -1216,6 +1373,28 @@ export function ThreeMapCanvas({
           </div>
         </div>
       )}
+
+      {/* QUICK TALK SPEECH BUBBLE MODAL (India Again interactive dialogue) */}
+      <QuickTalkModal
+        isOpen={showQuickTalkModal}
+        onClose={() => setShowQuickTalkModal(false)}
+        onSelectPhrase={(phrase) => {
+          playerAvatarRef.current?.say(phrase);
+          bazaarAudio.playStorefrontChime();
+        }}
+      />
+
+      {/* STOREFRONT INTERACTIVE DIALOGUE MODAL (India Again visit business dialogue) */}
+      <StorefrontDialogueModal
+        storefront={activeDialogueStorefront}
+        isOpen={Boolean(activeDialogueStorefront)}
+        onClose={() => setActiveDialogueStorefront(null)}
+        onOpenFullProfile={(shop) => {
+          if (onStorefrontSelectRef.current) {
+            onStorefrontSelectRef.current(shop);
+          }
+        }}
+      />
     </div>
   );
 }
