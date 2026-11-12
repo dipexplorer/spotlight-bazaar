@@ -23,26 +23,15 @@ import {
   Search,
   ArrowLeft,
   Footprints,
-  Eye,
   ChevronRight,
   Plus,
-  Rocket,
   Volume2,
   VolumeX,
-  Paintbrush,
-  Coffee,
-  Trophy,
   Share2,
   MessageSquare,
-  Box,
-  Layers,
-  Grid,
   MapPin,
 } from "lucide-react";
 import { VirtualJoystick } from "./VirtualJoystick";
-import { ChaiStallModal } from "./ChaiStallModal";
-import { CricketGameModal } from "./CricketGameModal";
-import { StorefrontCustomizerModal } from "./StorefrontCustomizerModal";
 import { QuickTalkModal } from "./QuickTalkModal";
 import { StorefrontDialogueModal } from "./StorefrontDialogueModal";
 import { createPlayerAvatarSystem, PlayerAvatarSystem } from "./playerAvatarSystem";
@@ -55,8 +44,6 @@ interface ThreeMapCanvasProps {
   activeStorefront?: BusinessStorefront | null;
   onCitySelect: (city: City | null) => void;
   onStorefrontSelect?: (storefront: BusinessStorefront) => void;
-  viewMode?: "3d" | "2d" | "grid";
-  onViewModeChange?: (mode: "3d" | "2d" | "grid") => void;
 }
 
 export function ThreeMapCanvas({
@@ -66,8 +53,6 @@ export function ThreeMapCanvas({
   activeStorefront,
   onCitySelect,
   onStorefrontSelect,
-  viewMode = "3d",
-  onViewModeChange,
 }: ThreeMapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -76,15 +61,9 @@ export function ThreeMapCanvas({
   const [isNight, setIsNight] = useState(false);
   const [isSceneReady, setIsSceneReady] = useState(false);
   const [isWalkMode, setIsWalkMode] = useState(false);
-  const [isCinematicPlaying, setIsCinematicPlaying] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
-  const [showShopsDrawer, setShowShopsDrawer] = useState(false);
-  const [showChaiModal, setShowChaiModal] = useState(false);
-  const [showCricketModal, setShowCricketModal] = useState(false);
-  const [customizingStorefront, setCustomizingStorefront] = useState<BusinessStorefront | null>(null);
   const [isSoundMuted, setIsSoundMuted] = useState(bazaarAudio.getMuted());
-  const [speedBoostUntil, setSpeedBoostUntil] = useState(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = useCallback((msg: string) => {
@@ -223,36 +202,6 @@ export function ThreeMapCanvas({
     });
   }, [selectedCity, flyToCityStreet]);
 
-  // Town Cinematic Tour Sweep
-  const playCinematicFlyIn = useCallback(() => {
-    if (!selectedCity) return;
-    setIsCinematicPlaying(true);
-    setIsWalkMode(false);
-
-    // Phase 1: High Drone Overview
-    targetCamPosRef.current = new THREE.Vector3(0, 52, -45);
-    targetLookAtRef.current = new THREE.Vector3(0, 3, 30);
-
-    // Phase 2: Sweep Down Boulevard
-    setTimeout(() => {
-      targetCamPosRef.current = new THREE.Vector3(-4, 12, 10);
-      targetLookAtRef.current = new THREE.Vector3(0, 3, 38);
-    }, 2200);
-
-    // Phase 3: Settle at Street Level
-    setTimeout(() => {
-      targetCamPosRef.current = new THREE.Vector3(0, 24, -18);
-      targetLookAtRef.current = new THREE.Vector3(0, 3, 38);
-      setIsCinematicPlaying(false);
-      import("canvas-confetti").then((m) => {
-        m.default({
-          particleCount: 50,
-          spread: 60,
-          origin: { y: 0.7 },
-        });
-      });
-    }, 4500);
-  }, [selectedCity]);
 
   // Update physical environmental lighting & connected Sun/Moon
   const updateEnvironmentLighting = useCallback((night: boolean) => {
@@ -480,25 +429,13 @@ export function ThreeMapCanvas({
 
       raycaster.setFromCamera(pointer, camera);
 
-      // In Town View: Check Storefront hitboxes, Chai Stall, Cricket Pitch
+      // In Town View: Check Storefront hitboxes
       if (selectedCityRef.current && hitBoxesRef.current.length > 0) {
         const sfIntersects = raycaster.intersectObjects(hitBoxesRef.current, false);
         if (sfIntersects.length > 0) {
           const hit = sfIntersects[0].object as THREE.Mesh & {
             storefrontData?: BusinessStorefront;
           };
-
-          if (hit.name === "landmark_chai_stall") {
-            bazaarAudio.playChaiPour();
-            setSpeedBoostUntil(Date.now() + 60000);
-            setShowChaiModal(true);
-            return;
-          }
-
-          if (hit.name === "landmark_cricket_pitch") {
-            setShowCricketModal(true);
-            return;
-          }
 
           if (hit.storefrontData) {
             bazaarAudio.playStorefrontChime();
@@ -868,51 +805,8 @@ export function ThreeMapCanvas({
           )}
         </div>
 
-        {/* Right: View Modes + Sound + Day/Night + CTA */}
+        {/* Right: Sound + Day/Night + Recenter + CTA */}
         <div className="flex items-center gap-1.5 pointer-events-auto shrink-0">
-          {/* View Mode Switcher */}
-          <div className="hidden lg:flex items-center p-1 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800 shadow-2xl gap-0.5">
-            <button
-              type="button"
-              onClick={() => {
-                if (selectedCity) onCitySelect(null);
-                onViewModeChange?.("3d");
-              }}
-              className={`px-2.5 py-1 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all ${
-                viewMode === "3d" && !selectedCity
-                  ? "bg-amber-500 text-neutral-950 font-bold"
-                  : "text-neutral-300 hover:text-white"
-              }`}
-            >
-              <Box className="w-3.5 h-3.5 text-amber-400" />
-              <span>3D Map</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onViewModeChange?.("2d")}
-              className={`px-2.5 py-1 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all ${
-                viewMode === "2d"
-                  ? "bg-amber-500 text-neutral-950 font-bold"
-                  : "text-neutral-400 hover:text-white"
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>2D Map</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onViewModeChange?.("grid")}
-              className={`px-2.5 py-1 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all ${
-                viewMode === "grid"
-                  ? "bg-amber-500 text-neutral-950 font-bold"
-                  : "text-neutral-400 hover:text-white"
-              }`}
-            >
-              <Grid className="w-3.5 h-3.5" />
-              <span>Directory</span>
-            </button>
-          </div>
-
           {/* Sound, Lighting & Recenter Controls */}
           <div className="flex items-center gap-1 p-1 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800 shadow-2xl">
             <button
@@ -1008,62 +902,26 @@ export function ThreeMapCanvas({
         {selectedCity ? (
           isWalkMode ? (
             /* First-Person / Avatar Walk Mode Bar */
-            <div className="flex items-center gap-2 p-2 px-3 rounded-2xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800 shadow-2xl pointer-events-auto flex-wrap justify-center">
+            <div className="flex items-center gap-2 p-2 px-3.5 rounded-2xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800 shadow-2xl pointer-events-auto flex-wrap justify-center">
               <div className="flex items-center gap-2 px-2 py-1 text-xs font-semibold text-white">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
                 <span>Walking {selectedCity.name}</span>
-                {Date.now() < speedBoostUntil && (
-                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-mono border border-amber-500/30">
-                    2x Pace
-                  </span>
-                )}
               </div>
-
-              <button
-                type="button"
-                onClick={() => setShowQuickTalkModal(true)}
-                className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95"
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                <span>Quick Talk</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowCricketModal(true)}
-                className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-emerald-400 border border-neutral-800 text-xs font-semibold flex items-center gap-1.5 transition-all"
-              >
-                <Trophy className="w-3.5 h-3.5" />
-                <span>Cricket</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  bazaarAudio.playChaiPour();
-                  setSpeedBoostUntil(Date.now() + 60000);
-                  setShowChaiModal(true);
-                }}
-                className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-amber-400 border border-neutral-800 text-xs font-semibold flex items-center gap-1.5 transition-all"
-              >
-                <Coffee className="w-3.5 h-3.5" />
-                <span>Chai</span>
-              </button>
 
               <button
                 type="button"
                 onClick={() => {
                   const targetShop = nearbyStorefront || activeStorefront || cityStorefronts[0] || storefronts[0];
                   if (targetShop) {
-                    setCustomizingStorefront(targetShop);
+                    setActiveDialogueStorefront(targetShop);
                   } else {
-                    showToast("No storefront available to paint");
+                    setShowQuickTalkModal(true);
                   }
                 }}
-                className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-amber-400 border border-neutral-800 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95"
               >
-                <Paintbrush className="w-3.5 h-3.5" />
-                <span>Paint</span>
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Talk to Owner</span>
               </button>
 
               <button
@@ -1071,7 +929,7 @@ export function ThreeMapCanvas({
                 onClick={() => {
                   if (typeof navigator !== "undefined" && navigator.clipboard) {
                     navigator.clipboard.writeText(window.location.href);
-                    showToast("🔗 3D Bazaar Street link copied!");
+                    showToast("🔗 3D High Street link copied!");
                   }
                 }}
                 className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-300 border border-neutral-800 text-xs font-semibold flex items-center gap-1.5 transition-all"
@@ -1085,15 +943,15 @@ export function ThreeMapCanvas({
                 onClick={toggleWalkMode}
                 className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-white text-xs font-semibold transition-all border border-neutral-700"
               >
-                Exit Walk
+                Exit Walk (Esc)
               </button>
             </div>
           ) : (
-            /* City High Street Level Card */
-            <div className="w-full max-w-lg p-3 sm:p-3.5 rounded-3xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800/90 shadow-2xl flex flex-col gap-2.5 pointer-events-auto">
+            /* City High Street Level Card - Clean, purposeful, zero-slop */
+            <div className="w-full max-w-lg p-3.5 sm:p-4 rounded-3xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800/90 shadow-2xl flex flex-col gap-3 pointer-events-auto">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                  <div className="w-9 h-9 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
                     <Store className="w-4 h-4" />
                   </div>
                   <div className="flex flex-col">
@@ -1101,7 +959,7 @@ export function ThreeMapCanvas({
                       {selectedCity.name} High Street
                     </span>
                     <span className="text-[11px] text-neutral-400">
-                      {cityStorefronts.length} verified businesses · Clear {isNight ? "night" : "day"}
+                      {cityStorefronts.length} verified {cityStorefronts.length === 1 ? "business" : "businesses"} · Clear {isNight ? "night" : "day"}
                     </span>
                   </div>
                 </div>
@@ -1109,17 +967,17 @@ export function ThreeMapCanvas({
                 <button
                   type="button"
                   onClick={() => onCitySelect(null)}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-[11px] text-amber-400 font-semibold transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-[11px] text-amber-400 font-semibold transition-colors"
                 >
                   <MapPin className="w-3.5 h-3.5" />
                   <span>Return to India Map</span>
                 </button>
               </div>
 
-              {/* Primary Action Row */}
+              {/* Clean Action Row */}
               <div className="flex items-center gap-2">
                 <a
-                  href={`/register?city=${selectedCity.slug}`}
+                  href={selectedCity ? `/register?city=${selectedCity.slug}` : "/register"}
                   className="flex-1 py-2.5 px-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-950/30"
                 >
                   <Plus className="w-4 h-4" />
@@ -1129,19 +987,24 @@ export function ThreeMapCanvas({
                 <button
                   type="button"
                   onClick={toggleWalkMode}
-                  className="py-2.5 px-3.5 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 transition-all bg-neutral-900 hover:bg-neutral-800 text-white border border-neutral-800"
+                  className="py-2.5 px-3.5 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 transition-all bg-neutral-900 hover:bg-neutral-800 text-white border border-neutral-800 active:scale-[0.98]"
                 >
-                  <Footprints className="w-4 h-4 text-neutral-400" />
+                  <Footprints className="w-4 h-4 text-amber-400" />
                   <span>Walk (WASD)</span>
                 </button>
-              </div>
 
-              {/* Secondary Actions Row */}
-              <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-neutral-800/80 text-[11px]">
                 <button
                   type="button"
-                  onClick={() => setShowQuickTalkModal(true)}
-                  className="flex-1 py-1.5 px-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-amber-400 hover:text-amber-300 flex items-center justify-center gap-1.5 transition-colors border border-neutral-800 font-medium"
+                  onClick={() => {
+                    const shop = nearbyStorefront || activeStorefront || cityStorefronts[0];
+                    if (shop) {
+                      setActiveDialogueStorefront(shop);
+                    } else {
+                      setShowQuickTalkModal(true);
+                    }
+                  }}
+                  className="py-2.5 px-3.5 rounded-2xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-800"
+                  title="Talk to Verified Business"
                 >
                   <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
                   <span>Talk</span>
@@ -1149,45 +1012,16 @@ export function ThreeMapCanvas({
 
                 <button
                   type="button"
-                  onClick={playCinematicFlyIn}
-                  disabled={isCinematicPlaying}
-                  className="flex-1 py-1.5 px-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-300 hover:text-white flex items-center justify-center gap-1.5 transition-colors border border-neutral-800 font-medium"
-                >
-                  <Rocket className="w-3.5 h-3.5 text-neutral-400" />
-                  <span>{isCinematicPlaying ? "Touring" : "Tour"}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowShopsDrawer(!showShopsDrawer)}
-                  className="flex-1 py-1.5 px-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-300 hover:text-white flex items-center justify-center gap-1.5 transition-colors border border-neutral-800 font-medium"
-                >
-                  <Eye className="w-3.5 h-3.5 text-neutral-400" />
-                  <span>Directory ({cityStorefronts.length})</span>
-                </button>
-
-                <button
-                  type="button"
                   onClick={() => {
-                    bazaarAudio.playChaiPour();
-                    setSpeedBoostUntil(Date.now() + 60000);
-                    setShowChaiModal(true);
+                    if (typeof navigator !== "undefined" && navigator.clipboard) {
+                      navigator.clipboard.writeText(window.location.href);
+                      showToast("🔗 High Street link copied!");
+                    }
                   }}
-                  className="py-1.5 px-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-amber-400 hover:text-amber-300 flex items-center justify-center gap-1.5 transition-colors border border-neutral-800 font-medium"
-                  title="Cutting Chai Stall (2x Speed Boost)"
+                  className="p-2.5 rounded-2xl text-xs font-medium flex items-center justify-center transition-all bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-800"
+                  title="Share High Street Link"
                 >
-                  <Coffee className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Chai</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowCricketModal(true)}
-                  className="py-1.5 px-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-emerald-400 hover:text-emerald-300 flex items-center justify-center gap-1.5 transition-colors border border-neutral-800 font-medium"
-                  title="Community Cricket Pitch"
-                >
-                  <Trophy className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Cricket</span>
+                  <Share2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
@@ -1219,15 +1053,10 @@ export function ThreeMapCanvas({
           <div className="px-3.5 py-1.5 rounded-xl bg-neutral-950/70 backdrop-blur-md border border-neutral-800/60 text-[10px] text-neutral-400 font-mono flex items-center gap-2 shadow-lg">
             <span>
               {selectedCity
-                ? "WASD move · Drag look 360° · Scroll zoom (clamped) · [E] talk"
+                ? "WASD move · Drag look 360° · Scroll zoom · [E] talk"
                 : "Drag look 360° · Scroll zoom · Tap city hub"}
             </span>
           </div>
-          {speedBoostUntil > Date.now() && (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500 text-neutral-950 text-[10px] font-bold shadow-lg shadow-amber-500/20">
-              <span>Chai speed boost active</span>
-            </div>
-          )}
         </div>
       </div>
 
@@ -1239,96 +1068,6 @@ export function ThreeMapCanvas({
               joystickVecRef.current = vec;
             }}
           />
-        </div>
-      )}
-
-      {/* CUTTING CHAI STALL MODAL */}
-      <ChaiStallModal
-        isOpen={showChaiModal}
-        onClose={() => setShowChaiModal(false)}
-        cityName={selectedCity?.name || "Bazaar"}
-      />
-
-      {/* COMMUNITY CRICKET MINI-GAME MODAL */}
-      <CricketGameModal
-        isOpen={showCricketModal}
-        onClose={() => setShowCricketModal(false)}
-        cityName={selectedCity?.name || "Bazaar"}
-      />
-
-      {/* STOREFRONT CUSTOMIZER MODAL */}
-      {customizingStorefront && (
-        <StorefrontCustomizerModal
-          storefront={customizingStorefront}
-          isOpen={Boolean(customizingStorefront)}
-          onClose={() => setCustomizingStorefront(null)}
-          onApply={(customs) => {
-            const plot = plotsRef.current.find(
-              (p) => p.storefrontData?.id === customizingStorefront.id
-            );
-            if (plot) {
-              plot.mesh.traverse((child) => {
-                if (child instanceof THREE.Mesh && child.material) {
-                  if (
-                    child.material instanceof THREE.MeshStandardMaterial &&
-                    child.material.color.getHex() !== 0x1f2937
-                  ) {
-                    child.material.color.set(customs.facadeColor);
-                  }
-                }
-              });
-            }
-            import("canvas-confetti").then((m) => {
-              m.default({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
-            });
-          }}
-        />
-      )}
-
-      {/* QUICK SHOPS POPUP DRAWER */}
-      {selectedCity && showShopsDrawer && cityStorefronts.length > 0 && (
-        <div className="absolute top-20 right-4 z-20 w-80 max-h-[60vh] rounded-2xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800 p-3 shadow-2xl flex flex-col gap-2 overflow-y-auto no-scrollbar pointer-events-auto">
-          <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
-            <span className="text-xs font-semibold text-white">
-              Shops in {selectedCity.name}
-            </span>
-            <button
-              type="button"
-              onClick={() => setShowShopsDrawer(false)}
-              className="text-xs text-neutral-400 hover:text-white"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            {cityStorefronts.map((shop) => (
-              <button
-                key={shop.id}
-                type="button"
-                onClick={() => {
-                  focusStorefront(shop);
-                  setActiveDialogueStorefront(shop);
-                  setShowShopsDrawer(false);
-                }}
-                className="p-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800/80 hover:border-amber-500/50 flex items-center justify-between text-left transition-all group"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-xs font-medium text-white group-hover:text-amber-400 truncate">
-                    {shop.name}
-                  </span>
-                  {shop.is_verified && (
-                    <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0" />
-                  )}
-                </div>
-                <div className="flex items-center gap-1 shrink-0 ml-2">
-                  <span className="text-[11px] font-semibold text-amber-400 font-mono">
-                    {shop.starting_price || "Direct"}
-                  </span>
-                  <ChevronRight className="w-3 h-3 text-neutral-500 group-hover:text-white" />
-                </div>
-              </button>
-            ))}
-          </div>
         </div>
       )}
 

@@ -21,7 +21,16 @@ async function getInitialStorefronts(): Promise<BusinessStorefront[]> {
         .order("is_featured", { ascending: false });
 
       if (!error && data && data.length > 0) {
-        return (data as unknown) as BusinessStorefront[];
+        // Exclude legacy mock dev placeholders
+        const filtered = ((data as unknown) as BusinessStorefront[]).filter(
+          (b) =>
+            b.slug !== "studio-prism-guwahati" &&
+            b.slug !== "northeast-brew-lab-guwahati" &&
+            b.slug !== "brahmaputra-weaves-guwahati" &&
+            b.slug !== "bandra-brew-lab-mumbai"
+        );
+        const hasNerqiva = filtered.some((b) => b.slug === "nerqiva-studio");
+        return hasNerqiva ? filtered : [...getStorefronts(), ...filtered];
       }
     } catch {
       // Fallback to seeds

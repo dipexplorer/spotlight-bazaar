@@ -24,7 +24,16 @@ export async function GET() {
         .order("created_at", { ascending: false });
 
       if (!error && data && data.length > 0) {
-        storefrontsList = (data as unknown) as BusinessStorefront[];
+        // Exclude legacy mock dev placeholders
+        const filtered = ((data as unknown) as BusinessStorefront[]).filter(
+          (b) =>
+            b.slug !== "studio-prism-guwahati" &&
+            b.slug !== "northeast-brew-lab-guwahati" &&
+            b.slug !== "brahmaputra-weaves-guwahati" &&
+            b.slug !== "bandra-brew-lab-mumbai"
+        );
+        const hasNerqiva = filtered.some((b) => b.slug === "nerqiva-studio");
+        storefrontsList = hasNerqiva ? filtered : [...getStorefronts(), ...filtered];
       }
     } catch {
       // Fallback to seed data seamlessly if DB is unreachable

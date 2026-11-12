@@ -142,12 +142,13 @@ export function buildCartoonStorefrontPlot(
   let badgeY = 9;
 
   if (isEmptyPlot) {
-    // EMPTY PLOT: For new businesses to claim
-    parts.push(box(6.0, 1.8, 0.2, "#0f172a", 0, 0.8, 0)); // Billboard sign
-    parts.push(box(6.2, 2.0, 0.1, "#f59e0b", 0, 0.7, -0.05)); // Amber border
-    parts.push(cylinder(0.08, 0.08, 1.6, 6, "#64748b", -2.5, 0, 0)); // Support pole
-    parts.push(cylinder(0.08, 0.08, 1.6, 6, "#64748b", 2.5, 0, 0)); // Support pole
-    badgeY = 3.5;
+    // Clean landscaped open commercial plot - no tacky billboard clutter
+    parts.push(box(12, 0.1, 10, "#14532d", 0, 0.05, 0)); // Fresh mowed green lawn
+    parts.push(box(0.4, 0.6, 0.4, "#d1c7b7", -5, 0, -4)); // Survey boundary stone
+    parts.push(box(0.4, 0.6, 0.4, "#d1c7b7", 5, 0, -4));
+    parts.push(box(0.4, 0.6, 0.4, "#d1c7b7", -5, 0, 4));
+    parts.push(box(0.4, 0.6, 0.4, "#d1c7b7", 5, 0, 4));
+    badgeY = 2.0;
   } else if (isConstruction) {
     // UNDER CONSTRUCTION PLOT: Showing real-world growth
     // Unfinished red brick walls

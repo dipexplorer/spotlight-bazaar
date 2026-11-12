@@ -318,3 +318,4 @@ export function buildSkyEnvironment(scene: THREE.Scene): SkyEnvironmentResult {
     dispose,
   };
 }
+
