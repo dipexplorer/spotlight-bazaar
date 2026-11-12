@@ -214,7 +214,7 @@ export function buildSkyEnvironment(scene: THREE.Scene): SkyEnvironmentResult {
 
       if (isNight) {
         scene.background = new THREE.Color(0x060d1f);
-        scene.fog = new THREE.Fog(0x060d1f, 160, 950);
+        scene.fog = new THREE.Fog(0x060d1f, 75, 280);
         sunMesh.visible = false;
         moonMesh.visible = true;
         moonMesh.position.set(120, 240, -180);
@@ -226,7 +226,7 @@ export function buildSkyEnvironment(scene: THREE.Scene): SkyEnvironmentResult {
         hemiLight.intensity = 0.28;
       } else {
         scene.background = new THREE.Color(0x38bdf8);
-        scene.fog = new THREE.Fog(0xbae6fd, 180, 1100);
+        scene.fog = new THREE.Fog(0xbae6fd, 85, 320);
         sunMesh.visible = true;
         moonMesh.visible = false;
         sunMesh.position.set(160, 320, -280);
