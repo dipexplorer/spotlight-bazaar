@@ -1,6 +1,11 @@
 import * as THREE from "three";
 import { City, BusinessStorefront } from "@/types";
 import { toWorld } from "./projection";
+import { buildRibbonRivers } from "./ribbonRivers";
+import { buildTopographyMountains } from "./topographyMountains";
+import { buildTopographyBeaches } from "./topographyBeaches";
+import { buildProceduralFlora } from "./proceduralFlora";
+import { buildHighwayNetwork, HighwayNetworkResult } from "./highwayNetwork";
 
 export interface IndiaLandData {
   source?: string;
@@ -232,40 +237,32 @@ export function buildIndiaNationalMap(
     const points: THREE.Vector3[] = [];
     for (const [lon, lat] of ring) {
       const [x, z] = toWorld(lon, lat);
-      points.push(new THREE.Vector3(x, 4.9, z));
+      points.push(new THREE.Vector3(x, 6.02, z));
     }
     const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
     const line = new THREE.Line(lineGeo, outlineMaterial);
     group.add(line);
   }
 
-  // 3. Flowing 3D River Networks (Ganga, Brahmaputra, Yamuna, Godavari, Krishna, Narmada, Kaveri)
-  const riverMaterial = new THREE.LineBasicMaterial({
-    color: 0x38bdf8, // Vibrant River Blue
-    transparent: true,
-    opacity: 0.8,
-    linewidth: 2.2,
-  });
+  // 3. Volumetric Ribbon Rivers (Wide 3D strips visible from orbit to ground)
+  const ribbonRivers = buildRibbonRivers(riversData);
+  group.add(ribbonRivers);
 
-  for (const river of riversData) {
-    for (const line of river.lines) {
-      if (!line || line.length < 4) continue;
-      const points: THREE.Vector3[] = [];
-      for (let i = 0; i < line.length; i += 2) {
-        const lon = line[i];
-        const lat = line[i + 1];
-        if (lon !== undefined && lat !== undefined) {
-          const [x, z] = toWorld(lon, lat);
-          points.push(new THREE.Vector3(x, 4.95, z));
-        }
-      }
-      if (points.length >= 2) {
-        const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
-        const lineMesh = new THREE.Line(lineGeo, riverMaterial);
-        group.add(lineMesh);
-      }
-    }
-  }
+  // 4. Golden Beach Coastline & Shallow Turquoise Ocean Reef Shelf
+  const beaches = buildTopographyBeaches(landData);
+  group.add(beaches);
+
+  // 5. Procedural 3D Mountain Topography (Himalayas, Western Ghats, Vindhyas, Satpuras, Shillong)
+  const mountains = buildTopographyMountains();
+  group.add(mountains);
+
+  // 6. Instanced Flora and Tree Clusters across fertile river basins
+  const flora = buildProceduralFlora();
+  group.add(flora);
+
+  // 7. National Highway Spine & Commercial Energy Pulses
+  const highways: HighwayNetworkResult = buildHighwayNetwork(cities);
+  group.add(highways.group);
 
   // 4. Clean, Handcrafted City Hotspots (NO "Plot Available" text)
   const countsByCity = new Map<string, { count: number; firstShopName?: string }>();
@@ -292,7 +289,7 @@ export function buildIndiaNationalMap(
     const pinGroup = new THREE.Group() as NationalCityPinObject;
     pinGroup.cityData = city;
     pinGroup.storefrontCount = count;
-    pinGroup.position.set(x, 5.0, z);
+    pinGroup.position.set(x, 6.06, z);
 
     // Ground Pulse Wave Ring
     const discSize = isFeatured ? 58 : 36;
@@ -375,13 +372,20 @@ export function buildIndiaNationalMap(
         pin.pulseRing.material.opacity = Math.max(0.3, ringOpacity);
       }
     }
+
+    // Update animated highway commerce energy pulses
+    highways.update(delta);
   };
 
   const dispose = () => {
     topMaterial.dispose();
     sideMaterial.dispose();
     outlineMaterial.dispose();
-    riverMaterial.dispose();
+    highways.dispose();
+    ribbonRivers.geometry.dispose();
+    if (ribbonRivers.material instanceof THREE.Material) {
+      ribbonRivers.material.dispose();
+    }
   };
 
   return {
