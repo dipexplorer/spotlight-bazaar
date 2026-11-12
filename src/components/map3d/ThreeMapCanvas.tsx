@@ -4,7 +4,11 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { City, BusinessStorefront } from "@/types";
-import { buildIndiaGlobe, GlobeBuildResult } from "./globeIndia";
+import { buildSkyEnvironment, SkyEnvironmentResult } from "./skyEnvironment";
+import {
+  buildIndiaNationalMap,
+  NationalMapBuildResult,
+} from "./indiaNationalMap";
 import { buildBazaarStreet } from "./bazaarStreet";
 import { TrafficSystem } from "./trafficSystem";
 import { PedestrianSystem } from "./pedestrianSystem";
@@ -33,7 +37,7 @@ import {
   Box,
   Layers,
   Grid,
-  Globe,
+  MapPin,
 } from "lucide-react";
 import { VirtualJoystick } from "./VirtualJoystick";
 import { ChaiStallModal } from "./ChaiStallModal";
@@ -97,8 +101,6 @@ export function ThreeMapCanvas({
   const nearbyStorefrontRef = useRef<BusinessStorefront | null>(null);
   nearbyStorefrontRef.current = nearbyStorefront;
 
-  const [userCoins] = useState(10);
-  const [dayNumber] = useState(7);
   const playerAvatarRef = useRef<PlayerAvatarSystem | null>(null);
 
   const isNightRef = useRef(isNight);
@@ -121,15 +123,13 @@ export function ThreeMapCanvas({
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
-  const globeResultRef = useRef<GlobeBuildResult | null>(null);
+  const skyEnvRef = useRef<SkyEnvironmentResult | null>(null);
+  const nationalMapRef = useRef<NationalMapBuildResult | null>(null);
   const currentBazaarGroupRef = useRef<THREE.Group | null>(null);
   const trafficRef = useRef<TrafficSystem | null>(null);
   const pedestriansRef = useRef<PedestrianSystem | null>(null);
   const hitBoxesRef = useRef<THREE.Mesh[]>([]);
   const plotsRef = useRef<StorefrontMeshResult[]>([]);
-  const dirLightRef = useRef<THREE.DirectionalLight | null>(null);
-  const ambientLightRef = useRef<THREE.AmbientLight | null>(null);
-  const hemiLightRef = useRef<THREE.HemisphereLight | null>(null);
 
   // Animation & Camera Tween State
   const targetCamPosRef = useRef<THREE.Vector3 | null>(null);
@@ -151,14 +151,13 @@ export function ThreeMapCanvas({
       )
     : [];
 
-  // Smooth Camera: Town High-Street View vs 3D Globe India Center
+  // Smooth Camera: Town High-Street View vs National 3D India Isometric Perspective
   const flyToCityStreet = useCallback((city: City, walk: boolean = false) => {
     if (walk) {
-      // Behind controllable avatar promenade
       targetCamPosRef.current = new THREE.Vector3(-8.2, 3.2, 7.5);
       targetLookAtRef.current = new THREE.Vector3(-8.2, 1.8, 26);
     } else {
-      // Drone high-street overview: angled down central boulevard
+      // Atmospheric drone view angled down the central boulevard
       targetCamPosRef.current = new THREE.Vector3(0, 24, -18);
       targetLookAtRef.current = new THREE.Vector3(0, 3, 38);
     }
@@ -168,9 +167,9 @@ export function ThreeMapCanvas({
     if (selectedCityRef.current) {
       flyToCityStreet(selectedCityRef.current, isWalkModeRef.current);
     } else {
-      // Re-center India on the 3D Earth Globe
-      targetCamPosRef.current = new THREE.Vector3(0, 42, 245);
-      targetLookAtRef.current = new THREE.Vector3(0, 0, 0);
+      // Perfectly frame 3D India with visible Sun/Moon in the sky above
+      targetCamPosRef.current = new THREE.Vector3(0, 840, 720);
+      targetLookAtRef.current = new THREE.Vector3(0, 0, 30);
       setIsWalkMode(false);
     }
   }, [flyToCityStreet]);
@@ -255,63 +254,33 @@ export function ThreeMapCanvas({
     }, 4500);
   }, [selectedCity]);
 
-  // Update physical environmental lighting
+  // Update physical environmental lighting & connected Sun/Moon
   const updateEnvironmentLighting = useCallback((night: boolean) => {
-    if (!dirLightRef.current || !ambientLightRef.current || !sceneRef.current) return;
+    if (skyEnvRef.current) {
+      skyEnvRef.current.updateLighting(night, Boolean(selectedCityRef.current));
+    }
 
-    if (selectedCityRef.current) {
-      // In Town View: Day vs Night high-street lighting
-      if (night) {
-        dirLightRef.current.intensity = 0.45;
-        dirLightRef.current.color.setHex(0x38bdf8);
-        ambientLightRef.current.intensity = 0.35;
-        ambientLightRef.current.color.setHex(0x0a101f);
-        sceneRef.current.background = new THREE.Color(0x080d1a);
-        sceneRef.current.fog = new THREE.Fog(0x050914, 45, 220);
-        if (hemiLightRef.current) hemiLightRef.current.intensity = 0.2;
-      } else {
-        dirLightRef.current.intensity = 2.4;
-        dirLightRef.current.color.setHex(0xfff7ed);
-        ambientLightRef.current.intensity = 1.1;
-        ambientLightRef.current.color.setHex(0xdbeafe);
-        sceneRef.current.background = new THREE.Color(0x38bdf8);
-        sceneRef.current.fog = new THREE.Fog(0xbae6fd, 55, 260);
-        if (hemiLightRef.current) hemiLightRef.current.intensity = 0.75;
-      }
-
-      // Streetlamp illumination
-      if (currentBazaarGroupRef.current) {
-        currentBazaarGroupRef.current.traverse((child) => {
-          if (child instanceof THREE.PointLight && child.name === "lamp_light") {
-            child.intensity = night ? 2.0 : 0;
+    // Streetlamp illumination in Town view
+    if (currentBazaarGroupRef.current) {
+      currentBazaarGroupRef.current.traverse((child) => {
+        if (child instanceof THREE.PointLight && child.name === "lamp_light") {
+          child.intensity = night ? 2.0 : 0;
+        }
+        if (child instanceof THREE.Mesh && child.name === "lamp_bulb") {
+          if (child.material instanceof THREE.MeshStandardMaterial) {
+            child.material.emissiveIntensity = night ? 2.2 : 0.15;
           }
-          if (child instanceof THREE.Mesh && child.name === "lamp_bulb") {
-            if (child.material instanceof THREE.MeshStandardMaterial) {
-              child.material.emissiveIntensity = night ? 2.2 : 0.15;
-            }
-          }
-        });
-      }
-    } else {
-      // In 3D Earth Globe View: Deep cosmos background, no ground fog
-      sceneRef.current.fog = null;
-      sceneRef.current.background = night
-        ? new THREE.Color(0x02040a)
-        : new THREE.Color(0x030712);
-      dirLightRef.current.intensity = night ? 1.8 : 2.6;
-      dirLightRef.current.color.setHex(0xffffff);
-      ambientLightRef.current.intensity = night ? 0.35 : 0.65;
-      ambientLightRef.current.color.setHex(0x38bdf8);
-      if (hemiLightRef.current) hemiLightRef.current.intensity = 0.4;
+        }
+      });
     }
   }, []);
 
-  // Synchronize when selectedCity changes: Switch Globe vs Town Street
+  // Synchronize when selectedCity changes: Switch National 3D Map vs Town Street
   useEffect(() => {
     const scene = sceneRef.current;
     if (!scene || !isSceneReady) return;
 
-    // Clean up town street & avatar simulations
+    // Clean up existing town street & simulations
     if (trafficRef.current) {
       trafficRef.current.dispose();
       trafficRef.current = null;
@@ -333,9 +302,9 @@ export function ThreeMapCanvas({
     }
 
     if (selectedCity) {
-      // Hide 3D Globe in Town view
-      if (globeResultRef.current) {
-        globeResultRef.current.group.visible = false;
+      // Hide National Map in Town view
+      if (nationalMapRef.current) {
+        nationalMapRef.current.group.visible = false;
       }
 
       try {
@@ -372,16 +341,16 @@ export function ThreeMapCanvas({
         console.error("[Spotlight 3D] Failed to build Town Street:", err);
       }
     } else {
-      // 3D Earth Globe Mode: Restore full spherical orbit limits
-      if (globeResultRef.current) {
-        globeResultRef.current.group.visible = true;
+      // 3D India National Map Mode: Restore national orbit limits
+      if (nationalMapRef.current) {
+        nationalMapRef.current.group.visible = true;
       }
 
       if (controlsRef.current) {
-        controlsRef.current.minDistance = 140;
-        controlsRef.current.maxDistance = 380;
-        controlsRef.current.maxPolarAngle = Math.PI;
-        controlsRef.current.target.set(0, 0, 0);
+        controlsRef.current.minDistance = 220;
+        controlsRef.current.maxDistance = 2400;
+        controlsRef.current.maxPolarAngle = Math.PI / 2.08;
+        controlsRef.current.target.set(0, 0, 30);
       }
 
       updateEnvironmentLighting(isNightRef.current);
@@ -407,18 +376,20 @@ export function ThreeMapCanvas({
     let isDisposed = false;
     let animId: number;
 
-    // 1. Scene: Deep cosmic navy by default for 3D Globe
+    // 1. Scene: Radiant sunny day sky by default
     const scene = new THREE.Scene();
     sceneRef.current = scene;
-    scene.background = new THREE.Color(0x030712);
+    scene.background = new THREE.Color(0x38bdf8);
+    scene.fog = new THREE.Fog(0xbae6fd, 1600, 3800);
 
-    // 2. Camera: Positioned to face India on Globe or in Town
+    // 2. Camera: Positioned to frame India prominently at initial load
     const aspect = container.clientWidth / container.clientHeight;
-    const camera = new THREE.PerspectiveCamera(40, aspect, 1, 2500);
+    const camera = new THREE.PerspectiveCamera(40, aspect, 2, 6000);
     if (selectedCityRef.current) {
       camera.position.set(0, 24, -18);
     } else {
-      camera.position.set(0, 42, 245);
+      // Heroic isometric 3D framing of India with sky and Sun above
+      camera.position.set(0, 840, 720);
     }
     cameraRef.current = camera;
 
@@ -444,10 +415,10 @@ export function ThreeMapCanvas({
       controls.maxPolarAngle = Math.PI / 2.05;
       controls.target.set(0, 3, 35);
     } else {
-      controls.minDistance = 140;
-      controls.maxDistance = 380;
-      controls.maxPolarAngle = Math.PI;
-      controls.target.set(0, 0, 0);
+      controls.minDistance = 220;
+      controls.maxDistance = 2400;
+      controls.maxPolarAngle = Math.PI / 2.08;
+      controls.target.set(0, 0, 30);
     }
     controlsRef.current = controls;
 
@@ -456,30 +427,11 @@ export function ThreeMapCanvas({
       (window as any).__camera = camera;
     }
 
-    // 5. Lights
-    const ambientLight = new THREE.AmbientLight(0x38bdf8, 0.65);
-    scene.add(ambientLight);
-    ambientLightRef.current = ambientLight;
+    // 5. Build Sky & Ocean Environment with 3D Sun and Moon
+    const skyEnv = buildSkyEnvironment(scene);
+    skyEnvRef.current = skyEnv;
 
-    const hemiLight = new THREE.HemisphereLight(0xbae6fd, 0x1e293b, 0.5);
-    scene.add(hemiLight);
-    hemiLightRef.current = hemiLight;
-
-    const dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
-    dirLight.position.set(160, 180, 220);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
-    dirLight.shadow.camera.near = 10;
-    dirLight.shadow.camera.far = 800;
-    dirLight.shadow.camera.left = -200;
-    dirLight.shadow.camera.right = 200;
-    dirLight.shadow.camera.top = 200;
-    dirLight.shadow.camera.bottom = -200;
-    scene.add(dirLight);
-    dirLightRef.current = dirLight;
-
-    // 6. Build 3D Earth Globe with India & Spherical City Beacons
+    // 6. Build 3D India National Relief Map
     Promise.all([
       fetch("/data/india-land.json").then((r) => r.json()),
       fetch("/data/rivers.json").then((r) => r.json()),
@@ -487,25 +439,27 @@ export function ThreeMapCanvas({
       .then(([landData, riversData]) => {
         if (isDisposed) return;
 
-        const globeResult = buildIndiaGlobe(
+        const nationalMap = buildIndiaNationalMap(
           landData,
           riversData,
           citiesRef.current,
           storefrontsRef.current
         );
-        globeResult.group.visible = !selectedCityRef.current;
-        scene.add(globeResult.group);
-        globeResultRef.current = globeResult;
+        nationalMap.group.visible = !selectedCityRef.current;
+        scene.add(nationalMap.group);
+        nationalMapRef.current = nationalMap;
+
+        skyEnv.updateLighting(isNightRef.current, Boolean(selectedCityRef.current));
 
         setIsSceneReady(true);
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Failed to build 3D India Globe:", err);
+        console.error("Failed to build 3D India National Map:", err);
         setLoading(false);
       });
 
-    // 7. Raycasting: Globe City Pins & Town Storefronts
+    // 7. Raycasting: City Hotspots & Town Storefronts
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
     let downX = 0;
@@ -562,10 +516,12 @@ export function ThreeMapCanvas({
         }
       }
 
-      // In Globe View: Check Spherical City Pins
-      if (!selectedCityRef.current && globeResultRef.current) {
-        const pinHitBoxes = globeResultRef.current.cityPins.map((p) => p.hitBox);
-        const pinIntersects = raycaster.intersectObjects(pinHitBoxes, false);
+      // In National Map View: Check City Beacon Hitboxes
+      if (!selectedCityRef.current && nationalMapRef.current) {
+        const pinIntersects = raycaster.intersectObjects(
+          nationalMapRef.current.hitBoxes,
+          false
+        );
         if (pinIntersects.length > 0) {
           const hit = pinIntersects[0].object as THREE.Mesh & { cityData?: City };
           if (hit.cityData && onCitySelectRef.current) {
@@ -616,9 +572,14 @@ export function ThreeMapCanvas({
       const delta = Math.min((now - lastTime) / 1000, 0.1);
       lastTime = now;
 
-      // Update Globe animations (pulsing city beacon rings, billboard rotation)
-      if (!selectedCityRef.current && globeResultRef.current) {
-        globeResultRef.current.update(delta, isNightRef.current, camera);
+      // Update Sky & Sun/Moon animation
+      if (skyEnvRef.current) {
+        skyEnvRef.current.update(delta);
+      }
+
+      // Update National Map beacons animation
+      if (!selectedCityRef.current && nationalMapRef.current) {
+        nationalMapRef.current.update(delta, isNightRef.current, camera);
       }
 
       // Update Town Traffic & Pedestrians
@@ -689,7 +650,7 @@ export function ThreeMapCanvas({
         camera.position.lerp(targetCamPosRef.current, factor);
         controls.target.lerp(targetLookAtRef.current, factor);
 
-        if (camera.position.distanceTo(targetCamPosRef.current) < 1.2) {
+        if (camera.position.distanceTo(targetCamPosRef.current) < 1.5) {
           targetCamPosRef.current = null;
           targetLookAtRef.current = null;
         }
@@ -710,8 +671,11 @@ export function ThreeMapCanvas({
       window.removeEventListener("keyup", handleKeyUp);
       canvas.removeEventListener("pointerdown", handlePointerDown);
       canvas.removeEventListener("pointerup", handlePointerUp);
-      if (globeResultRef.current) {
-        globeResultRef.current.dispose();
+      if (skyEnvRef.current) {
+        skyEnvRef.current.dispose();
+      }
+      if (nationalMapRef.current) {
+        nationalMapRef.current.dispose();
       }
       controls.dispose();
       renderer.dispose();
@@ -739,30 +703,30 @@ export function ThreeMapCanvas({
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full overflow-hidden bg-[#030712]"
+      className="relative w-full h-full overflow-hidden bg-[#38bdf8]"
     >
       <canvas
         ref={canvasRef}
         role="region"
-        aria-label="Spotlight 3D Interactive India Globe and Living Bazaar Street"
+        aria-label="Spotlight 3D Interactive India Map and Living Bazaar Street"
         tabIndex={0}
         className="w-full h-full block cursor-grab active:cursor-grabbing touch-none focus:outline-none"
       />
 
       {/* Loading Overlay */}
       {loading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#030712] z-30 transition-opacity duration-500">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#071322] z-30 transition-opacity duration-500">
           <div className="w-12 h-12 rounded-full border-2 border-amber-500/20 border-t-amber-500 animate-spin mb-3" />
           <p className="text-xs text-neutral-400 font-mono tracking-wider flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>INITIALIZING 3D INDIA GLOBE & LIVING STREETS...</span>
+            <span>INITIALIZING 3D INDIA RELIEF & LIVING STREETS...</span>
           </p>
         </div>
       )}
 
-      {/* UNIFIED TOP BAR: Mascot + Back to Globe + Omnibox Search + View Modes & Actions */}
+      {/* UNIFIED TOP BAR: Mascot + Back Button + Omnibox Search + View Modes & Actions */}
       <div className="absolute top-4 inset-x-4 z-20 flex items-center justify-between gap-3 pointer-events-none">
-        {/* Left: Mascot Brand & Mode Badge / Return to Globe */}
+        {/* Left: Mascot Brand & Mode Badge / Return to India Map */}
         <div className="flex items-center gap-2 pointer-events-auto shrink-0">
           <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800 shadow-2xl">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -789,17 +753,17 @@ export function ThreeMapCanvas({
               <button
                 type="button"
                 onClick={() => onCitySelect(null)}
-                title="Return to 3D India Globe"
+                title="Return to 3D India Map"
                 className="px-3.5 py-1.5 rounded-2xl bg-neutral-950/90 hover:bg-neutral-900 border border-amber-500/60 text-amber-400 text-xs font-bold flex items-center gap-1.5 shadow-2xl backdrop-blur-xl transition-all group"
               >
                 <ArrowLeft className="w-3.5 h-3.5 text-amber-400 group-hover:-translate-x-0.5 transition-transform" />
-                <span>← Return to India Globe</span>
+                <span>← Return to India Map</span>
               </button>
             )
           ) : (
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-neutral-950/80 backdrop-blur-xl border border-neutral-800 text-xs font-semibold text-neutral-300">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-              <span>3D Earth Globe</span>
+              <span>3D India Map</span>
             </div>
           )}
         </div>
@@ -921,7 +885,7 @@ export function ThreeMapCanvas({
               }`}
             >
               <Box className="w-3.5 h-3.5 text-amber-400" />
-              <span>3D Globe</span>
+              <span>3D Map</span>
             </button>
             <button
               type="button"
@@ -1014,7 +978,7 @@ export function ThreeMapCanvas({
         </div>
       )}
 
-      {/* BOTTOM CENTER: Town Street Card / Globe Helper Card */}
+      {/* BOTTOM CENTER: Town Street Card / National Map Card */}
       <div className="absolute bottom-3 sm:bottom-4 inset-x-4 z-20 flex flex-col items-center gap-2 pointer-events-none">
         {/* Nearby Storefront Proximity Trigger */}
         {nearbyStorefront && isWalkMode && (
@@ -1145,10 +1109,10 @@ export function ThreeMapCanvas({
                 <button
                   type="button"
                   onClick={() => onCitySelect(null)}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-[11px] text-amber-400 font-semibold transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-[11px] text-amber-400 font-semibold transition-colors"
                 >
-                  <Globe className="w-3.5 h-3.5" />
-                  <span>Return to Globe</span>
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Return to India Map</span>
                 </button>
               </div>
 
@@ -1229,12 +1193,12 @@ export function ThreeMapCanvas({
             </div>
           )
         ) : (
-          /* Globe Orbit Level Card */
+          /* National 3D Map Helper Card */
           <div className="p-3 px-5 rounded-3xl bg-neutral-950/90 backdrop-blur-2xl border border-neutral-800/90 shadow-2xl flex flex-col sm:flex-row items-center gap-3 pointer-events-auto">
             <div className="flex items-center gap-2.5">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
               <span className="text-xs text-neutral-300 font-medium">
-                Rotate 3D Earth Globe and tap any glowing beacon to enter its Living High Street
+                Tap Guwahati or any city hub to explore its Living 3D High Street
               </span>
             </div>
 
@@ -1256,7 +1220,7 @@ export function ThreeMapCanvas({
             <span>
               {selectedCity
                 ? "WASD move · Drag look 360° · Scroll zoom (clamped) · [E] talk"
-                : "Drag to rotate 3D Globe · Scroll zoom · Tap city beacon"}
+                : "Drag look 360° · Scroll zoom · Tap city hub"}
             </span>
           </div>
           {speedBoostUntil > Date.now() && (

@@ -150,7 +150,7 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
               className="px-3 py-1 rounded-xl text-xs font-semibold text-neutral-400 hover:text-white flex items-center gap-1.5 transition-colors"
             >
               <Box className="w-3.5 h-3.5 text-amber-400" />
-              <span>3D Globe</span>
+              <span>3D Map</span>
             </button>
             <button
               onClick={() => setViewMode("2d")}
