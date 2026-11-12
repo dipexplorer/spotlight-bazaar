@@ -296,10 +296,12 @@ export function ThreeMapCanvas({
       }
 
       if (controlsRef.current) {
-        controlsRef.current.minDistance = 220;
+        controlsRef.current.minDistance = 35;
         controlsRef.current.maxDistance = 2400;
-        controlsRef.current.maxPolarAngle = Math.PI / 2.08;
+        controlsRef.current.maxPolarAngle = Math.PI / 2.05;
         controlsRef.current.target.set(0, 0, 30);
+        controlsRef.current.enablePan = true;
+        controlsRef.current.screenSpacePanning = false;
       }
 
       updateEnvironmentLighting(isNightRef.current);
@@ -354,21 +356,35 @@ export function ThreeMapCanvas({
     renderer.shadowMap.type = THREE.PCFShadowMap;
     rendererRef.current = renderer;
 
-    // 4. Orbit Controls
+    // 4. Orbit Controls (Unlocked Google Earth style spatial navigation)
     const controls = new OrbitControls(camera, canvas);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
+    controls.enablePan = true;
+    controls.screenSpacePanning = false; // Pan strictly parallel to map ground plane
+
     if (selectedCityRef.current) {
       controls.minDistance = 3.2;
       controls.maxDistance = 65;
       controls.maxPolarAngle = Math.PI / 2.05;
       controls.target.set(0, 3, 35);
     } else {
-      controls.minDistance = 220;
+      // National Map: Unlocked deep zoom down to regional level
+      controls.minDistance = 35;
       controls.maxDistance = 2400;
-      controls.maxPolarAngle = Math.PI / 2.08;
+      controls.maxPolarAngle = Math.PI / 2.05;
       controls.target.set(0, 0, 30);
     }
+
+    controls.mouseButtons = {
+      LEFT: THREE.MOUSE.ROTATE,
+      MIDDLE: THREE.MOUSE.DOLLY,
+      RIGHT: THREE.MOUSE.PAN,
+    };
+    controls.touches = {
+      ONE: THREE.TOUCH.ROTATE,
+      TWO: THREE.TOUCH.DOLLY_PAN,
+    };
     controlsRef.current = controls;
 
     if (typeof window !== "undefined") {
@@ -473,6 +489,30 @@ export function ThreeMapCanvas({
     canvas.addEventListener("pointerdown", handlePointerDown);
     canvas.addEventListener("pointerup", handlePointerUp);
 
+    // Double-Click on National Map to smooth-focus and zoom into any region
+    const handleDblClick = (event: MouseEvent) => {
+      if (selectedCityRef.current) return;
+      const rect = canvas.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+
+      if (nationalMapRef.current) {
+        const intersects = raycaster.intersectObjects(
+          nationalMapRef.current.group.children,
+          true
+        );
+        if (intersects.length > 0) {
+          const hitPoint = intersects[0].point;
+          bazaarAudio.playStorefrontChime();
+          targetLookAtRef.current = new THREE.Vector3(hitPoint.x, 0, hitPoint.z);
+          targetCamPosRef.current = new THREE.Vector3(hitPoint.x, 85, hitPoint.z + 60);
+        }
+      }
+    };
+
+    canvas.addEventListener("dblclick", handleDblClick);
+
     // 8. Keyboard WASD Listener for Avatar Walk
     const handleKeyDown = (e: KeyboardEvent) => {
       keysDownRef.current[e.code] = true;
@@ -525,6 +565,39 @@ export function ThreeMapCanvas({
       }
       if (pedestriansRef.current) {
         pedestriansRef.current.update(delta);
+      }
+
+      // National Map Free Spatial Pan (WASD & Arrow Keys)
+      if (!selectedCityRef.current) {
+        const keys = keysDownRef.current;
+        let moveX = 0;
+        let moveZ = 0;
+
+        if (keys["KeyW"] || keys["ArrowUp"]) moveZ -= 1;
+        if (keys["KeyS"] || keys["ArrowDown"]) moveZ += 1;
+        if (keys["KeyA"] || keys["ArrowLeft"]) moveX -= 1;
+        if (keys["KeyD"] || keys["ArrowRight"]) moveX += 1;
+
+        if (moveX !== 0 || moveZ !== 0) {
+          const isShift = Boolean(keys["ShiftLeft"] || keys["ShiftRight"]);
+          const camDist = camera.position.distanceTo(controls.target);
+          const panSpeed = Math.max(camDist * 0.75, 25) * (isShift ? 2.5 : 1.0) * delta;
+
+          const forward = new THREE.Vector3();
+          camera.getWorldDirection(forward);
+          forward.y = 0;
+          forward.normalize();
+
+          const right = new THREE.Vector3();
+          right.crossVectors(forward, camera.up).normalize();
+
+          const panDelta = new THREE.Vector3();
+          panDelta.addScaledVector(forward, -moveZ * panSpeed);
+          panDelta.addScaledVector(right, moveX * panSpeed);
+
+          camera.position.add(panDelta);
+          controls.target.add(panDelta);
+        }
       }
 
       // Avatar Walk Physics & Camera Follow
@@ -608,6 +681,7 @@ export function ThreeMapCanvas({
       window.removeEventListener("keyup", handleKeyUp);
       canvas.removeEventListener("pointerdown", handlePointerDown);
       canvas.removeEventListener("pointerup", handlePointerUp);
+      canvas.removeEventListener("dblclick", handleDblClick);
       if (skyEnvRef.current) {
         skyEnvRef.current.dispose();
       }
@@ -1054,7 +1128,7 @@ export function ThreeMapCanvas({
             <span>
               {selectedCity
                 ? "WASD move · Drag look 360° · Scroll zoom · [E] talk"
-                : "Drag look 360° · Scroll zoom · Tap city hub"}
+                : "WASD / Right-drag pan · Drag look 360° · Scroll zoom · Double-click focus"}
             </span>
           </div>
         </div>
