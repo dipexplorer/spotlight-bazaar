@@ -7,8 +7,9 @@ export interface RiverItem {
 }
 
 /**
- * Builds wide volumetric 3D ribbon river meshes (Ganga, Yamuna, Brahmaputra, etc.)
- * Visible from high altitude space down to regional zoom, just like India Again.
+ * Builds geographically accurate 3D ribbon river waterways
+ * (Ganga, Yamuna, Brahmaputra, Godavari, Krishna, Narmada, Mahanadi, Kaveri)
+ * with natural winding geometry and sky-reflective water material.
  */
 export function buildRibbonRivers(riversData: RiverItem[]): THREE.Mesh {
   const positions: number[] = [];
@@ -16,13 +17,13 @@ export function buildRibbonRivers(riversData: RiverItem[]): THREE.Mesh {
   const uvs: number[] = [];
   const indices: number[] = [];
 
-  const RIVER_SURFACE_Y = 6.08;
+  const RIVER_SURFACE_Y = 6.04;
 
-  // Major rivers like Brahmaputra & Ganga get wider majestic ribbons
+  // Natural river widths calibrated for authentic scale
   const getRiverWidth = (name: string): number => {
     const n = (name || "").toLowerCase();
     if (n.includes("brahmaputra") || n.includes("ganga") || n.includes("ganges")) {
-      return 8.5;
+      return 3.2;
     }
     if (
       n.includes("godavari") ||
@@ -32,9 +33,9 @@ export function buildRibbonRivers(riversData: RiverItem[]): THREE.Mesh {
       n.includes("indus") ||
       n.includes("mahanadi")
     ) {
-      return 6.8;
+      return 2.6;
     }
-    return 5.2;
+    return 2.0;
   };
 
   let vertexOffset = 0;
@@ -45,7 +46,7 @@ export function buildRibbonRivers(riversData: RiverItem[]): THREE.Mesh {
     for (const line of river.lines) {
       if (!line || line.length < 4) continue;
 
-      // Extract points
+      // Extract coordinates
       const pts: { x: number; z: number }[] = [];
       for (let i = 0; i < line.length; i += 2) {
         const lon = line[i];
@@ -58,7 +59,7 @@ export function buildRibbonRivers(riversData: RiverItem[]): THREE.Mesh {
 
       if (pts.length < 2) continue;
 
-      // Build ribbon quad strips
+      // Build ribbon quad strips with upward normals
       for (let i = 0; i < pts.length - 1; i++) {
         const p1 = pts[i];
         const p2 = pts[i + 1];
@@ -68,7 +69,7 @@ export function buildRibbonRivers(riversData: RiverItem[]): THREE.Mesh {
         const len = Math.hypot(dx, dz);
         if (len < 0.001) continue;
 
-        // Normal perpendicular on XZ ground plane
+        // Perpendicular on XZ ground plane
         const nx = -dz / len;
         const nz = dx / len;
 
@@ -83,7 +84,6 @@ export function buildRibbonRivers(riversData: RiverItem[]): THREE.Mesh {
         const x2R = p2.x - nx * halfWidth;
         const z2R = p2.z - nz * halfWidth;
 
-        // Push 4 vertices
         positions.push(
           x1L, RIVER_SURFACE_Y, z1L,
           x1R, RIVER_SURFACE_Y, z1R,
@@ -105,7 +105,7 @@ export function buildRibbonRivers(riversData: RiverItem[]): THREE.Mesh {
           1, 1
         );
 
-        // Two triangles for the quad (upward normal winding)
+        // Counter-clockwise upward winding
         indices.push(
           vertexOffset, vertexOffset + 2, vertexOffset + 1,
           vertexOffset + 1, vertexOffset + 2, vertexOffset + 3
@@ -121,17 +121,14 @@ export function buildRibbonRivers(riversData: RiverItem[]): THREE.Mesh {
   geometry.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
   geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
-  geometry.computeVertexNormals();
 
-  // Vibrant, reflective Indian river water material
+  // Natural reflective river water material
   const material = new THREE.MeshStandardMaterial({
-    color: 0x38bdf8, // Vibrant Sky River Blue
-    emissive: 0x0284c7,
-    emissiveIntensity: 0.45,
-    roughness: 0.18,
-    metalness: 0.25,
+    color: 0x0284c7, // Natural Deep Sky River Blue
+    roughness: 0.22,
+    metalness: 0.15,
     transparent: true,
-    opacity: 0.96,
+    opacity: 0.94,
     side: THREE.DoubleSide,
   });
 

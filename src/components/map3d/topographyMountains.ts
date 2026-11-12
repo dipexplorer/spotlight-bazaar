@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { toWorld } from "./projection";
 
-interface MountainPeakDef {
+interface MountainDef {
   lat: number;
   lon: number;
   radius: number;
@@ -10,21 +10,20 @@ interface MountainPeakDef {
 }
 
 /**
- * Procedurally generates India's iconic 3D mountain ranges:
- * - Western Ghats (Sahyadris running down to Kerala)
- * - Himalayas & Northern Snow Ridges
- * - Vindhya & Satpura Ranges (Central India)
- * - Eastern Ghats (Odisha & Andhra)
- * - Aravalli Range (Rajasthan)
- * - Shillong Plateau (Meghalaya / Assam)
+ * Geographically accurate 3D Indian Mountain Topography:
+ * - High Northern Himalayas: Ladakh, Himachal, Uttarakhand, Sikkim, Arunachal (Snow-capped)
+ * - Western Ghats (Sahyadris): Lush green ridges running along Maharashtra, Goa, Karnataka, Nilgiris & Kerala
+ * - Vindhya & Satpura Ranges: Central India (MP) green plateau ridges
+ * - Aravalli Range: Rajasthan to Delhi
+ * - Eastern Ghats: Odisha & Andhra coastal hills
+ * - Shillong Plateau (Garo & Khasi Hills): Lush green rainforest hills in Meghalaya (NO snow)
  */
 export function buildTopographyMountains(): THREE.Group {
   const group = new THREE.Group();
   group.name = "india_mountains_group";
 
-  const peaks: MountainPeakDef[] = [];
+  const mountains: MountainDef[] = [];
 
-  // Helper to add a cluster along a ridge line
   const addRidge = (
     startLat: number,
     startLon: number,
@@ -37,11 +36,11 @@ export function buildTopographyMountains(): THREE.Group {
   ) => {
     for (let i = 0; i <= count; i++) {
       const t = i / count;
-      const lat = startLat + (endLat - startLat) * t + (Math.sin(i * 12.5) * 0.28);
-      const lon = startLon + (endLon - startLon) * t + (Math.cos(i * 14.2) * 0.28);
-      const scaleVariation = 0.75 + Math.abs(Math.sin(i * 7.1)) * 0.55;
+      const lat = startLat + (endLat - startLat) * t + Math.sin(i * 11.3) * 0.22;
+      const lon = startLon + (endLon - startLon) * t + Math.cos(i * 13.7) * 0.22;
+      const scaleVariation = 0.8 + Math.abs(Math.sin(i * 6.3)) * 0.45;
 
-      peaks.push({
+      mountains.push({
         lat,
         lon,
         radius: baseRadius * scaleVariation,
@@ -51,66 +50,57 @@ export function buildTopographyMountains(): THREE.Group {
     }
   };
 
-  // 1. WESTERN GHATS (Sahyadris: Maharashtra -> Goa -> Karnataka -> Kerala Nilgiris)
-  addRidge(19.8, 73.6, 15.4, 74.2, 14, 11, 24);
-  addRidge(15.2, 74.3, 11.5, 75.8, 12, 12, 28);
-  addRidge(11.4, 76.1, 8.6, 77.2, 10, 13, 32); // High Nilgiris & Anamudi
+  // 1. WESTERN GHATS (Sahyadris: Lush green forested ridges parallel to Arabian Sea)
+  addRidge(20.2, 73.6, 17.0, 73.8, 12, 8.5, 14); // Maharashtra Sahyadris
+  addRidge(16.8, 74.0, 13.5, 75.2, 10, 9.0, 16); // Goa & Karnataka Ghats
+  addRidge(13.2, 75.5, 10.5, 76.8, 10, 9.5, 18); // Coorg, Wayanad & Nilgiris
+  addRidge(10.2, 77.0, 8.5, 77.4, 8, 9.0, 17);  // Anamudi & Kerala Cardamom Hills
 
-  // 2. HIMALAYAN NORTHERN RIDGE (Snow-dusted lofty peaks)
-  addRidge(34.2, 75.8, 31.8, 77.9, 12, 16, 44, true); // Ladakh / Kashmir
-  addRidge(31.6, 78.1, 29.8, 80.4, 10, 15, 42, true); // Uttarakhand
-  addRidge(27.8, 88.2, 27.6, 89.1, 6, 14, 40, true);  // Sikkim / Kanchenjunga
-  addRidge(28.2, 92.5, 28.5, 96.2, 12, 15, 38, true); // Arunachal Himalayas
+  // 2. HIGH HIMALAYAN NORTHERN BOUNDARY (Crisp snow peaks strictly on northern crest)
+  addRidge(34.8, 76.2, 32.8, 78.4, 10, 11, 24, true); // Ladakh / Zanskar
+  addRidge(32.4, 78.2, 30.2, 80.6, 10, 11, 24, true); // Himachal & Uttarakhand Nanda Devi
+  addRidge(27.8, 88.2, 27.9, 88.7, 4, 10, 22, true);  // Sikkim Kanchenjunga
+  addRidge(28.4, 93.2, 28.6, 96.5, 10, 11, 24, true); // Arunachal High Crest
 
-  // 3. VINDHYA & SATPURA RANGES (Central India plateau hills)
-  addRidge(22.6, 74.8, 23.4, 82.2, 14, 10, 18);
-  addRidge(21.8, 75.2, 22.4, 81.6, 12, 9, 16);
+  // 3. VINDHYA & SATPURA RANGES (Central India green plateau hills)
+  addRidge(23.2, 75.5, 23.8, 81.8, 12, 7.5, 11); // Vindhya (North of Narmada)
+  addRidge(21.8, 75.8, 22.2, 80.5, 10, 7.0, 10); // Satpura (South of Narmada)
 
-  // 4. ARAVALLI RANGE (Rajasthan to Delhi)
-  addRidge(24.6, 73.2, 28.2, 76.8, 10, 8, 15);
+  // 4. ARAVALLI RANGE (Rajasthan to Haryana)
+  addRidge(24.5, 73.2, 28.0, 76.5, 8, 6.5, 9); // Mount Abu to Delhi
 
-  // 5. EASTERN GHATS (Odisha & Coastal Andhra)
-  addRidge(19.2, 83.8, 15.6, 80.2, 12, 9, 17);
+  // 5. EASTERN GHATS (Odisha & Andhra Pradesh coastal hills)
+  addRidge(19.2, 83.5, 16.5, 81.0, 8, 7.0, 11); // Araku Valley to Krishna basin
 
-  // 6. SHILLONG PLATEAU (Garo, Khasi, Jaintia hills in Meghalaya/Assam)
-  addRidge(25.4, 90.4, 25.7, 93.4, 8, 11, 22);
+  // 6. SHILLONG PLATEAU (Meghalaya Khasi & Garo Hills: 100% LUSH GREEN, NO snow)
+  addRidge(25.3, 90.6, 25.6, 92.8, 7, 7.5, 12, false);
 
-  // Split into Green Mountain Peaks vs Snow Peaks
-  const greenPeaks = peaks.filter((p) => !p.isSnow);
-  const snowPeaks = peaks.filter((p) => p.isSnow);
+  // Separate green hills from northern snow crests
+  const greenHills = mountains.filter((m) => !m.isSnow);
+  const snowPeaks = mountains.filter((m) => m.isSnow);
 
-  // Low-poly faceted cone geometry (6 sides gives the charming tilt-shift look of IndiaAgain)
-  const coneGeo = new THREE.ConeGeometry(1, 1, 6);
-  coneGeo.translate(0, 0.5, 0); // Ground pivot
+  // Green Hills: Low-poly faceted domes (matching IndiaAgain's charming tilt-shift terrain)
+  const domeGeo = new THREE.DodecahedronGeometry(1, 1);
+  domeGeo.translate(0, 0.7, 0); // Sit on ground
 
-  // Material for Forest Green Mountains
   const greenMat = new THREE.MeshStandardMaterial({
-    color: 0x1f663b, // Deep Indian mountain emerald
-    roughness: 0.82,
-    metalness: 0.1,
+    color: 0x1b4d2e, // Deep organic Indian forest green
+    roughness: 0.88,
+    metalness: 0.05,
     flatShading: true,
   });
 
-  // Material for Snow-capped Himalayas
-  const snowMat = new THREE.MeshStandardMaterial({
-    color: 0xe2e8f0, // Snow white/slate
-    roughness: 0.75,
-    metalness: 0.15,
-    flatShading: true,
-  });
-
-  // Instanced Mesh 1: Green Mountains
-  if (greenPeaks.length > 0) {
-    const greenInst = new THREE.InstancedMesh(coneGeo, greenMat, greenPeaks.length);
+  if (greenHills.length > 0) {
+    const greenInst = new THREE.InstancedMesh(domeGeo, greenMat, greenHills.length);
     greenInst.receiveShadow = true;
     greenInst.castShadow = true;
 
     const dummy = new THREE.Object3D();
-    greenPeaks.forEach((p, idx) => {
+    greenHills.forEach((p, idx) => {
       const [x, z] = toWorld(p.lon, p.lat);
-      dummy.position.set(x, 5.95, z);
+      dummy.position.set(x, 5.96, z);
       dummy.scale.set(p.radius, p.height, p.radius);
-      dummy.rotation.y = (idx * 1.3) % (Math.PI * 2);
+      dummy.rotation.y = (idx * 1.4) % (Math.PI * 2);
       dummy.updateMatrix();
       greenInst.setMatrixAt(idx, dummy.matrix);
     });
@@ -118,16 +108,26 @@ export function buildTopographyMountains(): THREE.Group {
     group.add(greenInst);
   }
 
-  // Instanced Mesh 2: Snow Peaks
+  // Northern Himalayas: Low-poly faceted snow peaks
+  const snowConeGeo = new THREE.ConeGeometry(1, 1, 6);
+  snowConeGeo.translate(0, 0.5, 0);
+
+  const snowMat = new THREE.MeshStandardMaterial({
+    color: 0xf8fafc, // Crisp Himalayan snow white
+    roughness: 0.65,
+    metalness: 0.1,
+    flatShading: true,
+  });
+
   if (snowPeaks.length > 0) {
-    const snowInst = new THREE.InstancedMesh(coneGeo, snowMat, snowPeaks.length);
+    const snowInst = new THREE.InstancedMesh(snowConeGeo, snowMat, snowPeaks.length);
     snowInst.receiveShadow = true;
     snowInst.castShadow = true;
 
     const dummy = new THREE.Object3D();
     snowPeaks.forEach((p, idx) => {
       const [x, z] = toWorld(p.lon, p.lat);
-      dummy.position.set(x, 5.95, z);
+      dummy.position.set(x, 5.96, z);
       dummy.scale.set(p.radius, p.height, p.radius);
       dummy.rotation.y = (idx * 1.7) % (Math.PI * 2);
       dummy.updateMatrix();

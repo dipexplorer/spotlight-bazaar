@@ -8,17 +8,10 @@ export interface HighwayNetworkResult {
   dispose: () => void;
 }
 
-interface HighwaySegment {
-  name: string;
-  from: string;
-  to: string;
-  curve: THREE.CatmullRomCurve3;
-}
-
 /**
- * Builds the National Highway Spine (Golden Quadrilateral & Corridors)
- * connecting India's major commercial hubs with 3D asphalt ribbons
- * and animated golden commercial energy pulses.
+ * Builds clean, subtle national highway connectors (Golden Quadrilateral & National Corridors)
+ * connecting commercial hubs with refined asphalt road ribbons.
+ * NO distracting floating balls or confusing moving spheres!
  */
 export function buildHighwayNetwork(cities: City[]): HighwayNetworkResult {
   const group = new THREE.Group();
@@ -62,9 +55,8 @@ export function buildHighwayNetwork(cities: City[]): HighwayNetworkResult {
     ["Grand Trunk North", "delhi ncr", "chandigarh"],
   ];
 
-  const ROAD_Y = 6.14;
-  const ROAD_WIDTH = 4.2;
-  const segments: HighwaySegment[] = [];
+  const ROAD_Y = 6.06;
+  const ROAD_WIDTH = 1.6;
 
   const roadPositions: number[] = [];
   const roadIndices: number[] = [];
@@ -75,9 +67,9 @@ export function buildHighwayNetwork(cities: City[]): HighwayNetworkResult {
     const p2 = cityMap.get(toCity);
     if (!p1 || !p2) continue;
 
-    // Slight curvature to follow natural Indian topography
-    const midX = (p1.x + p2.x) / 2 + (p2.z - p1.z) * 0.08;
-    const midZ = (p1.z + p2.z) / 2 - (p2.x - p1.x) * 0.08;
+    // Slight curvature to follow natural topography
+    const midX = (p1.x + p2.x) / 2 + (p2.z - p1.z) * 0.05;
+    const midZ = (p1.z + p2.z) / 2 - (p2.x - p1.x) * 0.05;
 
     const curve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(p1.x, ROAD_Y, p1.z),
@@ -85,15 +77,13 @@ export function buildHighwayNetwork(cities: City[]): HighwayNetworkResult {
       new THREE.Vector3(p2.x, ROAD_Y, p2.z),
     ]);
 
-    segments.push({ name, from: fromCity, to: toCity, curve });
-
-    // Generate quad strip
-    const points = curve.getPoints(24);
+    const numPoints = 20;
+    const pts = curve.getPoints(numPoints);
     const halfWidth = ROAD_WIDTH / 2;
 
-    for (let i = 0; i < points.length - 1; i++) {
-      const a = points[i];
-      const b = points[i + 1];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i];
+      const b = pts[i + 1];
 
       const dx = b.x - a.x;
       const dz = b.z - a.z;
@@ -119,71 +109,29 @@ export function buildHighwayNetwork(cities: City[]): HighwayNetworkResult {
     }
   }
 
-  // Asphalt road mesh
-  const roadMat = new THREE.MeshStandardMaterial({
-    color: 0x1e293b, // Asphalt slate dark grey
-    roughness: 0.85,
-    metalness: 0.1,
+  // Refined, subtle asphalt road ribbon
+  const roadMat = new THREE.MeshBasicMaterial({
+    color: 0x334155, // Clean slate highway ribbon
+    transparent: true,
+    opacity: 0.65,
     side: THREE.DoubleSide,
   });
 
   const roadGeo = new THREE.BufferGeometry();
   roadGeo.setAttribute("position", new THREE.Float32BufferAttribute(roadPositions, 3));
   roadGeo.setIndex(roadIndices);
-  roadGeo.computeVertexNormals();
 
   const roadMesh = new THREE.Mesh(roadGeo, roadMat);
-  roadMesh.receiveShadow = true;
   group.add(roadMesh);
 
-  // Animated Golden Energy Pulses along highways (Commerce Traffic)
-  const pulseCount = segments.length * 2;
-  const pulseGeo = new THREE.SphereGeometry(2.4, 8, 8);
-  const pulseMat = new THREE.MeshBasicMaterial({
-    color: 0xfbbf24, // Glowing warm amber commerce spark
-  });
-
-  const pulseInst = new THREE.InstancedMesh(pulseGeo, pulseMat, pulseCount);
-  group.add(pulseInst);
-
-  const dummy = new THREE.Object3D();
-  let progress = 0;
-
-  const update = (delta: number) => {
-    progress += delta * 0.18; // Speed of commerce flow
-    if (progress > 1) progress -= 1;
-
-    let instIdx = 0;
-    for (const seg of segments) {
-      // Pulse 1
-      const t1 = (progress + (instIdx * 0.23)) % 1;
-      const pt1 = seg.curve.getPoint(t1);
-      dummy.position.set(pt1.x, ROAD_Y + 0.8, pt1.z);
-      dummy.scale.set(1.1, 1.1, 1.1);
-      dummy.updateMatrix();
-      pulseInst.setMatrixAt(instIdx++, dummy.matrix);
-
-      // Pulse 2 (Reverse or offset)
-      const t2 = (1.0 - ((progress + (instIdx * 0.31)) % 1)) % 1;
-      const pt2 = seg.curve.getPoint(t2);
-      dummy.position.set(pt2.x, ROAD_Y + 0.8, pt2.z);
-      dummy.scale.set(0.9, 0.9, 0.9);
-      dummy.updateMatrix();
-      pulseInst.setMatrixAt(instIdx++, dummy.matrix);
-    }
-    pulseInst.instanceMatrix.needsUpdate = true;
+  const update = (_delta: number) => {
+    // Clean static road ribbon - zero distracting moving balls
   };
 
   const dispose = () => {
-    roadMat.dispose();
     roadGeo.dispose();
-    pulseMat.dispose();
-    pulseGeo.dispose();
+    roadMat.dispose();
   };
 
-  return {
-    group,
-    update,
-    dispose,
-  };
+  return { group, update, dispose };
 }

@@ -48,18 +48,17 @@ function createCityLabelTexture(
   const isFeatured = count > 0;
 
   if (isFeatured) {
-    // Featured Hub (e.g. Guwahati with Nerqiva Studio)
-    canvas.width = 512;
-    canvas.height = 160;
+    // Featured Flagship Hub (Guwahati with Nerqiva Studio)
+    canvas.width = 460;
+    canvas.height = 140;
     const ctx = canvas.getContext("2d")!;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Outer Container Pill
-    const x = 12;
-    const y = 12;
-    const w = 488;
-    const h = 136;
-    const r = 28;
+    const x = 10;
+    const y = 10;
+    const w = 440;
+    const h = 120;
+    const r = 26;
 
     ctx.beginPath();
     ctx.roundRect(x, y, w, h, r);
@@ -72,68 +71,69 @@ function createCityLabelTexture(
     ctx.stroke();
 
     // City Name
-    ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.fillStyle = "#ffffff";
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    ctx.fillText(city.name, x + 24, y + 42);
+    ctx.fillText(city.name, x + 24, y + 38);
 
     // Enter Badge in Amber
     const enterText = `${count} Shop · Enter →`;
-    ctx.font = "bold 22px 'JetBrains Mono', monospace";
-    const enterW = ctx.measureText(enterText).width + 24;
-    const enterX = x + w - enterW - 20;
-    const enterY = y + 22;
+    ctx.font = "bold 20px 'JetBrains Mono', monospace";
+    const enterW = ctx.measureText(enterText).width + 22;
+    const enterX = x + w - enterW - 16;
+    const enterY = y + 20;
 
     ctx.beginPath();
-    ctx.roundRect(enterX, enterY, enterW, 38, 19);
+    ctx.roundRect(enterX, enterY, enterW, 36, 18);
     ctx.fillStyle = "#f59e0b";
     ctx.fill();
 
     ctx.fillStyle = "#0a0f1d";
     ctx.textAlign = "center";
-    ctx.fillText(enterText, enterX + enterW / 2, enterY + 20);
+    ctx.fillText(enterText, enterX + enterW / 2, enterY + 19);
 
-    // Subtitle: First business name or active status
-    ctx.font = "600 22px -apple-system, BlinkMacSystemFont, sans-serif";
+    // Subtitle: Nerqiva Studio · Verified Flagship
+    ctx.font = "600 20px -apple-system, BlinkMacSystemFont, sans-serif";
     ctx.fillStyle = "#fbbf24";
     ctx.textAlign = "left";
     const sub = firstShopName ? `🌿 ${firstShopName} · Verified` : "Living 3D High Street";
-    ctx.fillText(sub, x + 24, y + 96);
+    ctx.fillText(sub, x + 24, y + 86);
   } else {
-    // Clean, Minimal City Pill (ZERO "Plot Available" text)
-    canvas.width = 320;
-    canvas.height = 96;
+    // Clean, crisp white pill (matching IndiaAgain's clean tag style)
+    canvas.width = 240;
+    canvas.height = 70;
     const ctx = canvas.getContext("2d")!;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const x = 10;
-    const y = 10;
-    const w = 300;
-    const h = 76;
-    const r = 24;
+    const x = 6;
+    const y = 6;
+    const w = 228;
+    const h = 58;
+    const r = 20;
 
+    // White Pill
     ctx.beginPath();
     ctx.roundRect(x, y, w, h, r);
-    ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.96)";
     ctx.fill();
 
-    ctx.lineWidth = 2.0;
-    ctx.strokeStyle = "rgba(148, 163, 184, 0.4)";
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(100, 116, 139, 0.35)";
     ctx.stroke();
 
-    // Glowing dot indicator
+    // Dot indicator
     ctx.beginPath();
-    ctx.arc(x + 28, y + h / 2, 6, 0, Math.PI * 2);
-    ctx.fillStyle = "#fbbf24";
+    ctx.arc(x + 22, y + h / 2, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#64748b";
     ctx.fill();
 
     // City Name
-    ctx.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.fillStyle = "#f8fafc";
+    ctx.font = "bold 22px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillStyle = "#0f172a";
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    ctx.fillText(city.name, x + 46, y + h / 2 + 1);
+    ctx.fillText(city.name, x + 36, y + h / 2 + 1);
   }
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -142,27 +142,7 @@ function createCityLabelTexture(
   return texture;
 }
 
-/**
- * Creates pulsating glowing ring texture for ground beacons
- */
-function createPulseRingTexture(): THREE.CanvasTexture {
-  const canvas = document.createElement("canvas");
-  canvas.width = 128;
-  canvas.height = 128;
-  const ctx = canvas.getContext("2d")!;
 
-  const grad = ctx.createRadialGradient(64, 64, 4, 64, 64, 60);
-  grad.addColorStop(0, "rgba(251, 191, 36, 0.95)");
-  grad.addColorStop(0.35, "rgba(245, 158, 11, 0.65)");
-  grad.addColorStop(0.75, "rgba(217, 119, 6, 0.15)");
-  grad.addColorStop(1, "rgba(0, 0, 0, 0)");
-
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 128, 128);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  return texture;
-}
 
 /**
  * Builds the complete 3D India National Relief Map
@@ -276,7 +256,6 @@ export function buildIndiaNationalMap(
     }
   }
 
-  const pulseRingTexture = createPulseRingTexture();
   const cityPins: NationalCityPinObject[] = [];
   const hitBoxes: THREE.Mesh[] = [];
 
@@ -291,46 +270,20 @@ export function buildIndiaNationalMap(
     pinGroup.storefrontCount = count;
     pinGroup.position.set(x, 6.06, z);
 
-    // Ground Pulse Wave Ring
-    const discSize = isFeatured ? 58 : 36;
-    const ringGeo = new THREE.PlaneGeometry(discSize, discSize);
-    const ringMat = new THREE.MeshBasicMaterial({
-      map: pulseRingTexture,
-      transparent: true,
-      opacity: isFeatured ? 0.95 : 0.7,
+    // 1. Clean Circular Ground Marker (NO giant yellow beams or spheres)
+    const markerGeo = new THREE.CircleGeometry(isFeatured ? 3.5 : 2.0, 24);
+    const markerMat = new THREE.MeshBasicMaterial({
+      color: isFeatured ? 0xf59e0b : 0xffffff,
+      side: THREE.DoubleSide,
       depthWrite: false,
     });
-    const pulseRing = new THREE.Mesh(ringGeo, ringMat);
-    pulseRing.rotation.x = -Math.PI / 2;
-    pinGroup.add(pulseRing);
-    pinGroup.pulseRing = pulseRing;
+    const markerMesh = new THREE.Mesh(markerGeo, markerMat);
+    markerMesh.rotation.x = -Math.PI / 2;
+    markerMesh.position.y = 0.02;
+    pinGroup.add(markerMesh);
+    pinGroup.pulseRing = markerMesh;
 
-    // Vertical Light Beam / Brass Pin
-    const beaconHeight = isFeatured ? 42 : 26;
-    const beaconPoints = [
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0, beaconHeight, 0),
-    ];
-    const beaconGeo = new THREE.BufferGeometry().setFromPoints(beaconPoints);
-    const beaconMat = new THREE.LineBasicMaterial({
-      color: isFeatured ? 0xf59e0b : 0xfbbf24,
-      transparent: true,
-      opacity: isFeatured ? 0.95 : 0.8,
-      linewidth: isFeatured ? 2.8 : 2.0,
-    });
-    const beacon = new THREE.Line(beaconGeo, beaconMat);
-    pinGroup.add(beacon);
-
-    // Glowing Pinhead Sphere
-    const headGeo = new THREE.SphereGeometry(isFeatured ? 5.0 : 3.6, 14, 14);
-    const headMat = new THREE.MeshBasicMaterial({
-      color: isFeatured ? 0xf59e0b : 0xfef08a,
-    });
-    const head = new THREE.Mesh(headGeo, headMat);
-    head.position.set(0, beaconHeight, 0);
-    pinGroup.add(head);
-
-    // Billboard City Label Sprite (Clean, high-contrast typography, NO "Plot Available")
+    // 2. Crisp Floating City Pill Tag floating cleanly near ground
     const labelTex = createCityLabelTexture(city, count, cityData?.firstShopName);
     const spriteMat = new THREE.SpriteMaterial({
       map: labelTex,
@@ -339,18 +292,19 @@ export function buildIndiaNationalMap(
       depthWrite: false,
     });
     const sprite = new THREE.Sprite(spriteMat);
-    sprite.position.set(0, beaconHeight + (isFeatured ? 16 : 10), 0);
-    const spriteW = isFeatured ? 88 : 52;
-    const aspect = isFeatured ? 160 / 512 : 96 / 320;
+    const labelY = isFeatured ? 9.5 : 6.8;
+    sprite.position.set(0, labelY, 0);
+    const spriteW = isFeatured ? 52 : 32;
+    const aspect = isFeatured ? 140 / 460 : 70 / 240;
     sprite.scale.set(spriteW, spriteW * aspect, 1);
     pinGroup.add(sprite);
     pinGroup.labelSprite = sprite;
 
-    // Click HitBox for Raycasting
-    const hitGeo = new THREE.SphereGeometry(isFeatured ? 32 : 24, 8, 8);
+    // 3. Click HitBox for Raycasting
+    const hitGeo = new THREE.SphereGeometry(isFeatured ? 24 : 16, 8, 8);
     const hitMat = new THREE.MeshBasicMaterial({ visible: false });
     const hitBox = new THREE.Mesh(hitGeo, hitMat);
-    hitBox.position.set(0, beaconHeight / 2, 0);
+    hitBox.position.set(0, labelY / 2, 0);
     (hitBox as any).cityData = city;
     pinGroup.add(hitBox);
     pinGroup.hitBox = hitBox;
@@ -360,20 +314,7 @@ export function buildIndiaNationalMap(
     hitBoxes.push(hitBox);
   }
 
-  let timer = 0;
-  const update = (delta: number, isNight: boolean, camera: THREE.Camera) => {
-    timer += delta;
-    const ringScale = 1.0 + Math.sin(timer * 3.2) * 0.16;
-    const ringOpacity = 0.85 - Math.sin(timer * 3.2) * 0.25;
-
-    for (const pin of cityPins) {
-      pin.pulseRing.scale.set(ringScale, ringScale, 1);
-      if (pin.pulseRing.material instanceof THREE.MeshBasicMaterial) {
-        pin.pulseRing.material.opacity = Math.max(0.3, ringOpacity);
-      }
-    }
-
-    // Update animated highway commerce energy pulses
+  const update = (delta: number, _isNight: boolean, _camera: THREE.Camera) => {
     highways.update(delta);
   };
 
