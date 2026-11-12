@@ -56,11 +56,11 @@ export function buildTopographyMountains(): THREE.Group {
   addRidge(13.2, 75.5, 10.5, 76.8, 10, 9.5, 18); // Coorg, Wayanad & Nilgiris
   addRidge(10.2, 77.0, 8.5, 77.4, 8, 9.0, 17);  // Anamudi & Kerala Cardamom Hills
 
-  // 2. HIGH HIMALAYAN NORTHERN BOUNDARY (Crisp snow peaks strictly on northern crest)
-  addRidge(34.8, 76.2, 32.8, 78.4, 10, 11, 24, true); // Ladakh / Zanskar
-  addRidge(32.4, 78.2, 30.2, 80.6, 10, 11, 24, true); // Himachal & Uttarakhand Nanda Devi
-  addRidge(27.8, 88.2, 27.9, 88.7, 4, 10, 22, true);  // Sikkim Kanchenjunga
-  addRidge(28.4, 93.2, 28.6, 96.5, 10, 11, 24, true); // Arunachal High Crest
+  // 2. HIGH HIMALAYAN NORTHERN BOUNDARY (Organic terraced snow peaks strictly on northern crest)
+  addRidge(34.8, 76.2, 32.8, 78.4, 8, 7.5, 12, true); // Ladakh / Zanskar
+  addRidge(32.4, 78.2, 30.2, 80.6, 8, 7.5, 12, true); // Himachal & Uttarakhand Nanda Devi
+  addRidge(27.8, 88.2, 27.9, 88.7, 3, 7.0, 11, true);  // Sikkim Kanchenjunga
+  addRidge(28.4, 93.2, 28.6, 96.5, 7, 7.0, 11, true); // Arunachal High Crest
 
   // 3. VINDHYA & SATPURA RANGES (Central India green plateau hills)
   addRidge(23.2, 75.5, 23.8, 81.8, 12, 7.5, 11); // Vindhya (North of Narmada)
@@ -108,19 +108,19 @@ export function buildTopographyMountains(): THREE.Group {
     group.add(greenInst);
   }
 
-  // Northern Himalayas: Low-poly faceted snow peaks
-  const snowConeGeo = new THREE.ConeGeometry(1, 1, 6);
-  snowConeGeo.translate(0, 0.5, 0);
+  // Northern Himalayas: Natural low-poly faceted snow massifs
+  const snowPeakGeo = new THREE.DodecahedronGeometry(1, 0);
+  snowPeakGeo.translate(0, 0.7, 0);
 
   const snowMat = new THREE.MeshStandardMaterial({
-    color: 0xf8fafc, // Crisp Himalayan snow white
-    roughness: 0.65,
-    metalness: 0.1,
+    color: 0xf1f5f9, // Crisp Himalayan snow crest
+    roughness: 0.75,
+    metalness: 0.08,
     flatShading: true,
   });
 
   if (snowPeaks.length > 0) {
-    const snowInst = new THREE.InstancedMesh(snowConeGeo, snowMat, snowPeaks.length);
+    const snowInst = new THREE.InstancedMesh(snowPeakGeo, snowMat, snowPeaks.length);
     snowInst.receiveShadow = true;
     snowInst.castShadow = true;
 

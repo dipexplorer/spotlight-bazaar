@@ -133,13 +133,23 @@ export function ThreeMapCanvas({
 
   // Smooth Camera: Town High-Street View vs National 3D India Isometric Perspective
   const flyToCityStreet = useCallback((city: City, walk: boolean = false) => {
+    const isGuwahati =
+      city?.slug?.toLowerCase() === "guwahati" ||
+      city?.name?.toLowerCase() === "guwahati";
+
     if (walk) {
-      targetCamPosRef.current = new THREE.Vector3(50, 3.2, 32);
-      targetLookAtRef.current = new THREE.Vector3(60, 2.5, 15);
+      if (playerAvatarRef.current) {
+        const p = playerAvatarRef.current.getPosition();
+        targetCamPosRef.current = new THREE.Vector3(p.x - 7, p.y + 4.0, p.z + 8.5);
+        targetLookAtRef.current = new THREE.Vector3(p.x, p.y + 1.8, p.z);
+      } else {
+        targetCamPosRef.current = new THREE.Vector3(isGuwahati ? 56 : 0, 4.4, isGuwahati ? 10 : 28);
+        targetLookAtRef.current = new THREE.Vector3(isGuwahati ? 64 : 0, 1.8, isGuwahati ? 2 : 20);
+      }
     } else {
       // Focused street-level perspective on the visited flagship business (Nerqiva Studio on GS Road)
-      targetCamPosRef.current = new THREE.Vector3(50, 24, 48);
-      targetLookAtRef.current = new THREE.Vector3(60, 4, 15);
+      targetCamPosRef.current = new THREE.Vector3(isGuwahati ? 52 : 0, 22, isGuwahati ? 28 : -18);
+      targetLookAtRef.current = new THREE.Vector3(isGuwahati ? 70 : 0, 3.5, isGuwahati ? 6 : 15);
     }
   }, []);
 
@@ -290,12 +300,12 @@ export function ThreeMapCanvas({
         hitBoxesRef.current = hitBoxes;
         plotsRef.current = plots;
 
-        // Instantiate controllable 3D Player Avatar near GS Road / Christian Basti
+        // Instantiate controllable 3D Player Avatar outside Nerqiva Studio gate
         const isGuwahati = selectedCity.slug === "guwahati" || selectedCity.name.toLowerCase() === "guwahati";
         const playerAvatar = createPlayerAvatarSystem(
-          isGuwahati ? 50 : -8.2,
-          0.1,
-          isGuwahati ? 28 : 16,
+          isGuwahati ? 64 : -8.2,
+          0.44,
+          isGuwahati ? 2 : 16,
           "@spotlight.bazaar"
         );
         scene.add(playerAvatar.group);
@@ -667,7 +677,7 @@ export function ThreeMapCanvas({
         if (isWalkModeRef.current) {
           const moveDelta = newPos.clone().sub(prevPos);
           camera.position.add(moveDelta);
-          controls.target.add(moveDelta);
+          controls.target.set(newPos.x, newPos.y + 1.8, newPos.z);
         }
 
         // Proximity detection for storefront dialogue trigger

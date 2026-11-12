@@ -67,13 +67,15 @@ export interface PlayerAvatarSystem {
 
 export function createPlayerAvatarSystem(
   initialX: number = 0,
-  initialY: number = 6.2,
+  initialY: number = 0.44,
   initialZ: number = 20,
   username: string = "@spotlight.bazaar"
 ): PlayerAvatarSystem {
   const group = new THREE.Group();
   group.name = "player_avatar_system";
   group.position.set(initialX, initialY, initialZ);
+  // Human-proportioned scale (approx 2.4m tall) so character is clearly visible in street view
+  group.scale.set(1.85, 1.85, 1.85);
 
   // Character hierarchy
   const root = new THREE.Group();
@@ -365,9 +367,28 @@ export function createPlayerAvatarSystem(
         group.position.x += vx;
         group.position.z += vz;
 
-        // Clamp inside bazaar corridor bounds relative to city street origin
-        group.position.x = Math.max(baseOriginX - 22, Math.min(baseOriginX + 22, group.position.x));
-        group.position.z = Math.max(baseOriginZ - 30, Math.min(baseOriginZ + 260, group.position.z));
+        // Expanded citywide exploration bounds: Allows freely walking across Guwahati,
+        // visiting Christian Basti, Paltan Bazar, Dispur, and crossing Saraighat Bridge
+        group.position.x = Math.max(-250, Math.min(230, group.position.x));
+        group.position.z = Math.max(-175, Math.min(155, group.position.z));
+
+        // Dynamic 3D elevation tracking: Ramps & Saraighat Bridge Deck
+        let targetY = 0.44; // Default elevated sidewalk height
+        if (Math.abs(group.position.x - -130) < 6.5) {
+          const z = group.position.z;
+          if (z <= -30 && z >= -150) {
+            targetY = 5.24; // Walking on Saraighat Bridge deck walkway
+          } else if (z > -30 && z <= -8) {
+            // South Approach Ramp
+            const t = (-8 - z) / 22;
+            targetY = 0.44 + t * (5.24 - 0.44);
+          } else if (z < -150 && z >= -172) {
+            // North Approach Ramp
+            const t = (z - -172) / 22;
+            targetY = 0.44 + t * (5.24 - 0.44);
+          }
+        }
+        group.position.y += (targetY - group.position.y) * Math.min(delta * 10, 1.0);
 
         // Advance walk animation cycle
         const strideRate = sprint ? 16.0 : 10.0;

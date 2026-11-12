@@ -101,7 +101,8 @@ export function buildGuwahatiCity(
   );
 
   // 1. EXPANSIVE ASSAM VALLEY NATURAL TERRAIN (1600 x 1400)
-  // Height-mapped mesh that forms a natural valley bowl framed by rolling hills
+  // Height-mapped mesh that forms a natural valley bowl framed by rolling hills.
+  // The urban city plain (where roads, businesses, and bridges reside) is strictly flat at Y = 0.0!
   const terrainWidth = 1600;
   const terrainHeight = 1400;
   const segX = 80;
@@ -116,40 +117,40 @@ export function buildGuwahatiCity(
 
     let elev = 0;
 
-    // A. River basin depression along the north (Z from -160 to -30)
-    if (z > -160 && z < -30 && Math.abs(x) < 700) {
-      elev = -0.6; // River water level sits at 0.0
-    }
+    // A. Brahmaputra River Basin depression along the north (Z: -155 to -30)
+    if (z >= -155 && z <= -30 && Math.abs(x) < 750) {
+      elev = -0.75; // River water level sits cleanly at Y = 0.04
+    } else if (x >= -260 && x <= 240 && z >= -35 && z <= 165) {
+      // B. Urban City Corridor: STRICTLY FLAT at Y = 0.0!
+      // Roads are elevated solid 3D slabs (top at Y = 0.32) so roads and sidewalks are ALWAYS visible.
+      elev = 0.0;
+    } else {
+      // C. Surrounding Natural Hills (Strictly OUTSIDE the road network)
+      // Kamakhya / Nilachal Hills in the West (X < -240, Z: -20 to 110)
+      const distKamakhya = Math.hypot(x - -270, z - 40);
+      if (distKamakhya < 100) {
+        const kFactor = (1 + Math.cos((distKamakhya / 100) * Math.PI)) * 0.5;
+        elev = Math.max(elev, kFactor * 34);
+      }
 
-    // B. Kamakhya / Nilachal Hills in the West (X: -260 to -160, Z: -40 to 120)
-    const distKamakhya = Math.hypot(x - -210, z - 30);
-    if (distKamakhya < 140) {
-      const kFactor = (1 + Math.cos((distKamakhya / 140) * Math.PI)) * 0.5;
-      elev = Math.max(elev, kFactor * 32);
-    }
+      // Meghalaya / Khasi Foothills in the South (Z > 165)
+      if (z > 165) {
+        const southGrad = Math.min((z - 165) / 380, 1.0);
+        elev = Math.max(elev, southGrad * southGrad * 46 + Math.sin(x * 0.015) * 6);
+      }
 
-    // C. Meghalaya / Khasi Foothills in the South (Z > 120)
-    if (z > 100) {
-      const southGrad = Math.min((z - 100) / 450, 1.0);
-      elev = Math.max(elev, southGrad * southGrad * 48 + Math.sin(x * 0.015) * 6);
-    }
+      // Sarania / Narengi Hills in the East (X > 240, Z: -10 to 110)
+      const distSarania = Math.hypot(x - 260, z - 45);
+      if (distSarania < 90) {
+        const sFactor = (1 + Math.cos((distSarania / 90) * Math.PI)) * 0.5;
+        elev = Math.max(elev, sFactor * 28);
+      }
 
-    // D. Sarania / Narengi Hills in the East (X > 160, Z from -20 to 120)
-    const distSarania = Math.hypot(x - 220, z - 40);
-    if (distSarania < 130) {
-      const sFactor = (1 + Math.cos((distSarania / 130) * Math.PI)) * 0.5;
-      elev = Math.max(elev, sFactor * 26);
-    }
-
-    // E. North Guwahati Hills across the Brahmaputra (Z < -160)
-    if (z < -160) {
-      const northGrad = Math.min((-160 - z) / 400, 1.0);
-      elev = Math.max(elev, northGrad * northGrad * 38 + Math.cos(x * 0.018) * 5);
-    }
-
-    // Subtle natural ground undulation across the city
-    if (elev === 0 && (z < -160 || z > -30 || Math.abs(x) > 700)) {
-      elev = Math.sin(x * 0.02) * Math.cos(z * 0.02) * 0.4;
+      // North Guwahati Hills across the Brahmaputra (Z < -165)
+      if (z < -165) {
+        const northGrad = Math.min((-165 - z) / 360, 1.0);
+        elev = Math.max(elev, northGrad * northGrad * 38 + Math.cos(x * 0.018) * 5);
+      }
     }
 
     posAttr.setY(i, elev);
@@ -221,69 +222,117 @@ export function buildGuwahatiCity(
   group.add(char2);
   disposables.push(char1Geo, char2Geo, sandbarMat);
 
-  // 3. SARAIGHAT BRIDGE (Iconic Steel Truss Bridge crossing the river)
-  // Connects Jalukbari (Z: -28) across to Amingaon / North Guwahati (Z: -156)
+  // 3. SARAIGHAT BRIDGE (Iconic Double-Deck Steel Truss Bridge across Brahmaputra)
+  // Perfectly connected between Jalukbari South Bank (Z: -30) and North Guwahati (Z: -150)
   const bridgeGroup = new THREE.Group();
   bridgeGroup.name = "saraighat_bridge";
 
   const bridgeX = -130;
-  const bridgeDeckW = 8.8;
-  const bridgeDeckL = 136;
-  const bridgeDeckGeo = new THREE.BoxGeometry(bridgeDeckW, 1.4, bridgeDeckL);
+  const bridgeDeckW = 9.4;
+  const bridgeDeckL = 120; // Exact river span from Z = -30 to Z = -150
+  const bridgeDeckY = 4.8;
+
   const bridgeDeckMat = new THREE.MeshStandardMaterial({
     color: 0x334155, // Asphalt & concrete slate
     roughness: 0.72,
     metalness: 0.2,
   });
-  const bridgeDeck = new THREE.Mesh(bridgeDeckGeo, bridgeDeckMat);
-  bridgeDeck.position.set(bridgeX, 3.8, -92);
-  bridgeDeck.receiveShadow = true;
-  bridgeDeck.castShadow = true;
-  bridgeGroup.add(bridgeDeck);
-
-  // Concrete Caisson Piers in the River
-  const pierMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.88 });
-  for (const pz of [-45, -70, -95, -120, -145]) {
-    const pierGeo = new THREE.CylinderGeometry(2.6, 3.2, 6.0, 14);
-    const pier = new THREE.Mesh(pierGeo, pierMat);
-    pier.position.set(bridgeX, 1.6, pz);
-    bridgeGroup.add(pier);
-  }
-
-  // Steel Truss Superstructure along bridge sides
   const trussMat = new THREE.MeshStandardMaterial({
     color: 0xb91c1c, // Classic Indian red-primer steel truss
     metalness: 0.45,
     roughness: 0.55,
   });
+  const pierMat = new THREE.MeshStandardMaterial({
+    color: 0x94a3b8, // Weathered concrete slate
+    roughness: 0.88,
+  });
+
+  // Main Bridge Road Deck
+  const bridgeDeckGeo = new THREE.BoxGeometry(bridgeDeckW, 1.2, bridgeDeckL);
+  const bridgeDeck = new THREE.Mesh(bridgeDeckGeo, bridgeDeckMat);
+  bridgeDeck.position.set(bridgeX, bridgeDeckY - 0.6, -90);
+  bridgeDeck.receiveShadow = true;
+  bridgeDeck.castShadow = true;
+  bridgeGroup.add(bridgeDeck);
+
+  // 6 Heavy Concrete Caisson Piers deep in Riverbed
+  for (const pz of [-45, -65, -85, -105, -125, -145]) {
+    const pierGeo = new THREE.CylinderGeometry(2.8, 3.6, 12.0, 16);
+    const pier = new THREE.Mesh(pierGeo, pierMat);
+    pier.position.set(bridgeX, 1.0, pz);
+    pier.receiveShadow = true;
+    bridgeGroup.add(pier);
+  }
+
+  // South & North Concrete Abutment Portal Towers (Grounding the bridge ends securely)
+  for (const portalZ of [-30, -150]) {
+    // Portal arch posts
+    for (const side of [-1, 1]) {
+      const postGeo = new THREE.BoxGeometry(1.6, 8.5, 3.2);
+      const post = new THREE.Mesh(postGeo, pierMat);
+      post.position.set(bridgeX + side * (bridgeDeckW / 2 + 0.6), 4.25, portalZ);
+      post.castShadow = true;
+      bridgeGroup.add(post);
+    }
+    // Overhead lintel beam
+    const lintelGeo = new THREE.BoxGeometry(bridgeDeckW + 3.0, 1.6, 3.2);
+    const lintel = new THREE.Mesh(lintelGeo, pierMat);
+    lintel.position.set(bridgeX, 8.8, portalZ);
+    bridgeGroup.add(lintel);
+  }
+
+  // Steel Truss Superstructure running strictly between South & North Abutments (Z: -30 to -150)
   for (const side of [-1, 1]) {
-    const trussBarGeo = new THREE.BoxGeometry(0.45, 4.2, bridgeDeckL);
+    const trussBarGeo = new THREE.BoxGeometry(0.5, 4.4, bridgeDeckL);
     const truss = new THREE.Mesh(trussBarGeo, trussMat);
-    truss.position.set(bridgeX + side * (bridgeDeckW / 2 + 0.2), 5.6, -92);
+    truss.position.set(bridgeX + side * (bridgeDeckW / 2 + 0.25), bridgeDeckY + 2.2, -90);
     truss.castShadow = true;
     bridgeGroup.add(truss);
 
-    // Overhead truss crossbeams
-    for (let bz = -150; bz <= -35; bz += 16) {
-      const topBeamGeo = new THREE.BoxGeometry(bridgeDeckW + 0.8, 0.4, 0.4);
+    // Diagonal truss struts
+    for (let bz = -142; bz <= -38; bz += 12) {
+      const topBeamGeo = new THREE.BoxGeometry(bridgeDeckW + 0.6, 0.45, 0.45);
       const topBeam = new THREE.Mesh(topBeamGeo, trussMat);
-      topBeam.position.set(bridgeX, 7.7, bz);
+      topBeam.position.set(bridgeX, bridgeDeckY + 4.4, bz);
       bridgeGroup.add(topBeam);
     }
   }
 
-  // Bridge Approach Ramps
-  const rampSouthGeo = new THREE.BoxGeometry(bridgeDeckW, 1.2, 22);
-  rampSouthGeo.rotateX(-0.12);
+  // Seamless South Approach Ramp (Connecting Bridge Deck Z: -30, Y: 4.8 down to Ground Road Z: -8, Y: 0.32)
+  const rampSouthLen = 22.0;
+  const rampAngle = Math.atan2(bridgeDeckY - 0.32, rampSouthLen); // ~0.20 rad
+  const rampSouthGeo = new THREE.BoxGeometry(bridgeDeckW, 0.8, rampSouthLen + 0.5);
+  rampSouthGeo.rotateX(-rampAngle);
   const rampSouth = new THREE.Mesh(rampSouthGeo, bridgeDeckMat);
-  rampSouth.position.set(bridgeX, 2.0, -20);
+  rampSouth.position.set(bridgeX, (bridgeDeckY + 0.32) / 2 - 0.1, -19);
+  rampSouth.receiveShadow = true;
   bridgeGroup.add(rampSouth);
 
-  const rampNorthGeo = new THREE.BoxGeometry(bridgeDeckW, 1.2, 22);
-  rampNorthGeo.rotateX(0.12);
+  // South Ramp Concrete Retaining Side Walls
+  for (const side of [-1, 1]) {
+    const wallGeo = new THREE.BoxGeometry(0.8, 1.8, rampSouthLen);
+    wallGeo.rotateX(-rampAngle);
+    const wall = new THREE.Mesh(wallGeo, pierMat);
+    wall.position.set(bridgeX + side * (bridgeDeckW / 2 + 0.4), (bridgeDeckY + 0.32) / 2 + 0.4, -19);
+    bridgeGroup.add(wall);
+  }
+
+  // Seamless North Approach Ramp (Connecting Bridge Deck Z: -150, Y: 4.8 down to North Highway Z: -172, Y: 0.32)
+  const rampNorthGeo = new THREE.BoxGeometry(bridgeDeckW, 0.8, rampSouthLen + 0.5);
+  rampNorthGeo.rotateX(rampAngle);
   const rampNorth = new THREE.Mesh(rampNorthGeo, bridgeDeckMat);
-  rampNorth.position.set(bridgeX, 2.0, -164);
+  rampNorth.position.set(bridgeX, (bridgeDeckY + 0.32) / 2 - 0.1, -161);
+  rampNorth.receiveShadow = true;
   bridgeGroup.add(rampNorth);
+
+  // North Ramp Concrete Retaining Side Walls
+  for (const side of [-1, 1]) {
+    const wallGeo = new THREE.BoxGeometry(0.8, 1.8, rampSouthLen);
+    wallGeo.rotateX(rampAngle);
+    const wall = new THREE.Mesh(wallGeo, pierMat);
+    wall.position.set(bridgeX + side * (bridgeDeckW / 2 + 0.4), (bridgeDeckY + 0.32) / 2 + 0.4, -161);
+    bridgeGroup.add(wall);
+  }
 
   group.add(bridgeGroup);
   disposables.push(bridgeDeckGeo, bridgeDeckMat, pierMat, trussMat);
@@ -346,10 +395,12 @@ export function buildGuwahatiCity(
     group.add(cMesh);
   }
 
-  // 6. CONNECTED ROAD NETWORK (Real Interconnected Guwahati Streets)
+  // 6. CONNECTED SOLID 3D ROAD NETWORK (Real Interconnected Guwahati Streets)
+  // All roads are built as solid 3D slabs (top surface at Y = 0.32) with raised concrete curbs (top at Y = 0.44)
+  // and yellow dashed lane markings (Y = 0.34). Zero 2D planes, zero terrain clipping!
   const roadMat = new THREE.MeshStandardMaterial({
-    color: 0x1e293b, // Asphalt slate
-    roughness: 0.78,
+    color: 0x1e293b, // Dark Asphalt slate
+    roughness: 0.82,
     metalness: 0.08,
   });
   const sidewalkMat = new THREE.MeshStandardMaterial({
@@ -369,38 +420,38 @@ export function buildGuwahatiCity(
 
   const roads: RoadDef[] = [
     // MG Road (Riverfront Boulevard along South Bank)
-    { x1: -240, z1: -25, x2: 240, z2: -25, width: 8.5, name: "MG Road Riverfront" },
+    { x1: -260, z1: -25, x2: 240, z2: -25, width: 9.0, name: "MG Road Riverfront" },
 
     // North Guwahati Riverfront Road
-    { x1: -200, z1: -160, x2: 120, z2: -160, width: 7.5, name: "North Guwahati Highway" },
+    { x1: -220, z1: -165, x2: 120, z2: -165, width: 8.0, name: "North Guwahati Highway" },
 
-    // Saraighat Highway (NH-27) connecting bridge to Jalukbari Rotary
-    { x1: -130, z1: -20, x2: -130, z2: 45, width: 8.5, name: "NH-27 Saraighat Approach" },
+    // Saraighat Highway (NH-27) connecting bridge approach to Jalukbari Rotary
+    { x1: -130, z1: -8, x2: -130, z2: 45, width: 9.0, name: "NH-27 Saraighat Approach" },
 
     // AT Road (Assam Trunk Road) from Jalukbari Rotary to Paltan Bazar
-    { x1: -130, z1: 45, x2: 15, z2: 45, width: 8.0, name: "AT Road (Assam Trunk)" },
+    { x1: -130, z1: 45, x2: 15, z2: 45, width: 8.5, name: "AT Road (Assam Trunk)" },
 
     // GS Road (Premier Commercial Highway Spine)
-    { x1: 15, z1: 45, x2: 35, z2: 25, width: 8.5, name: "GS Road (Paltan - Bhangagarh)" },
-    { x1: 35, z1: 25, x2: 60, z2: 15, width: 9.0, name: "GS Road (Christian Basti Flagship)" },
-    { x1: 60, z1: 15, x2: 95, z2: 50, width: 8.5, name: "GS Road (Walford)" },
-    { x1: 95, z1: 50, x2: 125, z2: 90, width: 8.5, name: "GS Road (Ganeshguri)" },
-    { x1: 125, z1: 90, x2: 160, z2: 140, width: 8.5, name: "GS Road (Dispur Secretariat)" },
+    { x1: 15, z1: 45, x2: 35, z2: 25, width: 9.0, name: "GS Road (Paltan - Bhangagarh)" },
+    { x1: 35, z1: 25, x2: 60, z2: 15, width: 9.5, name: "GS Road (Christian Basti Flagship)" },
+    { x1: 60, z1: 15, x2: 95, z2: 50, width: 9.0, name: "GS Road (Walford)" },
+    { x1: 95, z1: 50, x2: 125, z2: 90, width: 9.0, name: "GS Road (Ganeshguri)" },
+    { x1: 125, z1: 90, x2: 160, z2: 140, width: 9.0, name: "GS Road (Dispur Secretariat)" },
 
     // GNB Road & MC Road Heritage Loop (around Dighalipukhuri Lake)
-    { x1: -25, z1: -25, x2: 35, z2: -25, width: 7.5, name: "GNB Road West" },
-    { x1: 35, z1: -25, x2: 95, z2: -25, width: 7.5, name: "GNB Road (North of Lake)" },
-    { x1: 95, z1: -25, x2: 95, z2: 15, width: 7.0, name: "MC Road East" },
-    { x1: 95, z1: 15, x2: 60, z2: 15, width: 7.0, name: "MC Road to Christian Basti" },
-    { x1: 35, z1: -25, x2: 35, z2: 25, width: 7.0, name: "Nehru Park Avenue" },
+    { x1: -25, z1: -25, x2: 35, z2: -25, width: 8.0, name: "GNB Road West" },
+    { x1: 35, z1: -25, x2: 95, z2: -25, width: 8.0, name: "GNB Road (North of Lake)" },
+    { x1: 95, z1: -25, x2: 95, z2: 15, width: 7.5, name: "MC Road East" },
+    { x1: 95, z1: 15, x2: 60, z2: 15, width: 7.5, name: "MC Road to Christian Basti" },
+    { x1: 35, z1: -25, x2: 35, z2: 25, width: 7.5, name: "Nehru Park Avenue" },
 
     // Colony Connecting Roads (Loops & Neighborhood branches)
-    { x1: 60, z1: 15, x2: 60, z2: -10, width: 6.5, name: "Christian Basti Colony Lane" },
-    { x1: 60, z1: -10, x2: 35, z2: -10, width: 6.0, name: "Uzan Bazar Heritage Link" },
-    { x1: 15, z1: 45, x2: 15, z2: 90, width: 7.0, name: "Station Road South" },
-    { x1: 15, z1: 90, x2: 70, z2: 90, width: 6.5, name: "Rehabari - Bhangagarh Loop" },
-    { x1: 70, z1: 90, x2: 95, z2: 50, width: 6.5, name: "Bhangagarh Link" },
-    { x1: -60, z1: 45, x2: -60, z2: -25, width: 7.0, name: "Bharalumukh River Link" },
+    { x1: 60, z1: 15, x2: 60, z2: -10, width: 7.0, name: "Christian Basti Colony Lane" },
+    { x1: 60, z1: -10, x2: 35, z2: -10, width: 7.0, name: "Uzan Bazar Heritage Link" },
+    { x1: 15, z1: 45, x2: 15, z2: 90, width: 7.5, name: "Station Road South" },
+    { x1: 15, z1: 90, x2: 70, z2: 90, width: 7.0, name: "Rehabari - Bhangagarh Loop" },
+    { x1: 70, z1: 90, x2: 95, z2: 50, width: 7.0, name: "Bhangagarh Link" },
+    { x1: -60, z1: 45, x2: -60, z2: -25, width: 7.5, name: "Bharalumukh River Link" },
   ];
 
   for (const r of roads) {
@@ -408,38 +459,42 @@ export function buildGuwahatiCity(
     const dz = r.z2 - r.z1;
     const len = Math.hypot(dx, dz);
     const angle = Math.atan2(dx, dz);
+    const midX = (r.x1 + r.x2) / 2;
+    const midZ = (r.z1 + r.z2) / 2;
 
-    // Road Surface
-    const geo = new THREE.PlaneGeometry(r.width, len);
-    geo.rotateX(-Math.PI / 2);
-    geo.rotateY(angle);
-    const mesh = new THREE.Mesh(geo, roadMat);
-    mesh.position.set((r.x1 + r.x2) / 2, 0.06, (r.z1 + r.z2) / 2);
-    mesh.receiveShadow = true;
-    group.add(mesh);
+    // Solid 3D Road Box (Thickness: 0.32, top surface at Y = 0.32)
+    const roadGeo = new THREE.BoxGeometry(r.width, 0.32, len);
+    const roadMesh = new THREE.Mesh(roadGeo, roadMat);
+    roadMesh.position.set(midX, 0.16, midZ);
+    roadMesh.rotation.y = angle;
+    roadMesh.receiveShadow = true;
+    group.add(roadMesh);
+    disposables.push(roadGeo);
 
-    // Sidewalk Borders (Left and Right curbs)
-    const curbW = 1.4;
+    // Solid 3D Sidewalk Curbs (Left & Right, top surface at Y = 0.44)
+    const curbW = 1.6;
     for (const side of [-1, 1]) {
-      const cGeo = new THREE.PlaneGeometry(curbW, len);
-      cGeo.rotateX(-Math.PI / 2);
-      cGeo.rotateY(angle);
-      const cMesh = new THREE.Mesh(cGeo, sidewalkMat);
-      const perpX = -Math.sin(angle) * (r.width / 2 + curbW / 2) * side;
-      const perpZ = Math.cos(angle) * (r.width / 2 + curbW / 2) * side;
-      cMesh.position.set((r.x1 + r.x2) / 2 + perpX, 0.055, (r.z1 + r.z2) / 2 + perpZ);
-      group.add(cMesh);
+      const curbGeo = new THREE.BoxGeometry(curbW, 0.44, len);
+      const curbMesh = new THREE.Mesh(curbGeo, sidewalkMat);
+      const perpDist = (r.width / 2 + curbW / 2) * side;
+      const perpX = Math.cos(angle) * perpDist;
+      const perpZ = -Math.sin(angle) * perpDist;
+      curbMesh.position.set(midX + perpX, 0.22, midZ + perpZ);
+      curbMesh.rotation.y = angle;
+      curbMesh.receiveShadow = true;
+      group.add(curbMesh);
+      disposables.push(curbGeo);
     }
 
-    // Yellow Dashed Center Lane Marking
+    // Yellow Center Dashed Lane Marking (At Y = 0.335)
     const dashLine = new THREE.LineSegments(
       new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(r.x1, 0.07, r.z1),
-        new THREE.Vector3(r.x2, 0.07, r.z2),
+        new THREE.Vector3(r.x1, 0.335, r.z1),
+        new THREE.Vector3(r.x2, 0.335, r.z2),
       ]),
       new THREE.LineDashedMaterial({
         color: 0xfacc15,
-        dashSize: 2.8,
+        dashSize: 3.2,
         gapSize: 2.2,
         linewidth: 2,
       })
@@ -447,6 +502,65 @@ export function buildGuwahatiCity(
     dashLine.computeLineDistances();
     group.add(dashLine);
   }
+
+  // Solid Intersection Slabs & Rotaries (Ensuring 100% continuous, gapless junctions)
+  const buildIntersectionBox = (cx: number, cz: number, size: number) => {
+    const geo = new THREE.BoxGeometry(size, 0.32, size);
+    const mesh = new THREE.Mesh(geo, roadMat);
+    mesh.position.set(cx, 0.16, cz);
+    mesh.receiveShadow = true;
+    group.add(mesh);
+    disposables.push(geo);
+  };
+
+  // Major Junction Slabs
+  buildIntersectionBox(15, 45, 16);     // Paltan Bazar Junction
+  buildIntersectionBox(60, 15, 18);     // Christian Basti GS Road Junction
+  buildIntersectionBox(95, 50, 16);     // Walford / Bhangagarh Junction
+  buildIntersectionBox(125, 90, 16);    // Ganeshguri Junction
+  buildIntersectionBox(-25, -25, 16);   // Pan Bazar Riverfront Junction
+  buildIntersectionBox(35, -25, 15);    // Nehru Park North Junction
+  buildIntersectionBox(35, 25, 15);     // Nehru Park South Junction
+  buildIntersectionBox(-60, 45, 14);    // Bharalumukh South
+  buildIntersectionBox(-60, -25, 14);   // Bharalumukh Riverfront
+  buildIntersectionBox(-130, -8, 18);   // Saraighat South Ramp / MG Road merge
+  buildIntersectionBox(-130, -165, 18); // Saraighat North Ramp / Highway merge
+
+  // Jalukbari Rotary Roundabout (-130, 45)
+  const rotaryAsphaltGeo = new THREE.CylinderGeometry(18, 18, 0.32, 32);
+  const rotaryAsphalt = new THREE.Mesh(rotaryAsphaltGeo, roadMat);
+  rotaryAsphalt.position.set(-130, 0.16, 45);
+  rotaryAsphalt.receiveShadow = true;
+  group.add(rotaryAsphalt);
+
+  const rotaryIslandGeo = new THREE.CylinderGeometry(9, 9, 0.5, 32);
+  const rotaryIslandMat = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.9 });
+  const rotaryIsland = new THREE.Mesh(rotaryIslandGeo, rotaryIslandMat);
+  rotaryIsland.position.set(-130, 0.25, 45);
+  rotaryIsland.receiveShadow = true;
+  group.add(rotaryIsland);
+
+  // Terracotta rotary monument
+  const rotaryMonGeo = new THREE.CylinderGeometry(0.8, 1.4, 4.2, 8);
+  const rotaryMonMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.7 });
+  const rotaryMon = new THREE.Mesh(rotaryMonGeo, rotaryMonMat);
+  rotaryMon.position.set(-130, 2.6, 45);
+  group.add(rotaryMon);
+  disposables.push(rotaryAsphaltGeo, rotaryIslandGeo, rotaryIslandMat, rotaryMonGeo, rotaryMonMat);
+
+  // Dispur Secretariat Roundabout (160, 140)
+  const dispurAsphaltGeo = new THREE.CylinderGeometry(16, 16, 0.32, 32);
+  const dispurAsphalt = new THREE.Mesh(dispurAsphaltGeo, roadMat);
+  dispurAsphalt.position.set(160, 0.16, 140);
+  dispurAsphalt.receiveShadow = true;
+  group.add(dispurAsphalt);
+
+  const dispurIslandGeo = new THREE.CylinderGeometry(7.5, 7.5, 0.5, 32);
+  const dispurIsland = new THREE.Mesh(dispurIslandGeo, rotaryIslandMat);
+  dispurIsland.position.set(160, 0.25, 140);
+  dispurIsland.receiveShadow = true;
+  group.add(dispurIsland);
+  disposables.push(dispurAsphaltGeo, dispurIslandGeo);
 
   // 7. COMMERCIAL PLOTS & VERIFIED BUSINESS BLOCKS
   // Only authentic businesses (Nerqiva Studio) and active construction appear.
@@ -469,12 +583,12 @@ export function buildGuwahatiCity(
   }
 
   const plotPlacements: PlotPlacement[] = [
-    // Flagship 1: Nerqiva Studio on GS Road (781005)
+    // Flagship 1: Nerqiva Studio at Christian Basti Boulevard (781005)
     {
       business: nerqivaBusiness,
-      x: 60,
-      z: 15,
-      isLeft: false,
+      x: 74,
+      z: 2,
+      isLeft: true,
       colonyName: "GS Road & Christian Basti",
       pincode: "781005",
       tier: 2,
@@ -482,9 +596,9 @@ export function buildGuwahatiCity(
     // Plot 2: Under Construction Commercial Plot on GS Road
     {
       business: null,
-      x: 42,
-      z: 22,
-      isLeft: true,
+      x: 34,
+      z: 36,
+      isLeft: false,
       isConstruction: true,
       colonyName: "GS Road Commercial District",
       pincode: "781005",
@@ -556,6 +670,10 @@ export function buildGuwahatiCity(
       isEmptyPlot
     );
 
+    // Elevate plot base flush with the solid 3D road and sidewalk curbs (Y = 0.32)
+    plotResult.mesh.position.y = 0.32;
+    plotResult.hitBox.position.y = 0.32;
+
     group.add(plotResult.mesh);
     group.add(plotResult.hitBox);
 
@@ -601,8 +719,8 @@ export function buildGuwahatiCity(
       depthWrite: false,
     });
     const sprite = new THREE.Sprite(spriteMat);
-    const badgeScale = p.business ? 16 : 12;
-    sprite.position.set(p.x, p.business ? 7.2 : 4.5, p.z);
+    const badgeScale = p.business ? 14 : 9.5;
+    sprite.position.set(p.x, (p.business ? 7.6 : 4.8) + 0.32, p.z);
     sprite.scale.set(badgeScale, badgeScale * (115 / 380), 1);
     group.add(sprite);
   });
@@ -623,7 +741,7 @@ export function buildGuwahatiCity(
   // Along Dighalipukhuri Lake
   for (let lx = 42; lx <= 88; lx += 8) {
     for (const lz of [-23, 3]) {
-      treeDummy.position.set(lx + Math.sin(tIdx) * 1.5, 0.05, lz);
+      treeDummy.position.set(lx + Math.sin(tIdx) * 1.5, 0.32, lz);
       const s = 1.0 + Math.sin(tIdx * 2.1) * 0.25;
       treeDummy.scale.set(s, s * 1.25, s);
       treeDummy.rotation.y = tIdx * 1.3;
@@ -635,7 +753,7 @@ export function buildGuwahatiCity(
   // Along Brahmaputra Riverfront Park
   for (let rx = -220; rx <= 220; rx += 20) {
     if (Math.abs(rx - -130) < 22) continue; // Skip Saraighat bridge
-    treeDummy.position.set(rx, 0.05, -20);
+    treeDummy.position.set(rx, 0.32, -20);
     const s = 1.2 + Math.cos(tIdx * 1.8) * 0.3;
     treeDummy.scale.set(s, s * 1.3, s);
     treeDummy.rotation.y = tIdx * 1.5;
@@ -646,10 +764,10 @@ export function buildGuwahatiCity(
   group.add(treeInst);
   disposables.push(treeGeo, treeMat);
 
-  // 10. REALISTIC, PEACEFUL TRAFFIC (3 vehicles cruising smoothly at 3.5-4.5 m/s)
+  // 10. REALISTIC, PEACEFUL TRAFFIC (3 vehicles cruising strictly on asphalt at 3.5-5.0 m/s)
   interface CityVehicle {
     mesh: THREE.Group;
-    waypoints: [number, number][];
+    waypoints: [number, number, number][]; // [x, y, z] strictly on road centerlines
     currentWp: number;
     t: number;
     speed: number;
@@ -708,62 +826,84 @@ export function buildGuwahatiCity(
     return v;
   };
 
-  // Vehicle 1: Auto-Rickshaw touring MG Road, Pan Bazar & Christian Basti
+  // Vehicle 1: Auto-Rickshaw touring MG Road, Pan Bazar, Nehru Park & Christian Basti
   const auto = buildAuto();
   group.add(auto);
   vehicles.push({
     mesh: auto,
     waypoints: [
-      [-220, -25],
-      [-25, -25],
-      [35, 25],
-      [60, 15],
-      [95, 50],
-      [15, 45],
-      [-130, 45],
-      [-130, -25],
+      [-220, 0.32, -25],
+      [-130, 0.32, -25],
+      [-25, 0.32, -25],
+      [35, 0.32, -25],
+      [35, 0.32, 25],
+      [60, 0.32, 15],
+      [95, 0.32, 50],
+      [15, 0.32, 45],
+      [-60, 0.32, 45],
+      [-130, 0.32, 45],
+      [-130, 0.32, -8],
+      [-130, 0.32, -25],
     ],
     currentWp: 0,
     t: 0,
     speed: 4.2,
   });
 
-  // Vehicle 2: ASTC Red Bus Crossing Saraighat Bridge
+  // Vehicle 2: ASTC Red Bus Crossing Saraighat Bridge seamlessly
   const bus = buildBus();
   group.add(bus);
   vehicles.push({
     mesh: bus,
     waypoints: [
-      [-130, 45],
-      [-130, -25],
-      [-130, -160],
-      [-130, -25],
+      [-130, 0.32, 45],    // Jalukbari Rotary
+      [-130, 0.32, -8],    // NH-27 Approach Foot
+      [-130, 2.56, -19],   // South Ramp Mid
+      [-130, 4.8, -30],    // South Abutment Bridge Deck
+      [-130, 4.8, -90],    // Saraighat Bridge Mid River
+      [-130, 4.8, -150],   // North Abutment Bridge Deck
+      [-130, 2.56, -161],  // North Ramp Mid
+      [-130, 0.32, -172],  // North Highway Foot
+      [-170, 0.32, -165],  // North Highway Turn
+      [-130, 0.32, -165],  // North Highway Return
+      [-130, 0.32, -172],  // North Ramp Foot
+      [-130, 2.56, -161],  // North Ramp Ascend
+      [-130, 4.8, -150],   // North Abutment
+      [-130, 4.8, -90],    // Mid River
+      [-130, 4.8, -30],    // South Abutment
+      [-130, 2.56, -19],   // South Ramp Descend
+      [-130, 0.32, -8],    // NH-27 Foot
+      [-130, 0.32, 45],    // Jalukbari Rotary
     ],
     currentWp: 0,
     t: 0.25,
-    speed: 3.6,
+    speed: 3.8,
   });
 
-  // Vehicle 3: White Sedan on GS Road Commercial Highway
+  // Vehicle 3: White Sedan on GS Road Commercial Highway (Dispur to Paltan Bazar)
   const car = buildCar();
   group.add(car);
   vehicles.push({
     mesh: car,
     waypoints: [
-      [160, 140],
-      [125, 90],
-      [95, 50],
-      [60, 15],
-      [35, 25],
-      [15, 45],
-      [60, 15],
+      [160, 0.32, 140],  // Dispur Secretariat Roundabout
+      [125, 0.32, 90],   // Ganeshguri
+      [95, 0.32, 50],    // Walford
+      [60, 0.32, 15],    // Christian Basti (Nerqiva Studio)
+      [35, 0.32, 25],    // Bhangagarh
+      [15, 0.32, 45],    // Paltan Bazar Junction
+      [35, 0.32, 25],    // Bhangagarh
+      [60, 0.32, 15],    // Christian Basti
+      [95, 0.32, 50],    // Walford
+      [125, 0.32, 90],   // Ganeshguri
+      [160, 0.32, 140],  // Dispur Secretariat
     ],
     currentWp: 0,
     t: 0.6,
     speed: 4.8,
   });
 
-  // Animation Update
+  // Animation Update: Physical 3D interpolation along asphalt waypoints
   const update = (delta: number) => {
     const dt = Math.min(delta, 0.1);
 
@@ -773,21 +913,31 @@ export function buildGuwahatiCity(
       const p2 = v.waypoints[nextIdx];
 
       const dx = p2[0] - p1[0];
-      const dz = p2[1] - p1[1];
-      const dist = Math.hypot(dx, dz);
+      const dy = p2[1] - p1[1];
+      const dz = p2[2] - p1[2];
+      const horizontalDist = Math.hypot(dx, dz);
+      const totalDist = Math.hypot(dx, dy, dz);
 
-      v.t += (v.speed * dt) / Math.max(dist, 1);
+      v.t += (v.speed * dt) / Math.max(totalDist, 1);
       if (v.t >= 1) {
         v.t = 0;
         v.currentWp = nextIdx;
       }
 
       const curX = p1[0] + dx * v.t;
-      const curZ = p1[1] + dz * v.t;
-      v.mesh.position.set(curX, 0.1, curZ);
+      const curY = p1[1] + dy * v.t;
+      const curZ = p1[2] + dz * v.t;
+      v.mesh.position.set(curX, curY, curZ);
 
-      const angle = Math.atan2(dx, dz);
-      v.mesh.rotation.y = angle;
+      const yawAngle = Math.atan2(dx, dz);
+      v.mesh.rotation.y = yawAngle;
+
+      // Incline tilt for ramps (e.g. Saraighat Bridge ramps)
+      if (horizontalDist > 0.1) {
+        v.mesh.rotation.x = -Math.atan2(dy, horizontalDist);
+      } else {
+        v.mesh.rotation.x = 0;
+      }
     }
   };
 

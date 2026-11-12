@@ -35,10 +35,10 @@ export function buildProceduralFlora(): THREE.Group {
     }
   };
 
-  // 1. Assam & Brahmaputra Valley (near Guwahati / Tezpur / Dibrugarh)
-  addTreeCluster(26.2, 91.8, 25, 1.1);
-  addTreeCluster(26.6, 92.9, 20, 1.2);
-  addTreeCluster(26.8, 94.2, 20, 1.2);
+  // 1. Assam Forest Reserves (Kaziranga & Manas National Parks, flanking the Brahmaputra)
+  addTreeCluster(26.5, 93.3, 14, 0.8); // Kaziranga Reserve
+  addTreeCluster(26.7, 91.1, 12, 0.8); // Manas National Park
+  addTreeCluster(27.1, 94.8, 12, 0.8); // Upper Assam Dibru-Saikhowa
 
   // 2. Gangetic & Bengal Forest Belts (Sundarbans & Terai foothills)
   addTreeCluster(22.4, 88.6, 25, 1.4); // Sundarbans Delta
@@ -75,8 +75,8 @@ export function buildProceduralFlora(): THREE.Group {
   trees.forEach((t, i) => {
     const [x, z] = toWorld(t.lon, t.lat);
     dummy.position.set(x, 5.98, z);
-    const s = t.scale * 1.5;
-    dummy.scale.set(s, s * 1.2, s);
+    const s = t.scale * 0.75;
+    dummy.scale.set(s, s * 1.15, s);
     dummy.rotation.y = (i * 1.5) % (Math.PI * 2);
     dummy.updateMatrix();
     inst.setMatrixAt(i, dummy.matrix);
