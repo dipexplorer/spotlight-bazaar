@@ -10,6 +10,7 @@ import {
   NationalMapBuildResult,
 } from "./indiaNationalMap";
 import { buildBazaarStreet } from "./bazaarStreet";
+import { GUWAHATI_COLONIES, ColonyDefinition } from "./guwahatiCityModel";
 import { TrafficSystem } from "./trafficSystem";
 import { PedestrianSystem } from "./pedestrianSystem";
 import { StorefrontMeshResult } from "./cartoonStorefront";
@@ -133,12 +134,12 @@ export function ThreeMapCanvas({
   // Smooth Camera: Town High-Street View vs National 3D India Isometric Perspective
   const flyToCityStreet = useCallback((city: City, walk: boolean = false) => {
     if (walk) {
-      targetCamPosRef.current = new THREE.Vector3(-8.2, 3.2, 7.5);
-      targetLookAtRef.current = new THREE.Vector3(-8.2, 1.8, 26);
+      targetCamPosRef.current = new THREE.Vector3(50, 3.2, 32);
+      targetLookAtRef.current = new THREE.Vector3(60, 2.5, 15);
     } else {
-      // Atmospheric drone view angled down the central boulevard
-      targetCamPosRef.current = new THREE.Vector3(0, 24, -18);
-      targetLookAtRef.current = new THREE.Vector3(0, 3, 38);
+      // Elevated drone panorama viewing Guwahati, Dighalipukhuri Lake and the Brahmaputra River
+      targetCamPosRef.current = new THREE.Vector3(45, 95, 125);
+      targetLookAtRef.current = new THREE.Vector3(45, 2, -15);
     }
   }, []);
 
@@ -152,6 +153,26 @@ export function ThreeMapCanvas({
       setIsWalkMode(false);
     }
   }, [flyToCityStreet]);
+
+  // Focus a specific colony or Postal PIN Code location
+  const focusColony = useCallback(
+    (colony: ColonyDefinition) => {
+      const guwahatiCity = cities.find(
+        (c) => c.slug === "guwahati" || c.name.toLowerCase() === "guwahati"
+      );
+      if (
+        guwahatiCity &&
+        (!selectedCityRef.current || selectedCityRef.current.slug !== "guwahati")
+      ) {
+        onCitySelect(guwahatiCity);
+      }
+
+      targetCamPosRef.current = new THREE.Vector3(colony.x - 12, 32, colony.z + 48);
+      targetLookAtRef.current = new THREE.Vector3(colony.x, 2, colony.z);
+      showToast(`📍 Focused on ${colony.name} (PIN ${colony.pincode})`);
+    },
+    [cities, onCitySelect, showToast]
+  );
 
   // Frame a specific storefront in the 3D high street
   const focusStorefront = useCallback(
@@ -269,19 +290,25 @@ export function ThreeMapCanvas({
         hitBoxesRef.current = hitBoxes;
         plotsRef.current = plots;
 
-        // Instantiate controllable 3D Player Avatar
-        const playerAvatar = createPlayerAvatarSystem(-8.2, 0.1, 16, "@spotlight.bazaar");
+        // Instantiate controllable 3D Player Avatar near GS Road / Christian Basti
+        const isGuwahati = selectedCity.slug === "guwahati" || selectedCity.name.toLowerCase() === "guwahati";
+        const playerAvatar = createPlayerAvatarSystem(
+          isGuwahati ? 50 : -8.2,
+          0.1,
+          isGuwahati ? 28 : 16,
+          "@spotlight.bazaar"
+        );
         scene.add(playerAvatar.group);
         playerAvatarRef.current = playerAvatar;
 
-        // STRICT CAMERA CLAMPING IN TOWN VIEW:
-        // User CANNOT zoom out into empty space / see cut-off edges.
-        // Maximum distance is clamped to 65 (high drone overview).
+        // CAMERA CLAMPING IN TOWN VIEW:
+        // Allows exploring the expansive Guwahati riverfront, bridge, and colonies
         if (controlsRef.current) {
-          controlsRef.current.minDistance = 3.2;
-          controlsRef.current.maxDistance = 65;
-          controlsRef.current.maxPolarAngle = Math.PI / 2.05;
-          controlsRef.current.target.set(0, 3, 35);
+          controlsRef.current.minDistance = 4.0;
+          controlsRef.current.maxDistance = 380;
+          controlsRef.current.maxPolarAngle = Math.PI / 2.08;
+          controlsRef.current.target.set(isGuwahati ? 45 : 0, 2, isGuwahati ? -15 : -20);
+          controlsRef.current.screenSpacePanning = true;
         }
 
         updateEnvironmentLighting(isNightRef.current);
@@ -361,13 +388,13 @@ export function ThreeMapCanvas({
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.enablePan = true;
-    controls.screenSpacePanning = false; // Pan strictly parallel to map ground plane
+    controls.screenSpacePanning = true;
 
     if (selectedCityRef.current) {
-      controls.minDistance = 3.2;
-      controls.maxDistance = 65;
-      controls.maxPolarAngle = Math.PI / 2.05;
-      controls.target.set(0, 3, 35);
+      controls.minDistance = 4.0;
+      controls.maxDistance = 380;
+      controls.maxPolarAngle = Math.PI / 2.08;
+      controls.target.set(45, 2, -15);
     } else {
       // National Map: Unlocked deep zoom down to regional level
       controls.minDistance = 35;
@@ -377,13 +404,13 @@ export function ThreeMapCanvas({
     }
 
     controls.mouseButtons = {
-      LEFT: THREE.MOUSE.ROTATE,
+      LEFT: THREE.MOUSE.PAN,
       MIDDLE: THREE.MOUSE.DOLLY,
-      RIGHT: THREE.MOUSE.PAN,
+      RIGHT: THREE.MOUSE.ROTATE,
     };
     controls.touches = {
-      ONE: THREE.TOUCH.ROTATE,
-      TWO: THREE.TOUCH.DOLLY_PAN,
+      ONE: THREE.TOUCH.PAN,
+      TWO: THREE.TOUCH.DOLLY_ROTATE,
     };
     controlsRef.current = controls;
 
@@ -567,8 +594,8 @@ export function ThreeMapCanvas({
         pedestriansRef.current.update(delta);
       }
 
-      // National Map Free Spatial Pan (WASD & Arrow Keys)
-      if (!selectedCityRef.current) {
+      // Free Spatial Pan (WASD & Arrow Keys) in both National and Town Overview
+      if (!isWalkModeRef.current) {
         const keys = keysDownRef.current;
         let moveX = 0;
         let moveZ = 0;
@@ -581,7 +608,10 @@ export function ThreeMapCanvas({
         if (moveX !== 0 || moveZ !== 0) {
           const isShift = Boolean(keys["ShiftLeft"] || keys["ShiftRight"]);
           const camDist = camera.position.distanceTo(controls.target);
-          const panSpeed = Math.max(camDist * 0.75, 25) * (isShift ? 2.5 : 1.0) * delta;
+          const panSpeed =
+            Math.max(camDist * 0.75, selectedCityRef.current ? 35 : 55) *
+            (isShift ? 2.5 : 1.0) *
+            delta;
 
           const forward = new THREE.Vector3();
           camera.getWorldDirection(forward);
@@ -698,6 +728,16 @@ export function ThreeMapCanvas({
 
   const searchResultsCities = q
     ? cities.filter((c) => Boolean(c?.name) && c.name.toLowerCase().includes(q))
+    : [];
+
+  const searchResultsColonies = q
+    ? GUWAHATI_COLONIES.filter(
+        (col) =>
+          col.pincode.includes(q) ||
+          col.name.toLowerCase().includes(q) ||
+          col.zone.toLowerCase().includes(q) ||
+          col.description.toLowerCase().includes(q)
+      )
     : [];
 
   const searchResultsShops = q
@@ -827,6 +867,41 @@ export function ThreeMapCanvas({
                 </div>
               )}
 
+              {searchResultsColonies.length > 0 && (
+                <div className="mb-1">
+                  <span className="text-[10px] font-mono text-neutral-500 px-2 py-0.5 uppercase tracking-wider block">
+                    Colonies & Postal PIN Codes
+                  </span>
+                  {searchResultsColonies.map((col) => (
+                    <button
+                      key={col.pincode}
+                      type="button"
+                      onClick={() => {
+                        focusColony(col);
+                        setSearchOpen(false);
+                        setSearchQuery("");
+                      }}
+                      className="w-full px-3 py-2 rounded-xl text-left hover:bg-neutral-900 flex items-center justify-between text-xs text-white transition-colors group"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-medium text-white group-hover:text-amber-300 truncate">
+                            {col.name}
+                          </span>
+                          <span className="text-[10px] text-neutral-400 truncate">
+                            {col.description}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-mono text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-md shrink-0 ml-2">
+                        PIN {col.pincode}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {searchResultsShops.length > 0 && (
                 <div>
                   <span className="text-[10px] font-mono text-neutral-500 px-2 py-0.5 uppercase tracking-wider block">
@@ -870,6 +945,7 @@ export function ThreeMapCanvas({
               )}
 
               {searchResultsCities.length === 0 &&
+                searchResultsColonies.length === 0 &&
                 searchResultsShops.length === 0 && (
                   <div className="py-4 text-center text-xs text-neutral-500">
                     No results for &ldquo;{searchQuery}&rdquo;
@@ -1126,9 +1202,9 @@ export function ThreeMapCanvas({
         <div className="flex items-center gap-2">
           <div className="px-3.5 py-1.5 rounded-xl bg-neutral-950/70 backdrop-blur-md border border-neutral-800/60 text-[10px] text-neutral-400 font-mono flex items-center gap-2 shadow-lg">
             <span>
-              {selectedCity
-                ? "WASD move · Drag look 360° · Scroll zoom · [E] talk"
-                : "WASD / Right-drag pan · Drag look 360° · Scroll zoom · Double-click focus"}
+              {isWalkMode
+                ? "WASD / Arrows walk avatar · Shift sprint · [E] talk · Esc exit walk"
+                : "Drag pan · Right-drag look 360° · Scroll zoom · WASD / Arrows shift view"}
             </span>
           </div>
         </div>

@@ -8,6 +8,7 @@ import { toWorld } from "./projection";
 import { buildCartoonStorefrontPlot, StorefrontMeshResult } from "./cartoonStorefront";
 import { createTrafficSystem, TrafficSystem } from "./trafficSystem";
 import { createPedestrianSystem, PedestrianSystem } from "./pedestrianSystem";
+import { buildGuwahatiCity } from "./guwahatiCityModel";
 
 export interface BazaarStreetBuildResult {
   group: THREE.Group;
@@ -25,6 +26,28 @@ export function buildBazaarStreet(
   city: City,
   storefronts: BusinessStorefront[]
 ): BazaarStreetBuildResult {
+  // If Guwahati, render the authentic, expansive connected Guwahati city model
+  // (with Brahmaputra River, Saraighat Bridge, Dighalipukhuri Lake, GS Road, and colonies)
+  if (city.slug?.toLowerCase() === "guwahati" || city.name.toLowerCase() === "guwahati") {
+    const guwahati = buildGuwahatiCity(storefronts);
+    const traffic: TrafficSystem = {
+      group: new THREE.Group(),
+      update: (delta) => guwahati.update(delta),
+      dispose: () => guwahati.dispose(),
+    };
+    const pedestrians: PedestrianSystem = {
+      group: new THREE.Group(),
+      update: () => {},
+      dispose: () => {},
+    };
+    return {
+      group: guwahati.group,
+      hitBoxes: guwahati.hitBoxes,
+      plots: guwahati.plots,
+      traffic,
+      pedestrians,
+    };
+  }
   const group = new THREE.Group();
   group.name = `bazaar_street_${city.slug}`;
 

@@ -208,26 +208,32 @@ export function buildSkyEnvironment(scene: THREE.Scene): SkyEnvironmentResult {
   // Update Lighting and Environment between Day and Night
   const updateLighting = (isNight: boolean, inTown: boolean) => {
     if (inTown) {
-      // In Town View: local street lighting
+      // In Town View: local street lighting with visible celestial Sun / Moon
       oceanMesh.visible = false;
-      sunMesh.visible = false;
-      moonMesh.visible = false;
-      starField.visible = false;
+      starField.visible = isNight;
 
       if (isNight) {
-        scene.background = new THREE.Color(0x080d1a);
-        scene.fog = new THREE.Fog(0x050914, 45, 220);
-        dirLight.intensity = 0.45;
+        scene.background = new THREE.Color(0x060d1f);
+        scene.fog = new THREE.Fog(0x060d1f, 160, 950);
+        sunMesh.visible = false;
+        moonMesh.visible = true;
+        moonMesh.position.set(120, 240, -180);
+
+        dirLight.intensity = 0.55;
         dirLight.color.setHex(0x38bdf8);
-        ambientLight.intensity = 0.35;
-        ambientLight.color.setHex(0x0a101f);
-        hemiLight.intensity = 0.2;
+        ambientLight.intensity = 0.42;
+        ambientLight.color.setHex(0x0c1b33);
+        hemiLight.intensity = 0.28;
       } else {
         scene.background = new THREE.Color(0x38bdf8);
-        scene.fog = new THREE.Fog(0xbae6fd, 55, 260);
+        scene.fog = new THREE.Fog(0xbae6fd, 180, 1100);
+        sunMesh.visible = true;
+        moonMesh.visible = false;
+        sunMesh.position.set(160, 320, -280);
+
         dirLight.intensity = 2.4;
         dirLight.color.setHex(0xfff7ed);
-        ambientLight.intensity = 1.1;
+        ambientLight.intensity = 1.15;
         ambientLight.color.setHex(0xdbeafe);
         hemiLight.intensity = 0.75;
       }
