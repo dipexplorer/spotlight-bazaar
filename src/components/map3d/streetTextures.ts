@@ -89,6 +89,32 @@ export function createSidewalkTexture(): THREE.CanvasTexture {
 }
 
 /**
+ * Creates alternating black and white striped curb texture (Indian highway/city curbs)
+ */
+export function createStripedCurbTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d")!;
+
+  // Alternating black and white blocks (50% black, 50% white)
+  ctx.fillStyle = "#1e293b"; // Dark slate / asphalt black
+  ctx.fillRect(0, 0, 64, 128);
+  ctx.fillStyle = "#f8fafc"; // Clean white concrete
+  ctx.fillRect(64, 0, 64, 128);
+
+  // Subtle concrete bevel shadow
+  ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
+  ctx.fillRect(0, 0, 128, 6);
+  ctx.fillRect(0, 122, 128, 6);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+}
+
+/**
  * Generates an illuminated 3D neon shop signboard texture
  */
 export function createNeonSignTexture(

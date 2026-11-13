@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { BusinessStorefront } from "@/types";
 import { buildCartoonStorefrontPlot, StorefrontMeshResult } from "./cartoonStorefront";
-import { createRoadTexture, createSidewalkTexture } from "./streetTextures";
+import { createRoadTexture, createSidewalkTexture, createStripedCurbTexture } from "./streetTextures";
 
 export interface ColonyDefinition {
   name: string;
@@ -126,11 +126,11 @@ export function buildGuwahatiCity(
       elev = 0.0;
     } else {
       // C. Surrounding Natural Hills (Strictly OUTSIDE the road network)
-      // Kamakhya / Nilachal Hills in the West (X < -240, Z: -20 to 110)
-      const distKamakhya = Math.hypot(x - -270, z - 40);
-      if (distKamakhya < 100) {
-        const kFactor = (1 + Math.cos((distKamakhya / 100) * Math.PI)) * 0.5;
-        elev = Math.max(elev, kFactor * 34);
+      // Kamakhya / Nilachal Hills in the West (X < -220, Z: -20 to 110)
+      const distKamakhya = Math.hypot(x - -260, z - 25);
+      if (distKamakhya < 110) {
+        const kFactor = (1 + Math.cos((distKamakhya / 110) * Math.PI)) * 0.5;
+        elev = Math.max(elev, kFactor * 46);
       }
 
       // Meghalaya / Khasi Foothills in the South (Z > 165)
@@ -146,10 +146,25 @@ export function buildGuwahatiCity(
         elev = Math.max(elev, sFactor * 28);
       }
 
-      // North Guwahati Hills across the Brahmaputra (Z < -165)
+      // North Guwahati Rolling Dome Hills across the Brahmaputra (Z < -165)
       if (z < -165) {
-        const northGrad = Math.min((-165 - z) / 360, 1.0);
-        elev = Math.max(elev, northGrad * northGrad * 38 + Math.cos(x * 0.018) * 5);
+        const northGrad = Math.min((-165 - z) / 340, 1.0);
+        elev = northGrad * northGrad * 24;
+
+        // Distinct rolling green dome peaks (matching IndiaAgain's north bank skyline)
+        const domeHills = [
+          { cx: -190, cz: -220, r: 85, h: 48 },
+          { cx: -70, cz: -245, r: 95, h: 56 },
+          { cx: 75, cz: -230, r: 90, h: 52 },
+          { cx: 220, cz: -215, r: 80, h: 44 },
+        ];
+        for (const dh of domeHills) {
+          const d = Math.hypot(x - dh.cx, z - dh.cz);
+          if (d < dh.r) {
+            const factor = (1 + Math.cos((d / dh.r) * Math.PI)) * 0.5;
+            elev = Math.max(elev, factor * dh.h);
+          }
+        }
       }
     }
 
@@ -419,13 +434,13 @@ export function buildGuwahatiCity(
   }
 
   const roads: RoadDef[] = [
-    // MG Road (Riverfront Boulevard along South Bank)
-    { x1: -260, z1: -25, x2: 240, z2: -25, width: 9.0, name: "MG Road Riverfront" },
+    // MG Road (Riverfront Boulevard from Bharalumukh through Pan Bazar to Uzan Bazar)
+    { x1: -60, z1: -25, x2: 240, z2: -25, width: 9.0, name: "MG Road Riverfront" },
 
-    // North Guwahati Riverfront Road
+    // North Guwahati Highway
     { x1: -220, z1: -165, x2: 120, z2: -165, width: 8.0, name: "North Guwahati Highway" },
 
-    // Saraighat Highway (NH-27) connecting bridge approach to Jalukbari Rotary
+    // Saraighat Highway (NH-27) connecting bridge south approach to Jalukbari Rotary
     { x1: -130, z1: -8, x2: -130, z2: 45, width: 9.0, name: "NH-27 Saraighat Approach" },
 
     // AT Road (Assam Trunk Road) from Jalukbari Rotary to Paltan Bazar
@@ -454,6 +469,43 @@ export function buildGuwahatiCity(
     { x1: -60, z1: 45, x2: -60, z2: -25, width: 7.5, name: "Bharalumukh River Link" },
   ];
 
+  interface JunctionNode {
+    x: number;
+    z: number;
+    radius: number;
+  }
+
+  const junctions: JunctionNode[] = [
+    { x: 15, z: 45, radius: 8.5 },      // Paltan Bazar Junction
+    { x: 60, z: 15, radius: 9.5 },      // Christian Basti Junction
+    { x: 95, z: 50, radius: 8.5 },      // Walford Junction
+    { x: 125, z: 90, radius: 8.5 },     // Ganeshguri Junction
+    { x: 160, z: 140, radius: 10.0 },   // Dispur Secretariat
+    { x: -25, z: -25, radius: 8.5 },    // Pan Bazar Riverfront
+    { x: 35, z: -25, radius: 8.0 },     // Nehru Park North
+    { x: 35, z: 25, radius: 8.0 },      // Nehru Park South
+    { x: -60, z: 45, radius: 7.5 },     // Bharalumukh South
+    { x: -60, z: -25, radius: 7.5 },    // Bharalumukh Riverfront
+    { x: -130, z: -8, radius: 8.5 },    // Saraighat South Ramp Merge
+    { x: -130, z: -165, radius: 8.5 },  // Saraighat North Ramp Merge
+    { x: 60, z: -10, radius: 6.5 },     // Uzan Bazar Link
+    { x: 35, z: -10, radius: 6.5 },     // Uzan Bazar Lake Link
+    { x: 15, z: 90, radius: 7.5 },      // Station Road South
+    { x: 70, z: 90, radius: 7.5 },      // Rehabari Loop
+    { x: 95, z: -25, radius: 7.5 },     // MC Road East North
+  ];
+
+  // 1. Seamless rounded asphalt junctions at Y = 0.16 (height 0.32)
+  for (const j of junctions) {
+    const jGeo = new THREE.CylinderGeometry(j.radius, j.radius, 0.32, 28);
+    const jMesh = new THREE.Mesh(jGeo, roadMat);
+    jMesh.position.set(j.x, 0.16, j.z);
+    jMesh.receiveShadow = true;
+    group.add(jMesh);
+    disposables.push(jGeo);
+  }
+
+  // 2. Build each solid 3D road segment with Indian black-and-white striped curbs
   for (const r of roads) {
     const dx = r.x2 - r.x1;
     const dz = r.z2 - r.z1;
@@ -462,7 +514,7 @@ export function buildGuwahatiCity(
     const midX = (r.x1 + r.x2) / 2;
     const midZ = (r.z1 + r.z2) / 2;
 
-    // Solid 3D Road Box (Thickness: 0.32, top surface at Y = 0.32)
+    // Solid 3D Road Asphalt Box (top at Y = 0.32)
     const roadGeo = new THREE.BoxGeometry(r.width, 0.32, len);
     const roadMesh = new THREE.Mesh(roadGeo, roadMat);
     roadMesh.position.set(midX, 0.16, midZ);
@@ -471,60 +523,84 @@ export function buildGuwahatiCity(
     group.add(roadMesh);
     disposables.push(roadGeo);
 
-    // Solid 3D Sidewalk Curbs (Left & Right, top surface at Y = 0.44)
-    const curbW = 1.6;
-    for (const side of [-1, 1]) {
-      const curbGeo = new THREE.BoxGeometry(curbW, 0.44, len);
-      const curbMesh = new THREE.Mesh(curbGeo, sidewalkMat);
-      const perpDist = (r.width / 2 + curbW / 2) * side;
-      const perpX = Math.cos(angle) * perpDist;
-      const perpZ = -Math.sin(angle) * perpDist;
-      curbMesh.position.set(midX + perpX, 0.22, midZ + perpZ);
-      curbMesh.rotation.y = angle;
-      curbMesh.receiveShadow = true;
-      group.add(curbMesh);
-      disposables.push(curbGeo);
+    // Calculate junction insets so curbs & center lines NEVER cross or slice intersections
+    let startInset = 0;
+    for (const j of junctions) {
+      if (Math.hypot(r.x1 - j.x, r.z1 - j.z) <= j.radius + 1.2) {
+        startInset = Math.max(startInset, j.radius);
+      }
+    }
+    // Also check Jalukbari rotary (-130, 45, radius: 18)
+    if (Math.hypot(r.x1 - -130, r.z1 - 45) <= 19.5) {
+      startInset = Math.max(startInset, 18.0);
     }
 
-    // Yellow Center Dashed Lane Marking (At Y = 0.335)
-    const dashLine = new THREE.LineSegments(
-      new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(r.x1, 0.335, r.z1),
-        new THREE.Vector3(r.x2, 0.335, r.z2),
-      ]),
-      new THREE.LineDashedMaterial({
-        color: 0xfacc15,
-        dashSize: 3.2,
-        gapSize: 2.2,
-        linewidth: 2,
-      })
-    );
-    dashLine.computeLineDistances();
-    group.add(dashLine);
+    let endInset = 0;
+    for (const j of junctions) {
+      if (Math.hypot(r.x2 - j.x, r.z2 - j.z) <= j.radius + 1.2) {
+        endInset = Math.max(endInset, j.radius);
+      }
+    }
+    if (Math.hypot(r.x2 - -130, r.z2 - 45) <= 19.5) {
+      endInset = Math.max(endInset, 18.0);
+    }
+
+    const curbLen = len - startInset - endInset;
+    if (curbLen > 1.5) {
+      const startParam = startInset / len;
+      const endParam = 1.0 - endInset / len;
+      const midParam = (startParam + endParam) / 2;
+      const curbCenterX = r.x1 + dx * midParam;
+      const curbCenterZ = r.z1 + dz * midParam;
+
+      const curbW = 1.35;
+      const curbTex = createStripedCurbTexture();
+      curbTex.repeat.set(1, Math.max(2, Math.round(curbLen / 2.0)));
+      const stripedCurbMat = new THREE.MeshStandardMaterial({
+        map: curbTex,
+        roughness: 0.8,
+        metalness: 0.08,
+      });
+      disposables.push(stripedCurbMat, curbTex);
+
+      // Left & Right Striped Curbs (top at Y = 0.44)
+      for (const side of [-1, 1]) {
+        const curbGeo = new THREE.BoxGeometry(curbW, 0.44, curbLen);
+        const curbMesh = new THREE.Mesh(curbGeo, stripedCurbMat);
+        const perpDist = (r.width / 2 + curbW / 2) * side;
+        const perpX = Math.cos(angle) * perpDist;
+        const perpZ = -Math.sin(angle) * perpDist;
+        curbMesh.position.set(curbCenterX + perpX, 0.22, curbCenterZ + perpZ);
+        curbMesh.rotation.y = angle;
+        curbMesh.receiveShadow = true;
+        group.add(curbMesh);
+        disposables.push(curbGeo);
+      }
+
+      // Yellow Center Dashed Lane Marking strictly between junction insets
+      const lineStart = new THREE.Vector3(
+        r.x1 + dx * startParam,
+        0.335,
+        r.z1 + dz * startParam
+      );
+      const lineEnd = new THREE.Vector3(
+        r.x1 + dx * endParam,
+        0.335,
+        r.z1 + dz * endParam
+      );
+      const dashLine = new THREE.LineSegments(
+        new THREE.BufferGeometry().setFromPoints([lineStart, lineEnd]),
+        new THREE.LineDashedMaterial({
+          color: 0xfacc15,
+          dashSize: 3.2,
+          gapSize: 2.2,
+          linewidth: 2,
+        })
+      );
+      dashLine.computeLineDistances();
+      group.add(dashLine);
+    }
   }
-
-  // Solid Intersection Slabs & Rotaries (Ensuring 100% continuous, gapless junctions)
-  const buildIntersectionBox = (cx: number, cz: number, size: number) => {
-    const geo = new THREE.BoxGeometry(size, 0.32, size);
-    const mesh = new THREE.Mesh(geo, roadMat);
-    mesh.position.set(cx, 0.16, cz);
-    mesh.receiveShadow = true;
-    group.add(mesh);
-    disposables.push(geo);
-  };
-
-  // Major Junction Slabs
-  buildIntersectionBox(15, 45, 16);     // Paltan Bazar Junction
-  buildIntersectionBox(60, 15, 18);     // Christian Basti GS Road Junction
-  buildIntersectionBox(95, 50, 16);     // Walford / Bhangagarh Junction
-  buildIntersectionBox(125, 90, 16);    // Ganeshguri Junction
-  buildIntersectionBox(-25, -25, 16);   // Pan Bazar Riverfront Junction
-  buildIntersectionBox(35, -25, 15);    // Nehru Park North Junction
-  buildIntersectionBox(35, 25, 15);     // Nehru Park South Junction
-  buildIntersectionBox(-60, 45, 14);    // Bharalumukh South
-  buildIntersectionBox(-60, -25, 14);   // Bharalumukh Riverfront
-  buildIntersectionBox(-130, -8, 18);   // Saraighat South Ramp / MG Road merge
-  buildIntersectionBox(-130, -165, 18); // Saraighat North Ramp / Highway merge
 
   // Jalukbari Rotary Roundabout (-130, 45)
   const rotaryAsphaltGeo = new THREE.CylinderGeometry(18, 18, 0.32, 32);
@@ -719,8 +795,8 @@ export function buildGuwahatiCity(
       depthWrite: false,
     });
     const sprite = new THREE.Sprite(spriteMat);
-    const badgeScale = p.business ? 14 : 9.5;
-    sprite.position.set(p.x, (p.business ? 7.6 : 4.8) + 0.32, p.z);
+    const badgeScale = p.business ? 12 : 8.5;
+    sprite.position.set(p.x, plotResult.badgePosition.y, p.z);
     sprite.scale.set(badgeScale, badgeScale * (115 / 380), 1);
     group.add(sprite);
   });
@@ -738,9 +814,10 @@ export function buildGuwahatiCity(
   const treeDummy = new THREE.Object3D();
   let tIdx = 0;
 
-  // Along Dighalipukhuri Lake
+  // Along Dighalipukhuri Lake (keeping clear of Nerqiva Studio at x=74, z=2)
   for (let lx = 42; lx <= 88; lx += 8) {
     for (const lz of [-23, 3]) {
+      if (Math.hypot(lx - 74, lz - 2) < 12) continue; // Keep Nerqiva Studio entrance unobstructed
       treeDummy.position.set(lx + Math.sin(tIdx) * 1.5, 0.32, lz);
       const s = 1.0 + Math.sin(tIdx * 2.1) * 0.25;
       treeDummy.scale.set(s, s * 1.25, s);
@@ -832,18 +909,15 @@ export function buildGuwahatiCity(
   vehicles.push({
     mesh: auto,
     waypoints: [
-      [-220, 0.32, -25],
-      [-130, 0.32, -25],
-      [-25, 0.32, -25],
-      [35, 0.32, -25],
-      [35, 0.32, 25],
-      [60, 0.32, 15],
-      [95, 0.32, 50],
-      [15, 0.32, 45],
-      [-60, 0.32, 45],
-      [-130, 0.32, 45],
-      [-130, 0.32, -8],
-      [-130, 0.32, -25],
+      [-60, 0.32, -25],    // Bharalumukh Riverfront
+      [-25, 0.32, -25],    // Pan Bazar Riverfront
+      [35, 0.32, -25],     // Nehru Park North
+      [35, 0.32, 25],      // Nehru Park South
+      [60, 0.32, 15],      // Christian Basti (Nerqiva Studio)
+      [95, 0.32, 50],      // Walford
+      [15, 0.32, 45],      // Paltan Bazar Junction
+      [-60, 0.32, 45],     // Bharalumukh South
+      [-60, 0.32, -25],    // Back to Riverfront via Bharalumukh River Link
     ],
     currentWp: 0,
     t: 0,

@@ -147,9 +147,9 @@ export function ThreeMapCanvas({
         targetLookAtRef.current = new THREE.Vector3(isGuwahati ? 64 : 0, 1.8, isGuwahati ? 2 : 20);
       }
     } else {
-      // Focused street-level perspective on the visited flagship business (Nerqiva Studio on GS Road)
-      targetCamPosRef.current = new THREE.Vector3(isGuwahati ? 52 : 0, 22, isGuwahati ? 28 : -18);
-      targetLookAtRef.current = new THREE.Vector3(isGuwahati ? 70 : 0, 3.5, isGuwahati ? 6 : 15);
+      // Cinematic Drone Overview Perspective (Matching IndiaAgain's high drone shoot across Guwahati)
+      targetCamPosRef.current = new THREE.Vector3(isGuwahati ? 45 : 0, isGuwahati ? 110 : 22, isGuwahati ? 155 : -18);
+      targetLookAtRef.current = new THREE.Vector3(isGuwahati ? 45 : 0, isGuwahati ? 2 : 3.5, isGuwahati ? 10 : 15);
     }
   }, []);
 
@@ -311,13 +311,13 @@ export function ThreeMapCanvas({
         scene.add(playerAvatar.group);
         playerAvatarRef.current = playerAvatar;
 
-        // CAMERA CLAMPING IN TOWN VIEW:
-        // Focuses closely on the visited location; distant areas soften into atmospheric blur
+        // UNLOCKED DEEP DRONE ZOOM & STREET NAVIGATION:
+        // Wide-range zooming from high-altitude drone overview (750m) down to intimate street inspection (3.2m)
         if (controlsRef.current) {
-          controlsRef.current.minDistance = 3.5;
-          controlsRef.current.maxDistance = 110;
-          controlsRef.current.maxPolarAngle = Math.PI / 2.08;
-          controlsRef.current.target.set(isGuwahati ? 60 : 0, 3, isGuwahati ? 15 : 35);
+          controlsRef.current.minDistance = 3.2;
+          controlsRef.current.maxDistance = 750;
+          controlsRef.current.maxPolarAngle = Math.PI / 2.02;
+          controlsRef.current.target.set(isGuwahati ? 45 : 0, 2, isGuwahati ? 10 : 35);
           controlsRef.current.screenSpacePanning = true;
         }
 
@@ -377,7 +377,7 @@ export function ThreeMapCanvas({
       selectedCityRef.current?.slug === "guwahati" ||
       selectedCityRef.current?.name.toLowerCase() === "guwahati";
     if (selectedCityRef.current) {
-      camera.position.set(isGuwahati ? 50 : 0, 24, isGuwahati ? 48 : -18);
+      camera.position.set(isGuwahati ? 45 : 0, isGuwahati ? 110 : 24, isGuwahati ? 155 : -18);
     } else {
       // Heroic isometric 3D framing of India with sky and Sun above
       camera.position.set(0, 840, 720);
@@ -404,10 +404,13 @@ export function ThreeMapCanvas({
     controls.screenSpacePanning = true;
 
     if (selectedCityRef.current) {
-      controls.minDistance = 3.5;
-      controls.maxDistance = 110;
-      controls.maxPolarAngle = Math.PI / 2.08;
-      controls.target.set(60, 3, 15);
+      const isGuw =
+        selectedCityRef.current.slug === "guwahati" ||
+        selectedCityRef.current.name.toLowerCase() === "guwahati";
+      controls.minDistance = 3.2;
+      controls.maxDistance = 750;
+      controls.maxPolarAngle = Math.PI / 2.02;
+      controls.target.set(isGuw ? 45 : 60, 2, isGuw ? 10 : 15);
     } else {
       // National Map: Unlocked deep zoom down to regional level
       controls.minDistance = 35;
