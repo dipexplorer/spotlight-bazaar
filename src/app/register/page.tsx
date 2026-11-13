@@ -20,6 +20,7 @@ import { CategoryId, BusinessStorefront } from "@/types";
 import { compressImage } from "@/lib/utils/compressImage";
 import { saveLocalStorefront } from "@/lib/utils/localStorefront";
 import { ShareCardModal } from "@/components/onboarding/ShareCardModal";
+import { LocationMapPicker } from "@/components/register/LocationMapPicker";
 
 export default function RegisterPage() {
   const [step, setStep] = useState<number>(1);
@@ -31,7 +32,10 @@ export default function RegisterPage() {
   const [tagline, setTagline] = useState("");
   const [category, setCategory] = useState<CategoryId>("creative-weddings");
   const [city, setCity] = useState("Guwahati");
-  const [pincode, setPincode] = useState("");
+  const [pincode, setPincode] = useState("781005");
+  const [lat, setLat] = useState<number>(26.1550);
+  const [lon, setLon] = useState<number>(91.7750);
+  const [addressName, setAddressName] = useState<string>("GS Road & Christian Basti");
   const [whatsapp, setWhatsapp] = useState("");
   const [instagram, setInstagram] = useState("");
   const [startingPrice, setStartingPrice] = useState("");
@@ -125,8 +129,8 @@ export default function RegisterPage() {
       whatsapp_phone: cleanPhone,
       instagram_handle: instagram.replace(/^@/, "").trim() || undefined,
       starting_price: startingPrice.trim(),
-      lat: selectedCity ? selectedCity.lat : 26.1445,
-      lon: selectedCity ? selectedCity.lon : 91.7362,
+      lat: lat || (selectedCity ? selectedCity.lat : 26.1550),
+      lon: lon || (selectedCity ? selectedCity.lon : 91.7750),
       portfolio_images: portfolio,
     };
 
@@ -337,6 +341,20 @@ export default function RegisterPage() {
                   />
                 </div>
               </div>
+
+              {/* Dynamic 3D Real Map & GPS Anchor Module */}
+              <LocationMapPicker
+                city={city}
+                initialLat={lat}
+                initialLon={lon}
+                initialPincode={pincode || "781005"}
+                onLocationChange={(loc) => {
+                  setLat(loc.lat);
+                  setLon(loc.lon);
+                  if (loc.pincode) setPincode(loc.pincode);
+                  if (loc.addressName) setAddressName(loc.addressName);
+                }}
+              />
 
               <button
                 type="button"

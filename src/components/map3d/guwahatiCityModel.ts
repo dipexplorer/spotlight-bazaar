@@ -3,6 +3,8 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { BusinessStorefront } from "@/types";
 import { buildCartoonStorefrontPlot, StorefrontMeshResult } from "./cartoonStorefront";
 import { createRoadTexture, createSidewalkTexture, createStripedCurbTexture } from "./streetTextures";
+import { computeDynamicStorefrontPlacements } from "./dynamicStorefrontPlacement";
+import { DEFAULT_CITY_ANCHORS } from "@/lib/geo/geoProjection";
 
 export interface ColonyDefinition {
   name: string;
@@ -924,116 +926,15 @@ export function buildGuwahatiCity(
     }
   }
 
-  // 8. COMMERCIAL PLOTS & VERIFIED BUSINESS BLOCKS
-  const nerqivaBusiness =
-    guwahatiStorefronts.find((s) => s.slug === "nerqiva-studio") ||
-    guwahatiStorefronts[0] ||
-    null;
-
-  interface PlotPlacement {
-    business: BusinessStorefront | null;
-    x: number;
-    z: number;
-    isLeft: boolean;
-    isConstruction?: boolean;
-    colonyName: string;
-    pincode: string;
-    tier: number;
-  }
-
-  const plotPlacements: PlotPlacement[] = [
-    // Flagship 1: Nerqiva Studio at Christian Basti Boulevard (781005)
-    {
-      business: nerqivaBusiness,
-      x: 74,
-      z: 2,
-      isLeft: true,
-      colonyName: "GS Road & Christian Basti",
-      pincode: "781005",
-      tier: 2,
-    },
-    // Plot 2: Under Construction Commercial Plot on GS Road
-    {
-      business: null,
-      x: 34,
-      z: 36,
-      isLeft: false,
-      isConstruction: true,
-      colonyName: "GS Road Commercial District",
-      pincode: "781005",
-      tier: 1,
-    },
-    // Plot 3: Riverside Commercial Space (781001)
-    {
-      business: null,
-      x: -25,
-      z: -24,
-      isLeft: true,
-      colonyName: "Pan Bazar Riverfront",
-      pincode: "781001",
-      tier: 1,
-    },
-    // Plot 4: Dighalipukhuri Lakeside Studio (781004)
-    {
-      business: null,
-      x: 65,
-      z: -10,
-      isLeft: false,
-      colonyName: "Uzan Bazar Lakefront",
-      pincode: "781004",
-      tier: 1,
-    },
-    // Plot 5: Paltan Bazar Wholesale / Transit Hub (781008)
-    {
-      business: null,
-      x: 15,
-      z: 45,
-      isLeft: true,
-      colonyName: "Paltan Bazar Station Road",
-      pincode: "781008",
-      tier: 1,
-    },
-    // Plot 6: Dispur Secretariat Avenue (781006)
-    {
-      business: null,
-      x: 160,
-      z: 140,
-      isLeft: false,
-      colonyName: "Dispur Secretariat Avenue",
-      pincode: "781006",
-      tier: 1,
-    },
-    // Plot 7: Jalukbari & Saraighat Bridge Gateway (781014)
-    {
-      business: null,
-      x: -130,
-      z: 45,
-      isLeft: true,
-      colonyName: "Jalukbari Gateway",
-      pincode: "781014",
-      tier: 1,
-    },
-    // Plot 8: Ganeshguri Retail & Dining Plot (781005)
-    {
-      business: null,
-      x: 125,
-      z: 90,
-      isLeft: false,
-      colonyName: "Ganeshguri Commercial Center",
-      pincode: "781005",
-      tier: 1,
-    },
-    // Plot 9: Chandmari & Zoo Road Plot (781003)
-    {
-      business: null,
-      x: 175,
-      z: 15,
-      isLeft: true,
-      colonyName: "Chandmari & Zoo Road",
-      pincode: "781003",
-      tier: 1,
-    },
-  ];
+  // 8. DYNAMIC GIS-ANCHORED COMMERCIAL PLOTS & VERIFIED BUSINESS BLOCKS
+  // Automatically anchors verified businesses to their real physical GPS coordinates
+  // and dynamically faces them towards the road.
+  const plotPlacements = computeDynamicStorefrontPlacements(
+    guwahatiStorefronts,
+    roads,
+    GUWAHATI_COLONIES,
+    DEFAULT_CITY_ANCHORS.guwahati
+  );
 
   plotPlacements.forEach((p, idx) => {
     const isConstruction = Boolean(p.isConstruction);
@@ -1046,7 +947,8 @@ export function buildGuwahatiCity(
       p.x,
       p.z,
       isConstruction,
-      isEmptyPlot
+      isEmptyPlot,
+      p.rotationY
     );
 
     plotResult.mesh.position.y = 0.32;

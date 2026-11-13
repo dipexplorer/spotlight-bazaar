@@ -1,0 +1,337 @@
+{
+  "type": "FeatureCollection",
+  "name": "guwahati_roads",
+  "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "MG Road Riverfront West", "highway": "primary", "width": 9.0 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.6850, 26.1750],
+          [91.7300, 26.1720]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "MG Road (Bharalumukh - Pan Bazar)", "highway": "primary", "width": 9.0 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7300, 26.1720],
+          [91.7450, 26.1850]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "MG Road (Sukreswar Ghat)", "highway": "primary", "width": 9.0 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7450, 26.1850],
+          [91.7620, 26.1900]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "MG Road (Uzan Bazar Riverfront)", "highway": "primary", "width": 9.0 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7620, 26.1900],
+          [91.7780, 26.1920]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "MG Road (Kharghuli Riverfront)", "highway": "primary", "width": 9.0 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7780, 26.1920],
+          [91.8100, 26.1950]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Saraighat Double-Deck Bridge (NH-27)", "highway": "trunk", "width": 9.4, "isBridge": true },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.6850, 26.1680],
+          [91.6850, 26.1980]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "North Guwahati Highway West", "highway": "primary", "width": 8.5 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.6500, 26.2020],
+          [91.6850, 26.2020]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "North Guwahati Highway (Amingaon)", "highway": "primary", "width": 8.5 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.6850, 26.2020],
+          [91.7400, 26.2020]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "North Highway (Dirgheswari & IIT)", "highway": "primary", "width": 8.5 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7400, 26.2020],
+          [91.8100, 26.2020]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "NH-27 Saraighat South Approach", "highway": "trunk", "width": 9.0 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.6850, 26.1500],
+          [91.6850, 26.1680]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "AT Road (Jalukbari - Maligaon)", "highway": "trunk", "width": 8.5 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.6850, 26.1500],
+          [91.7080, 26.1580]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "AT Road (Maligaon - Bharalumukh)", "highway": "trunk", "width": 8.5 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7080, 26.1580],
+          [91.7300, 26.1640]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "AT Road (Bharalumukh - Paltan Bazar)", "highway": "trunk", "width": 8.5 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7300, 26.1640],
+          [91.7520, 26.1720]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "GS Road (Paltan - Bhangagarh)", "highway": "primary", "width": 9.0 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7520, 26.1720],
+          [91.7640, 26.1620]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "GS Road (Christian Basti Flagship)", "highway": "primary", "width": 9.5 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7640, 26.1620],
+          [91.7750, 26.1550]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "GS Road (Walford)", "highway": "primary", "width": 9.0 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7750, 26.1550],
+          [91.7850, 26.1460]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "GS Road (Ganeshguri Flyover)", "highway": "primary", "width": 9.5 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7850, 26.1460],
+          [91.7940, 26.1380]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "GS Road (Dispur Secretariat)", "highway": "primary", "width": 9.5 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7940, 26.1380],
+          [91.8040, 26.1280]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "GS Road (Khanapara Foothills)", "highway": "primary", "width": 9.0 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.8040, 26.1280],
+          [91.8180, 26.1150]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Zoo Road (Chandmari - State Zoo)", "highway": "secondary", "width": 8.5 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7780, 26.1920],
+          [91.7850, 26.1680]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Zoo Road (Commerce Hub)", "highway": "secondary", "width": 8.5 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7850, 26.1680],
+          [91.7900, 26.1520]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Zoo Road to Ganeshguri Junction", "highway": "secondary", "width": 8.5 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7900, 26.1520],
+          [91.7940, 26.1380]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "GNB Road (Cotton University)", "highway": "secondary", "width": 8.0 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7450, 26.1850],
+          [91.7580, 26.1880]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "GNB Road (Dighalipukhuri Lake Promenade)", "highway": "secondary", "width": 8.0 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7580, 26.1880],
+          [91.7680, 26.1880]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "GNB Road (Ambari & Museum)", "highway": "secondary", "width": 8.0 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7680, 26.1880],
+          [91.7780, 26.1880]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "GNB Road to Chandmari Junction", "highway": "secondary", "width": 8.0 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7780, 26.1880],
+          [91.7780, 26.1920]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Bharalumukh River Link", "highway": "tertiary", "width": 8.0 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7300, 26.1640],
+          [91.7300, 26.1720]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Christian Basti to Lake Link", "highway": "residential", "width": 7.0 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.7750, 26.1550],
+          [91.7680, 26.1880]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Deepor Beel North Highway", "highway": "secondary", "width": 8.0 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.6850, 26.1500],
+          [91.6600, 26.1300]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Deepor Beel Lakefront Drive", "highway": "secondary", "width": 8.0 },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [91.6600, 26.1300],
+          [91.6600, 26.1100]
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "type": "FeatureCollection",
+  "name": "guwahati_colonies",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "GS Road & Christian Basti",
+        "pincode": "781005",
+        "zone": "Modern Commercial Flagship",
+        "description": "Flagship business boulevard & home of Nerqiva Studio"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [91.7750, 26.1550]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Pan Bazar Riverfront",
+        "pincode": "781001",
+        "zone": "Commercial Heritage Hub",
+        "description": "Brahmaputra riverfront, Cotton University & historic publishing district"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [91.7450, 26.1850]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Uzan Bazar Lakefront",
+        "pincode": "781004",
+        "zone": "Lakeside Cultural District",
+        "description": "Dighalipukhuri heritage lake, Assam State Museum & artisanal cafes"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [91.7650, 26.1900]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Paltan Bazar & Station Road",
+        "pincode": "781008",
+        "zone": "Transit & Wholesale Hub",
+        "description": "Guwahati Railway Junction, transit hub & commercial trading center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [91.7520, 26.1720]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Dispur Secretariat Avenue",
+        "pincode": "781006",
+        "zone": "Capital Commercial District",
+        "description": "Government Secretariat, tea auction center & premier retail"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [91.8040, 26.1280]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Jalukbari & Saraighat Bridge",
+        "pincode": "781014",
+        "zone": "University & Gateway Hub",
+        "description": "Gateway rotary, Gauhati University & Saraighat Bridge approach"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [91.6850, 26.1500]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Chandmari & Zoo Road",
+        "pincode": "781003",
+        "zone": "Media & Commercial Arts Hub",
+        "description": "Assam State Zoo, media houses & premier shopping promenade"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [91.7850, 26.1680]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Ganeshguri Commercial Center",
+        "pincode": "781005",
+        "zone": "Central Flyover Retail District",
+        "description": "Ganeshguri flyover junction, lifestyle retail & vibrant eateries"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [91.7940, 26.1380]
+      }
+    }
+  ]
+}

@@ -120,7 +120,8 @@ export function buildCartoonStorefrontPlot(
   xOffset: number,
   zOffset: number,
   isConstruction = false,
-  isEmptyPlot = false
+  isEmptyPlot = false,
+  customRotationY?: number
 ): StorefrontMeshResult {
   const parts: THREE.BufferGeometry[] = [];
 
@@ -130,7 +131,7 @@ export function buildCartoonStorefrontPlot(
   // Positive Z (facade/entrance) faces the street:
   // When isLeft is true (plot on right/east side of street at x=74, street at x=60),
   // facade must face West (-X), so rotationY = -Math.PI / 2.
-  const rotationY = isLeft ? -Math.PI / 2 : Math.PI / 2;
+  const rotationY = customRotationY !== undefined ? customRotationY : (isLeft ? -Math.PI / 2 : Math.PI / 2);
 
   // 1. Plot Base Grounds (Lush Green Lawn)
   parts.push(box(plotW, 0.08, plotD, "#15803d", 0, 0, 0));
