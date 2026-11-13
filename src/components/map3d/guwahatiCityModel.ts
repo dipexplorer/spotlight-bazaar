@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { BusinessStorefront } from "@/types";
 import { buildCartoonStorefrontPlot, StorefrontMeshResult } from "./cartoonStorefront";
-import { createRoadTexture, createSidewalkTexture, createStripedCurbTexture } from "./streetTextures";
+import { createStripedCurbTexture } from "./streetTextures";
 import { computeDynamicStorefrontPlacements } from "./dynamicStorefrontPlacement";
 import { DEFAULT_CITY_ANCHORS } from "@/lib/geo/geoProjection";
 
@@ -17,101 +17,101 @@ export interface ColonyDefinition {
 
 export const GUWAHATI_COLONIES: ColonyDefinition[] = [
   {
-    "name": "GS Road & Christian Basti",
-    "pincode": "781005",
-    "zone": "Modern Commercial Flagship",
-    "x": 60,
-    "z": 15,
-    "description": "Flagship business boulevard & home of Nerqiva Studio"
+    name: "GS Road & Christian Basti",
+    pincode: "781005",
+    zone: "Modern Commercial Flagship",
+    x: 60,
+    z: 15,
+    description: "Flagship business boulevard & home of Nerqiva Studio",
   },
   {
-    "name": "Pan Bazar Riverfront",
-    "pincode": "781001",
-    "zone": "Commercial Heritage Hub",
-    "x": -25,
-    "z": -24,
-    "description": "Brahmaputra riverfront, Cotton University & historic publishing district"
+    name: "Pan Bazar Riverfront",
+    pincode: "781001",
+    zone: "Commercial Heritage Hub",
+    x: -25,
+    z: -24,
+    description: "Brahmaputra riverfront, Cotton University & historic publishing district",
   },
   {
-    "name": "Uzan Bazar Lakefront",
-    "pincode": "781004",
-    "zone": "Lakeside Cultural District",
-    "x": 65,
-    "z": -10,
-    "description": "Dighalipukhuri heritage lake, Assam State Museum & artisanal cafes"
+    name: "Uzan Bazar Lakefront",
+    pincode: "781004",
+    zone: "Lakeside Cultural District",
+    x: 65,
+    z: -10,
+    description: "Dighalipukhuri heritage lake, Assam State Museum & artisanal cafes",
   },
   {
-    "name": "Paltan Bazar & Station Road",
-    "pincode": "781008",
-    "zone": "Transit & Wholesale Hub",
-    "x": 15,
-    "z": 45,
-    "description": "Guwahati Railway Junction, transit hub & commercial trading center"
+    name: "Paltan Bazar & Station Road",
+    pincode: "781008",
+    zone: "Transit & Wholesale Hub",
+    x: 15,
+    z: 45,
+    description: "Guwahati Railway Junction, transit hub & commercial trading center",
   },
   {
-    "name": "Ganeshguri Commercial Center",
-    "pincode": "781005",
-    "zone": "Central Flyover Retail District",
-    "x": 125,
-    "z": 90,
-    "description": "Ganeshguri flyover junction, lifestyle retail & vibrant eateries"
+    name: "Ganeshguri Commercial Center",
+    pincode: "781005",
+    zone: "Central Flyover Retail District",
+    x: 125,
+    z: 90,
+    description: "Ganeshguri flyover junction, lifestyle retail & vibrant eateries",
   },
   {
-    "name": "Dispur Secretariat Avenue",
-    "pincode": "781006",
-    "zone": "Capital Commercial District",
-    "x": 160,
-    "z": 140,
-    "description": "Government Secretariat, tea auction center & premier retail"
+    name: "Dispur Secretariat Avenue",
+    pincode: "781006",
+    zone: "Capital Commercial District",
+    x: 160,
+    z: 140,
+    description: "Government Secretariat, tea auction center & premier retail",
   },
   {
-    "name": "Chandmari & Zoo Road",
-    "pincode": "781003",
-    "zone": "Media & Commercial Arts Hub",
-    "x": 175,
-    "z": 15,
-    "description": "Assam State Zoo, media houses & premier shopping promenade"
+    name: "Chandmari & Zoo Road",
+    pincode: "781003",
+    zone: "Media & Commercial Arts Hub",
+    x: 175,
+    z: 15,
+    description: "Assam State Zoo, media houses & premier shopping promenade",
   },
   {
-    "name": "Jalukbari & Saraighat Bridge",
-    "pincode": "781014",
-    "zone": "University & Gateway Hub",
-    "x": -130,
-    "z": 45,
-    "description": "Gateway rotary, Gauhati University & Saraighat Bridge approach"
+    name: "Jalukbari & Saraighat Bridge",
+    pincode: "781014",
+    zone: "University & Gateway Hub",
+    x: -130,
+    z: 45,
+    description: "Gateway rotary, Gauhati University & Saraighat Bridge approach",
   },
   {
-    "name": "Beltola & Jayanagar",
-    "pincode": "781028",
-    "zone": "Historic Market & Residential Hub",
-    "x": 135,
-    "z": 165,
-    "description": "Bi-weekly traditional Beltola market, lifestyle cafes & residential hub"
+    name: "Beltola & Jayanagar",
+    pincode: "781028",
+    zone: "Historic Market & Residential Hub",
+    x: 135,
+    z: 165,
+    description: "Bi-weekly traditional Beltola market, lifestyle cafes & residential hub",
   },
   {
-    "name": "Six Mile & VIP Road",
-    "pincode": "781022",
-    "zone": "Modern Healthcare & Retail Corridor",
-    "x": 220,
-    "z": 175,
-    "description": "Super specialty hospitals, premier retail complexes & Silsako lake link"
+    name: "Six Mile & VIP Road",
+    pincode: "781022",
+    zone: "Modern Healthcare & Retail Corridor",
+    x: 220,
+    z: 175,
+    description: "Super specialty hospitals, premier retail complexes & Silsako lake link",
   },
   {
-    "name": "Bharalumukh & Shantipur",
-    "pincode": "781009",
-    "zone": "Riverfront Promenade & Commerce",
-    "x": -60,
-    "z": -26,
-    "description": "Bharalu river discharge, riverfront walkways & traditional commerce"
+    name: "Bharalumukh & Shantipur",
+    pincode: "781009",
+    zone: "Riverfront Promenade & Commerce",
+    x: -60,
+    z: -26,
+    description: "Bharalu river discharge, riverfront walkways & traditional commerce",
   },
   {
-    "name": "Maligaon Commercial Center",
-    "pincode": "781011",
-    "zone": "NFR Headquarters & Transit",
-    "x": -80,
-    "z": 45,
-    "description": "Northeast Frontier Railway HQ, bustling markets & Kamakhya approach"
-  }
+    name: "Maligaon Commercial Center",
+    pincode: "781011",
+    zone: "NFR Headquarters & Transit",
+    x: -80,
+    z: 45,
+    description: "Northeast Frontier Railway HQ, bustling markets & Kamakhya approach",
+  },
 ];
 
 export interface GuwahatiCityResult {
@@ -125,29 +125,63 @@ export interface GuwahatiCityResult {
 
 /**
  * Organic parametric S-curve of the Brahmaputra South Bank at Guwahati.
- * Traces through Saraighat gorge (x = -130, z = -29), Bharalumukh (x = -60, z = -26),
- * Pan Bazar (x = -25, z = -24), Uzan Bazar (x = 65, z = -26), and Kharghuli (x = 180, z = -32).
+ * Traces closely along the northern edge of MG Road / Strand Road:
+ * - Saraighat / Jalukbari constriction: x = -130, z = -20 (river width: 128m)
+ * - Kamakhya foothill: x = -80, z = -28
+ * - Bharalumukh & Sukreswar Ghat: x = -50 to 10, z = -34 to -36
+ * - Pan Bazar / Dighalipukhuri riverfront: x = 35 to 65, z = -38 to -42
+ * - Uzan Bazar & Kharghuli bend: x = 110 to 180, curves north-east from z = -42 to z = -75
+ * - Ramsa Foothill / Narengi East: x = 240 to 450, curves to z = -120 to -180
+ * - Saraighat West approach: x = -260 to -500, curves to z = -45 to -90
  */
 export function getRiverSouthBankZ(x: number): number {
-  const baseCurve = -26.0 + Math.sin((x + 50) * 0.005) * 5.0;
-  const eastBend = Math.max(0, (x - 80) * 0.045);
-  const westBend = Math.max(0, (-100 - x) * 0.035);
-  return baseCurve - eastBend - westBend;
+  if (x < -130) {
+    return -20.0 - (x + 130) * 0.12 + Math.sin(x * 0.02) * 3.0;
+  }
+  if (x < -60) {
+    const t = (x - -130) / 70;
+    return -20.0 + t * (-34.0 - -20.0) + Math.sin(t * Math.PI) * 2.5;
+  }
+  if (x < 65) {
+    const t = (x - -60) / 125;
+    return -34.0 + t * (-42.0 - -34.0) + Math.sin(t * Math.PI) * 3.0;
+  }
+  if (x < 180) {
+    const t = (x - 65) / 115;
+    return -42.0 + t * (-75.0 - -42.0) + Math.sin(t * Math.PI) * 3.5;
+  }
+  return -75.0 - (x - 180) * 0.22 + Math.sin(x * 0.015) * 3.5;
 }
 
 /**
- * Organic parametric curve of the Brahmaputra North Bank across from Guwahati.
- * Forms the northern shoreline passing through Saraighat North (x = -130, z = -149),
- * Amingaon (x = 60, z = -147), and Dirgheswari / IIT approach (x = 180, z = -153).
+ * Organic parametric curve of the Brahmaputra North Bank across from Guwahati:
+ * Forms the wide northern shoreline passing through:
+ * - Saraighat North bottleneck (x = -130, z = -148, river width: 128m)
+ * - Amingaon Bay (x = -50 to 10, widens dramatically to z = -215, river width: ~180m)
+ * - Dirgheswari / North Guwahati (x = 50 to 120, z = -210 to -240)
+ * - Kurua / North Bank East (x = 180 to 450, sweeps northeast to z = -280 to -360)
+ * - Western river basin (x = -260 to -500, z = -180 to -240)
  */
 export function getRiverNorthBankZ(x: number): number {
-  const baseCurve = -148.0 + Math.cos((x - 20) * 0.005) * 6.0;
-  const eastBend = Math.max(0, (x - 80) * 0.04);
-  const westBend = Math.max(0, (-100 - x) * 0.03);
-  return baseCurve - eastBend - westBend;
+  if (x < -130) {
+    return -148.0 - (x + 130) * 0.14 + Math.cos(x * 0.02) * 3.5;
+  }
+  if (x < -40) {
+    const t = (x - -130) / 90;
+    return -148.0 + t * (-210.0 - -148.0) + Math.sin(t * Math.PI) * 4.5;
+  }
+  if (x < 60) {
+    const t = (x - -40) / 100;
+    return -210.0 + t * (-235.0 - -210.0) + Math.sin(t * Math.PI) * 4.0;
+  }
+  if (x < 180) {
+    const t = (x - 60) / 120;
+    return -235.0 + t * (-275.0 - -235.0);
+  }
+  return -275.0 - (x - 180) * 0.25 + Math.cos(x * 0.015) * 4.5;
 }
 
-interface RoadDef {
+export interface RoadDef {
   x1: number;
   z1: number;
   x2: number;
@@ -157,150 +191,215 @@ interface RoadDef {
 }
 
 export const GUWAHATI_ROADS: RoadDef[] = [
-    { x1: -240.0, z1: -8.0, x2: -190.0, z2: -8.0, width: 8.5, name: "Pandu River Approach" },
-    { x1: -190.0, z1: -8.0, x2: -130.0, z2: -8.0, width: 9.0, name: "Saraighat South Approach Road" },
-    { x1: -130.0, z1: -8.0, x2: -80.0, z2: -18.0, width: 9.0, name: "MG Road (Pandu - Kamakhya Ghat)" },
-    { x1: -80.0, z1: -18.0, x2: -60.0, z2: -26.0, width: 9.0, name: "MG Road (Kamakhya - Bharalumukh)" },
-    { x1: -60.0, z1: -26.0, x2: -25.0, z2: -24.0, width: 9.0, name: "MG Road (Bharalumukh - Pan Bazar)" },
-    { x1: -25.0, z1: -24.0, x2: 35.0, z2: -28.0, width: 9.0, name: "MG Road (Sukreswar Ghat Promenade)" },
-    { x1: 35.0, z1: -28.0, x2: 65.0, z2: -34.0, width: 9.0, name: "MG Road (Uzan Bazar Riverfront)" },
-    { x1: 65.0, z1: -34.0, x2: 120.0, z2: -38.0, width: 9.0, name: "MG Road (Uzan Bazar - Kharghuli West)" },
-    { x1: 120.0, z1: -38.0, x2: 180.0, z2: -42.0, width: 9.0, name: "MG Road (Kharghuli Riverfront East)" },
-    { x1: 180.0, z1: -42.0, x2: 240.0, z2: -46.0, width: 8.5, name: "Kharghuli - Ramsa Hill Road" },
-    { x1: -130.0, z1: -8.0, x2: -130.0, z2: 45.0, width: 9.5, name: "NH-27 Saraighat South Highway" },
-    { x1: -240.0, z1: -170.0, x2: -130.0, z2: -170.0, width: 8.5, name: "North Highway West" },
-    { x1: -130.0, z1: -170.0, x2: 0.0, z2: -170.0, width: 8.5, name: "North Highway (Amingaon)" },
-    { x1: 0.0, z1: -170.0, x2: 90.0, z2: -170.0, width: 8.5, name: "North Highway (IIT Guwahati Approach)" },
-    { x1: 90.0, z1: -170.0, x2: 180.0, z2: -170.0, width: 8.5, name: "North Highway (Dirgheswari Approach)" },
-    { x1: 0.0, z1: -170.0, x2: 0.0, z2: -210.0, width: 7.5, name: "Amingaon North Cross" },
-    { x1: 90.0, z1: -170.0, x2: 90.0, z2: -215.0, width: 8.0, name: "IIT Guwahati Main Campus Avenue" },
-    { x1: -130.0, z1: -170.0, x2: -130.0, z2: -210.0, width: 8.0, name: "Saraighat North Rotary Link" },
-    { x1: -130.0, z1: 45.0, x2: -80.0, z2: 45.0, width: 9.0, name: "AT Road (Jalukbari - Maligaon)" },
-    { x1: -80.0, z1: 45.0, x2: -60.0, z2: 45.0, width: 9.0, name: "AT Road (Maligaon - Bharalumukh)" },
-    { x1: -60.0, z1: 45.0, x2: -25.0, z2: 45.0, width: 9.0, name: "AT Road (Bharalumukh - Machkhowa)" },
-    { x1: -25.0, z1: 45.0, x2: 15.0, z2: 45.0, width: 9.0, name: "AT Road (Machkhowa - Paltan Bazar)" },
-    { x1: -80.0, z1: 45.0, x2: -80.0, z2: -18.0, width: 7.5, name: "Kamakhya Temple Foothill Road" },
-    { x1: -60.0, z1: 45.0, x2: -60.0, z2: -26.0, width: 8.0, name: "Bharalumukh River Link" },
-    { x1: -25.0, z1: 45.0, x2: -25.0, z2: 10.0, width: 7.5, name: "Fancy Bazar Cross Link" },
-    { x1: -25.0, z1: 10.0, x2: 15.0, z2: 10.0, width: 7.5, name: "Hem Baruah Road" },
-    { x1: -25.0, z1: 10.0, x2: -25.0, z2: -24.0, width: 7.5, name: "Machkhowa River Link" },
-    { x1: 15.0, z1: 45.0, x2: 35.0, z2: 25.0, width: 9.5, name: "GS Road (Paltan Bazar - Ulubari)" },
-    { x1: 35.0, z1: 25.0, x2: 60.0, z2: 15.0, width: 10.0, name: "GS Road (Ulubari - Christian Basti Flagship)" },
-    { x1: 60.0, z1: 15.0, x2: 95.0, z2: 50.0, width: 9.5, name: "GS Road (Christian Basti - Walford)" },
-    { x1: 95.0, z1: 50.0, x2: 125.0, z2: 90.0, width: 10.0, name: "GS Road (Walford - Ganeshguri Flyover)" },
-    { x1: 125.0, z1: 90.0, x2: 160.0, z2: 140.0, width: 10.0, name: "GS Road (Ganeshguri - Dispur Secretariat)" },
-    { x1: 160.0, z1: 140.0, x2: 190.0, z2: 160.0, width: 9.5, name: "GS Road (Dispur - Downtown Hospital)" },
-    { x1: 190.0, z1: 160.0, x2: 220.0, z2: 175.0, width: 9.5, name: "GS Road (Downtown - Six Mile Flyover)" },
-    { x1: 220.0, z1: 175.0, x2: 255.0, z2: 185.0, width: 9.5, name: "GS Road (Six Mile - Khanapara Gateway)" },
-    { x1: 180.0, z1: -42.0, x2: 175.0, z2: 15.0, width: 9.0, name: "Zoo Road (Chandmari - Commerce College)" },
-    { x1: 175.0, z1: 15.0, x2: 165.0, z2: 45.0, width: 9.0, name: "Zoo Road (Zoo Tiniali - Assam State Zoo)" },
-    { x1: 165.0, z1: 45.0, x2: 145.0, z2: 70.0, width: 9.0, name: "Zoo Road (State Zoo - Sundarpur)" },
-    { x1: 145.0, z1: 70.0, x2: 125.0, z2: 90.0, width: 9.0, name: "Zoo Road (Sundarpur - Ganeshguri Flyover)" },
-    { x1: -25.0, z1: -24.0, x2: 35.0, z2: -10.0, width: 8.5, name: "GNB Road (Pan Bazar - Cotton University)" },
-    { x1: 35.0, z1: -10.0, x2: 65.0, z2: -10.0, width: 8.5, name: "GNB Road (Dighalipukhuri Lake Promenade)" },
-    { x1: 65.0, z1: -10.0, x2: 110.0, z2: -15.0, width: 8.5, name: "GNB Road (Ambari - State Museum)" },
-    { x1: 110.0, z1: -15.0, x2: 150.0, z2: -15.0, width: 8.5, name: "GNB Road (Guwahati Club - Silpukhuri)" },
-    { x1: 150.0, z1: -15.0, x2: 180.0, z2: -42.0, width: 8.5, name: "Silpukhuri to Chandmari Flyover" },
-    { x1: 35.0, z1: -28.0, x2: 35.0, z2: -10.0, width: 7.5, name: "Nehru Park West Link" },
-    { x1: 35.0, z1: -10.0, x2: 35.0, z2: 25.0, width: 7.5, name: "Nehru Park South to Ulubari Link" },
-    { x1: 65.0, z1: -34.0, x2: 65.0, z2: -10.0, width: 7.5, name: "Latasil Field to Uzan Bazar Link" },
-    { x1: 65.0, z1: -10.0, x2: 60.0, z2: 15.0, width: 7.5, name: "Christian Basti - Dighalipukhuri Heritage Link" },
-    { x1: 110.0, z1: -15.0, x2: 110.0, z2: 15.0, width: 7.5, name: "Ambari South Avenue" },
-    { x1: 110.0, z1: 15.0, x2: 60.0, z2: 15.0, width: 7.5, name: "Christian Basti East Avenue" },
-    { x1: 110.0, z1: 15.0, x2: 150.0, z2: -15.0, width: 7.5, name: "Silpukhuri Link" },
-    { x1: 110.0, z1: 15.0, x2: 95.0, z2: 50.0, width: 7.5, name: "Christian Basti to Walford Link" },
-    { x1: 150.0, z1: -15.0, x2: 115.0, z2: 30.0, width: 7.5, name: "Rajgarh Road North" },
-    { x1: 115.0, z1: 30.0, x2: 60.0, z2: 15.0, width: 7.5, name: "Rajgarh to Christian Basti Link" },
-    { x1: 115.0, z1: 30.0, x2: 95.0, z2: 50.0, width: 7.5, name: "Rajgarh South Link" },
-    { x1: 175.0, z1: 15.0, x2: 115.0, z2: 30.0, width: 7.5, name: "Zoo Tiniali to Rajgarh Link" },
-    { x1: -130.0, z1: 45.0, x2: -180.0, z2: 90.0, width: 9.5, name: "NH-27 Jalukbari to Deepor Beel Eco Junction" },
-    { x1: -180.0, z1: 90.0, x2: -120.0, z2: 125.0, width: 10.0, name: "NH-27 Deepor Beel to Gorchuk" },
-    { x1: -120.0, z1: 125.0, x2: -50.0, z2: 145.0, width: 10.0, name: "NH-27 Gorchuk to Lokhra (ISBT)" },
-    { x1: -50.0, z1: 145.0, x2: 25.0, z2: 160.0, width: 10.0, name: "NH-27 Lokhra to Betkuchi" },
-    { x1: 25.0, z1: 160.0, x2: 100.0, z2: 175.0, width: 10.0, name: "NH-27 Betkuchi to Basistha Chariali" },
-    { x1: 100.0, z1: 175.0, x2: 175.0, z2: 185.0, width: 10.0, name: "NH-27 Basistha to Khanapara" },
-    { x1: 175.0, z1: 185.0, x2: 255.0, z2: 185.0, width: 10.0, name: "NH-27 Khanapara East" },
-    { x1: -180.0, z1: 90.0, x2: -195.0, z2: 125.0, width: 8.0, name: "Deepor Beel North Shore Drive" },
-    { x1: -195.0, z1: 125.0, x2: -190.0, z2: 165.0, width: 8.0, name: "Deepor Beel South Shore Drive" },
-    { x1: -190.0, z1: 165.0, x2: -120.0, z2: 125.0, width: 8.0, name: "Deepor Beel to Gorchuk Connector" },
-    { x1: -180.0, z1: 90.0, x2: -240.0, z2: 110.0, width: 9.0, name: "Borjhar Airport Highway West" },
-    { x1: 15.0, z1: 45.0, x2: 15.0, z2: 80.0, width: 7.5, name: "Station Road South / Solapara" },
-    { x1: 15.0, z1: 80.0, x2: 60.0, z2: 80.0, width: 7.5, name: "Rehabari Commercial Drive" },
-    { x1: 60.0, z1: 80.0, x2: 95.0, z2: 50.0, width: 7.5, name: "Arya Nagar to Walford Link" },
-    { x1: 15.0, z1: 80.0, x2: -25.0, z2: 80.0, width: 7.5, name: "Arya Nagar West Drive" },
-    { x1: -25.0, z1: 80.0, x2: -60.0, z2: 45.0, width: 7.5, name: "Fatasil to Bharalumukh Link" },
-    { x1: -25.0, z1: 80.0, x2: -50.0, z2: 145.0, width: 8.0, name: "Fatasil South to Lokhra Bypass Link" },
-    { x1: 125.0, z1: 90.0, x2: 130.0, z2: 130.0, width: 8.5, name: "Beltola Tiniali Road" },
-    { x1: 130.0, z1: 130.0, x2: 135.0, z2: 165.0, width: 8.5, name: "Beltola Bazar Chariali" },
-    { x1: 135.0, z1: 165.0, x2: 100.0, z2: 175.0, width: 8.5, name: "Beltola to Basistha Chariali Link" },
-    { x1: 135.0, z1: 165.0, x2: 175.0, z2: 185.0, width: 8.0, name: "Beltola to Khanapara Link" },
-    { x1: 160.0, z1: 140.0, x2: 130.0, z2: 130.0, width: 8.0, name: "Dispur Last Gate to Beltola Link" },
-    { x1: 220.0, z1: 175.0, x2: 210.0, z2: 130.0, width: 8.5, name: "Six Mile to Chachal / Silsako Beel" },
-    { x1: 210.0, z1: 130.0, x2: 215.0, z2: 80.0, width: 8.5, name: "VIP Road Borbari" },
-    { x1: 215.0, z1: 80.0, x2: 225.0, z2: 25.0, width: 8.5, name: "VIP Road Hengrabari" },
-    { x1: 225.0, z1: 25.0, x2: 240.0, z2: -10.0, width: 8.5, name: "VIP Road to Narengi Tiniali" },
-    { x1: 240.0, z1: -10.0, x2: 240.0, z2: -46.0, width: 8.0, name: "Narengi to Ramsa River Link" },
-    { x1: 240.0, z1: -10.0, x2: 205.0, z2: -20.0, width: 8.5, name: "Noonmati Refinery Road" },
-    { x1: 205.0, z1: -20.0, x2: 180.0, z2: -42.0, width: 8.5, name: "Bamunimaidam to Chandmari Junction" },
-    { x1: 175.0, z1: 15.0, x2: 225.0, z2: 25.0, width: 8.0, name: "Mother Teresa Road (Zoo Tiniali to Narengi)" },
-    { x1: -25.0, z1: 10.0, x2: -25.0, z2: -24.0, width: 7.5, name: "Pan Bazar Church Road" },
-    { x1: -25.0, z1: 10.0, x2: 35.0, z2: 10.0, width: 7.0, name: "Don Bosco School Road" },
-    { x1: 35.0, z1: 10.0, x2: 35.0, z2: 25.0, width: 7.0, name: "Nehru Stadium Approach" },
-    { x1: 35.0, z1: 10.0, x2: 60.0, z2: 15.0, width: 7.0, name: "Bhangagarh Link Road" },
-    { x1: 65.0, z1: -10.0, x2: 65.0, z2: -34.0, width: 7.5, name: "Latasil Field Avenue" },
-    { x1: 35.0, z1: -28.0, x2: 65.0, z2: -10.0, width: 7.0, name: "Dighalipukhuri West Bank" },
-    { x1: 65.0, z1: -10.0, x2: 90.0, z2: -25.0, width: 7.0, name: "Lamb Road Cultural Promenade" },
-    { x1: 90.0, z1: -25.0, x2: 110.0, z2: -15.0, width: 7.0, name: "State Museum Link" },
-    { x1: 90.0, z1: -25.0, x2: 120.0, z2: -38.0, width: 7.0, name: "Kharghuli Foothill Cross" },
-    { x1: 60.0, z1: 15.0, x2: 75.0, z2: 35.0, width: 7.5, name: "Tarun Nagar Road" },
-    { x1: 75.0, z1: 35.0, x2: 95.0, z2: 50.0, width: 7.5, name: "Walford East Link" },
-    { x1: 75.0, z1: 35.0, x2: 115.0, z2: 30.0, width: 7.0, name: "Rajgarh South Cross" },
-    { x1: 60.0, z1: 15.0, x2: 45.0, z2: 45.0, width: 7.0, name: "Lachit Nagar Avenue" },
-    { x1: 45.0, z1: 45.0, x2: 35.0, z2: 25.0, width: 7.0, name: "Lachit Nagar to Ulubari" },
-    { x1: 45.0, z1: 45.0, x2: 15.0, z2: 45.0, width: 7.0, name: "Lachit Nagar to Paltan Bazar" },
-    { x1: -80.0, z1: 45.0, x2: -105.0, z2: 20.0, width: 7.5, name: "Maligaon Stadium Road" },
-    { x1: -105.0, z1: 20.0, x2: -130.0, z2: 45.0, width: 7.5, name: "Railway HQ Gateway" },
-    { x1: -105.0, z1: 20.0, x2: -80.0, z2: -18.0, width: 7.0, name: "Pandu Port Road" },
-    { x1: -130.0, z1: 45.0, x2: -155.0, z2: 15.0, width: 8.0, name: "Gauhati University Main Avenue" },
-    { x1: -155.0, z1: 15.0, x2: -180.0, z2: 90.0, width: 8.0, name: "University Campus South Link" },
-    { x1: -155.0, z1: 15.0, x2: -130.0, z2: -8.0, width: 8.0, name: "Jalukbari North Promenade" },
-    { x1: 160.0, z1: 140.0, x2: 175.0, z2: 115.0, width: 8.0, name: "Assam Assembly Avenue" },
-    { x1: 175.0, z1: 115.0, x2: 145.0, z2: 70.0, width: 7.5, name: "Assembly to Zoo Road Link" },
-    { x1: 175.0, z1: 115.0, x2: 190.0, z2: 160.0, width: 7.5, name: "MLA Hostel Drive" },
-    { x1: 160.0, z1: 140.0, x2: 185.0, z2: 150.0, width: 7.5, name: "Tea Auction Centre Road" },
-    { x1: 185.0, z1: 150.0, x2: 220.0, z2: 175.0, width: 7.5, name: "Super Market Flyover Approach" },
-    { x1: 130.0, z1: 130.0, x2: 155.0, z2: 145.0, width: 7.5, name: "Survey Building Road" },
-    { x1: 155.0, z1: 145.0, x2: 135.0, z2: 165.0, width: 7.5, name: "Survey to Beltola Bazar" },
-    { x1: 135.0, z1: 165.0, x2: 155.0, z2: 175.0, width: 7.5, name: "Jayanagar Main Road" },
-    { x1: 155.0, z1: 175.0, x2: 175.0, z2: 185.0, width: 7.5, name: "Jayanagar to Khanapara Link" },
-    { x1: 155.0, z1: 175.0, x2: 100.0, z2: 175.0, width: 7.5, name: "Jayanagar to Basistha Link" },
+  // 1. Riverfront MG Road & Western River Approaches
+  { x1: -240.0, z1: -8.0, x2: -190.0, z2: -8.0, width: 8.5, name: "Pandu River Approach" },
+  { x1: -190.0, z1: -8.0, x2: -130.0, z2: -8.0, width: 9.0, name: "Saraighat South Approach Road" },
+  { x1: -130.0, z1: -8.0, x2: -80.0, z2: -18.0, width: 9.0, name: "MG Road (Pandu - Kamakhya Ghat)" },
+  { x1: -80.0, z1: -18.0, x2: -60.0, z2: -26.0, width: 9.0, name: "MG Road (Kamakhya - Bharalumukh)" },
+  { x1: -60.0, z1: -26.0, x2: -25.0, z2: -24.0, width: 9.0, name: "MG Road (Bharalumukh - Pan Bazar)" },
+  { x1: -25.0, z1: -24.0, x2: 35.0, z2: -28.0, width: 9.0, name: "MG Road (Sukreswar Ghat Promenade)" },
+  { x1: 35.0, z1: -28.0, x2: 65.0, z2: -34.0, width: 9.0, name: "MG Road (Uzan Bazar Riverfront)" },
+  { x1: 65.0, z1: -34.0, x2: 120.0, z2: -38.0, width: 9.0, name: "MG Road (Uzan Bazar - Kharghuli West)" },
+  { x1: 120.0, z1: -38.0, x2: 180.0, z2: -42.0, width: 9.0, name: "MG Road (Kharghuli Riverfront East)" },
+  { x1: 180.0, z1: -42.0, x2: 240.0, z2: -46.0, width: 8.5, name: "Kharghuli - Ramsa Hill Road" },
+
+  // 2. Saraighat Bridge South Highway Connector (NH-27 to Jalukbari)
+  { x1: -130.0, z1: -8.0, x2: -130.0, z2: 45.0, width: 9.5, name: "NH-27 Saraighat South Highway" },
+
+  // 3. North Highway Network (Amingaon, IIT Guwahati, Dirgheswari across Saraighat Bridge)
+  { x1: -240.0, z1: -168.0, x2: -130.0, z2: -168.0, width: 8.5, name: "North Highway West" },
+  { x1: -130.0, z1: -168.0, x2: 0.0, z2: -168.0, width: 8.5, name: "North Highway (Amingaon)" },
+  { x1: 0.0, z1: -168.0, x2: 90.0, z2: -168.0, width: 8.5, name: "North Highway (IIT Guwahati Approach)" },
+  { x1: 90.0, z1: -168.0, x2: 180.0, z2: -168.0, width: 8.5, name: "North Highway (Dirgheswari Approach)" },
+  { x1: 0.0, z1: -168.0, x2: 0.0, z2: -210.0, width: 7.5, name: "Amingaon North Cross" },
+  { x1: 90.0, z1: -168.0, x2: 90.0, z2: -215.0, width: 8.0, name: "IIT Guwahati Main Campus Avenue" },
+  { x1: -130.0, z1: -168.0, x2: -130.0, z2: -210.0, width: 8.0, name: "Saraighat North Rotary Link" },
+
+  // 4. AT Road Corridor (Jalukbari -> Maligaon -> Bharalumukh -> Paltan Bazar)
+  { x1: -130.0, z1: 45.0, x2: -80.0, z2: 45.0, width: 9.0, name: "AT Road (Jalukbari - Maligaon)" },
+  { x1: -80.0, z1: 45.0, x2: -60.0, z2: 45.0, width: 9.0, name: "AT Road (Maligaon - Bharalumukh)" },
+  { x1: -60.0, z1: 45.0, x2: -25.0, z2: 45.0, width: 9.0, name: "AT Road (Bharalumukh - Machkhowa)" },
+  { x1: -25.0, z1: 45.0, x2: 15.0, z2: 45.0, width: 9.0, name: "AT Road (Machkhowa - Paltan Bazar)" },
+  { x1: -80.0, z1: 45.0, x2: -80.0, z2: -18.0, width: 7.5, name: "Kamakhya Temple Foothill Road" },
+  { x1: -60.0, z1: 45.0, x2: -60.0, z2: -26.0, width: 8.0, name: "Bharalumukh River Link" },
+
+  // 5. Fancy Bazar & Commercial Core Links
+  { x1: -25.0, z1: 45.0, x2: -25.0, z2: 10.0, width: 7.5, name: "Fancy Bazar Cross Link" },
+  { x1: -25.0, z1: 10.0, x2: 15.0, z2: 10.0, width: 7.5, name: "Hem Baruah Road" },
+  { x1: -25.0, z1: 10.0, x2: -25.0, z2: -24.0, width: 7.5, name: "Machkhowa River Link" },
+
+  // 6. GS Road Commercial Flagship Spine (Paltan Bazar -> Ulubari -> Ganeshguri -> Dispur -> Six Mile -> Khanapara)
+  { x1: 15.0, z1: 45.0, x2: 35.0, z2: 25.0, width: 9.5, name: "GS Road (Paltan Bazar - Ulubari)" },
+  { x1: 35.0, z1: 25.0, x2: 60.0, z2: 15.0, width: 10.0, name: "GS Road (Ulubari - Christian Basti Flagship)" },
+  { x1: 60.0, z1: 15.0, x2: 95.0, z2: 50.0, width: 9.5, name: "GS Road (Christian Basti - Walford)" },
+  { x1: 95.0, z1: 50.0, x2: 125.0, z2: 90.0, width: 10.0, name: "GS Road (Walford - Ganeshguri Flyover)" },
+  { x1: 125.0, z1: 90.0, x2: 160.0, z2: 140.0, width: 10.0, name: "GS Road (Ganeshguri - Dispur Secretariat)" },
+  { x1: 160.0, z1: 140.0, x2: 190.0, z2: 160.0, width: 9.5, name: "GS Road (Dispur - Downtown Hospital)" },
+  { x1: 190.0, z1: 160.0, x2: 220.0, z2: 175.0, width: 9.5, name: "GS Road (Downtown - Six Mile Flyover)" },
+  { x1: 220.0, z1: 175.0, x2: 255.0, z2: 185.0, width: 9.5, name: "GS Road (Six Mile - Khanapara Gateway)" },
+
+  // 7. Zoo Road Corridor (RG Baruah Road: Chandmari -> State Zoo -> Ganeshguri)
+  { x1: 180.0, z1: -42.0, x2: 175.0, z2: 15.0, width: 9.0, name: "Zoo Road (Chandmari - Commerce College)" },
+  { x1: 175.0, z1: 15.0, x2: 165.0, z2: 45.0, width: 9.0, name: "Zoo Road (Zoo Tiniali - Assam State Zoo)" },
+  { x1: 165.0, z1: 45.0, x2: 145.0, z2: 70.0, width: 9.0, name: "Zoo Road (State Zoo - Sundarpur)" },
+  { x1: 145.0, z1: 70.0, x2: 125.0, z2: 90.0, width: 9.0, name: "Zoo Road (Sundarpur - Ganeshguri Flyover)" },
+
+  // 8. GNB Road Cultural Corridor (Pan Bazar -> Cotton Univ -> Dighalipukhuri -> Ambari -> Silpukhuri -> Chandmari)
+  { x1: -25.0, z1: -24.0, x2: 35.0, z2: -10.0, width: 8.5, name: "GNB Road (Pan Bazar - Cotton University)" },
+  { x1: 35.0, z1: -10.0, x2: 65.0, z2: -10.0, width: 8.5, name: "GNB Road (Dighalipukhuri Lake Promenade)" },
+  { x1: 65.0, z1: -10.0, x2: 110.0, z2: -15.0, width: 8.5, name: "GNB Road (Ambari - State Museum)" },
+  { x1: 110.0, z1: -15.0, x2: 150.0, z2: -15.0, width: 8.5, name: "GNB Road (Guwahati Club - Silpukhuri)" },
+  { x1: 150.0, z1: -15.0, x2: 180.0, z2: -42.0, width: 8.5, name: "Silpukhuri to Chandmari Flyover" },
+
+  // 9. North-South Inner Connectors & B. Baruah Road
+  { x1: 35.0, z1: -28.0, x2: 35.0, z2: -10.0, width: 8.0, name: "Nehru Park River Link" },
+  { x1: 35.0, z1: -10.0, x2: 35.0, z2: 25.0, width: 8.0, name: "B. Baruah Road (Nehru Park to Ulubari)" },
+  { x1: 65.0, z1: -34.0, x2: 65.0, z2: -10.0, width: 8.0, name: "Latasil Field to Uzan Bazar Link" },
+
+  // 10. Clean 2-Segment Rajgarh Road (Connecting Chandmari to Bhangagarh)
+  { x1: 150.0, z1: -15.0, x2: 105.0, z2: 0.0, width: 8.0, name: "Rajgarh Road North (Chandmari Link)" },
+  { x1: 105.0, z1: 0.0, x2: 60.0, z2: 15.0, width: 8.0, name: "Rajgarh Road South (Bhangagarh Link)" },
+
+  // 11. NH-27 Southern Bypass Expressway Loop
+  { x1: -130.0, z1: 45.0, x2: -180.0, z2: 90.0, width: 9.5, name: "NH-27 Jalukbari to Deepor Beel Eco Junction" },
+  { x1: -180.0, z1: 90.0, x2: -120.0, z2: 125.0, width: 10.0, name: "NH-27 Deepor Beel to Gorchuk" },
+  { x1: -120.0, z1: 125.0, x2: -50.0, z2: 145.0, width: 10.0, name: "NH-27 Gorchuk to Lokhra (ISBT)" },
+  { x1: -50.0, z1: 145.0, x2: 25.0, z2: 160.0, width: 10.0, name: "NH-27 Lokhra to Betkuchi" },
+  { x1: 25.0, z1: 160.0, x2: 100.0, z2: 175.0, width: 10.0, name: "NH-27 Betkuchi to Basistha Chariali" },
+  { x1: 100.0, z1: 175.0, x2: 175.0, z2: 185.0, width: 10.0, name: "NH-27 Basistha to Khanapara" },
+  { x1: 175.0, z1: 185.0, x2: 255.0, z2: 185.0, width: 10.0, name: "NH-27 Khanapara East" },
+
+  // 12. Deepor Beel Scenic Shore Drive & Borjhar Airport Highway
+  { x1: -180.0, z1: 90.0, x2: -195.0, z2: 125.0, width: 8.0, name: "Deepor Beel North Shore Drive" },
+  { x1: -195.0, z1: 125.0, x2: -190.0, z2: 165.0, width: 8.0, name: "Deepor Beel South Shore Drive" },
+  { x1: -190.0, z1: 165.0, x2: -120.0, z2: 125.0, width: 8.0, name: "Deepor Beel to Gorchuk Connector" },
+  { x1: -180.0, z1: 90.0, x2: -240.0, z2: 110.0, width: 9.0, name: "Borjhar Airport Highway West" },
+
+  // 13. South Central Commercial & Residential Grid
+  { x1: 15.0, z1: 45.0, x2: 15.0, z2: 80.0, width: 7.5, name: "Station Road South / Solapara" },
+  { x1: 15.0, z1: 80.0, x2: 60.0, z2: 80.0, width: 7.5, name: "Rehabari Commercial Drive" },
+  { x1: 60.0, z1: 80.0, x2: 95.0, z2: 50.0, width: 7.5, name: "Arya Nagar to Walford Link" },
+  { x1: 15.0, z1: 80.0, x2: -25.0, z2: 80.0, width: 7.5, name: "Arya Nagar West Drive" },
+  { x1: -25.0, z1: 80.0, x2: -60.0, z2: 45.0, width: 7.5, name: "Fatasil to Bharalumukh Link" },
+  { x1: -25.0, z1: 80.0, x2: -50.0, z2: 145.0, width: 8.0, name: "Fatasil South to Lokhra Bypass Link" },
+
+  // 14. Beltola & Jayanagar High Street
+  { x1: 125.0, z1: 90.0, x2: 130.0, z2: 130.0, width: 8.5, name: "Beltola Tiniali Road" },
+  { x1: 130.0, z1: 130.0, x2: 135.0, z2: 165.0, width: 8.5, name: "Beltola Bazar Chariali" },
+  { x1: 135.0, z1: 165.0, x2: 100.0, z2: 175.0, width: 8.5, name: "Beltola to Basistha Chariali Link" },
+  { x1: 135.0, z1: 165.0, x2: 175.0, z2: 185.0, width: 8.0, name: "Beltola to Khanapara Link" },
+  { x1: 160.0, z1: 140.0, x2: 130.0, z2: 130.0, width: 8.0, name: "Dispur Last Gate to Beltola Link" },
+
+  // 15. VIP Road & Eastern Wetlands (Six Mile -> Chachal -> Narengi)
+  { x1: 220.0, z1: 175.0, x2: 210.0, z2: 130.0, width: 8.5, name: "Six Mile to Chachal / Silsako Beel" },
+  { x1: 210.0, z1: 130.0, x2: 215.0, z2: 80.0, width: 8.5, name: "VIP Road Borbari" },
+  { x1: 215.0, z1: 80.0, x2: 225.0, z2: 25.0, width: 8.5, name: "VIP Road Hengrabari" },
+  { x1: 225.0, z1: 25.0, x2: 240.0, z2: -10.0, width: 8.5, name: "VIP Road to Narengi Tiniali" },
+  { x1: 240.0, z1: -10.0, x2: 240.0, z2: -46.0, width: 8.0, name: "Narengi to Ramsa River Link" },
+  { x1: 240.0, z1: -10.0, x2: 205.0, z2: -20.0, width: 8.5, name: "Noonmati Refinery Road" },
+  { x1: 205.0, z1: -20.0, x2: 180.0, z2: -42.0, width: 8.5, name: "Bamunimaidam to Chandmari Junction" },
+  { x1: 175.0, z1: 15.0, x2: 225.0, z2: 25.0, width: 8.0, name: "Mother Teresa Road (Zoo Tiniali to Narengi)" },
+
+  // 16. Pan Bazar & Cotton University Inner Grid
+  { x1: -25.0, z1: 10.0, x2: -25.0, z2: -24.0, width: 7.5, name: "Pan Bazar Church Road" },
+  { x1: -25.0, z1: 10.0, x2: 35.0, z2: 10.0, width: 7.0, name: "Don Bosco School Road" },
+  { x1: 35.0, z1: 10.0, x2: 35.0, z2: 25.0, width: 7.0, name: "Nehru Stadium Approach" },
+
+  // 17. Uzan Bazar, Dighalipukhuri & Lamb Road Cultural Precinct
+  { x1: 65.0, z1: -10.0, x2: 65.0, z2: -34.0, width: 7.5, name: "Latasil Field Avenue" },
+  { x1: 35.0, z1: -28.0, x2: 65.0, z2: -10.0, width: 7.0, name: "Dighalipukhuri West Bank" },
+  { x1: 65.0, z1: -10.0, x2: 90.0, z2: -25.0, width: 7.0, name: "Lamb Road Cultural Promenade" },
+  { x1: 90.0, z1: -25.0, x2: 110.0, z2: -15.0, width: 7.0, name: "State Museum Link" },
+  { x1: 90.0, z1: -25.0, x2: 120.0, z2: -38.0, width: 7.0, name: "Kharghuli Foothill Cross" },
+
+  // 18. Ulubari & Lachit Nagar Commercial Links
+  { x1: 60.0, z1: 15.0, x2: 75.0, z2: 35.0, width: 7.5, name: "Tarun Nagar Road" },
+  { x1: 60.0, z1: 15.0, x2: 45.0, z2: 45.0, width: 7.0, name: "Lachit Nagar Avenue" },
+  { x1: 45.0, z1: 45.0, x2: 35.0, z2: 25.0, width: 7.0, name: "Lachit Nagar to Ulubari" },
+  { x1: 45.0, z1: 45.0, x2: 15.0, z2: 45.0, width: 7.0, name: "Lachit Nagar to Paltan Bazar" },
+
+  // 19. Maligaon & Railway HQ Enclave
+  { x1: -80.0, z1: 45.0, x2: -105.0, z2: 20.0, width: 7.5, name: "Maligaon Stadium Road" },
+  { x1: -105.0, z1: 20.0, x2: -130.0, z2: 45.0, width: 7.5, name: "Railway HQ Gateway" },
+  { x1: -105.0, z1: 20.0, x2: -80.0, z2: -18.0, width: 7.0, name: "Pandu Port Road" },
+
+  // 20. Gauhati University Campus & Jalukbari Outer Loops
+  { x1: -130.0, z1: 45.0, x2: -155.0, z2: 15.0, width: 8.0, name: "Gauhati University Main Avenue" },
+  { x1: -155.0, z1: 15.0, x2: -180.0, z2: 90.0, width: 8.0, name: "University Campus South Link" },
+  { x1: -155.0, z1: 15.0, x2: -130.0, z2: -8.0, width: 8.0, name: "Jalukbari North Promenade" },
+
+  // 21. Dispur Capital Complex & Assam Secretariat Enclave
+  { x1: 160.0, z1: 140.0, x2: 175.0, z2: 115.0, width: 8.0, name: "Assam Assembly Avenue" },
+  { x1: 175.0, z1: 115.0, x2: 145.0, z2: 70.0, width: 7.5, name: "Assembly to Zoo Road Link" },
+  { x1: 175.0, z1: 115.0, x2: 190.0, z2: 160.0, width: 7.5, name: "MLA Hostel Drive" },
+  { x1: 160.0, z1: 140.0, x2: 185.0, z2: 150.0, width: 7.5, name: "Tea Auction Centre Road" },
+  { x1: 185.0, z1: 150.0, x2: 220.0, z2: 175.0, width: 7.5, name: "Super Market Flyover Approach" },
+
+  // 22. Survey & Jayanagar Neighborhood Connectors
+  { x1: 130.0, z1: 130.0, x2: 155.0, z2: 145.0, width: 7.5, name: "Survey Building Road" },
+  { x1: 155.0, z1: 145.0, x2: 135.0, z2: 165.0, width: 7.5, name: "Survey to Beltola Bazar" },
+  { x1: 135.0, z1: 165.0, x2: 155.0, z2: 175.0, width: 7.5, name: "Jayanagar Main Road" },
+  { x1: 155.0, z1: 175.0, x2: 175.0, z2: 185.0, width: 7.5, name: "Jayanagar to Khanapara Link" },
+  { x1: 155.0, z1: 175.0, x2: 100.0, z2: 175.0, width: 7.5, name: "Jayanagar to Basistha Link" },
 ];
 
 /**
- * Distance from point (px, pz) to 2D line segment (x1, z1)-(x2, z2).
+ * Creates an authentic Low-Poly Faceted Hill Mesh with sharp triangular faces and flat shading,
+ * exactly matching the iconic visual style of indiaagain.live.
  */
-function distToSegment(px: number, pz: number, x1: number, z1: number, x2: number, z2: number): number {
-  const dx = x2 - x1;
-  const dz = z2 - z1;
-  const lenSq = dx * dx + dz * dz;
-  if (lenSq === 0) return Math.hypot(px - x1, pz - z1);
-  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (pz - z1) * dz) / lenSq));
-  const projX = x1 + t * dx;
-  const projZ = z1 + t * dz;
-  return Math.hypot(px - projX, pz - projZ);
+function createLowPolyFacetedHill(
+  radius: number,
+  height: number,
+  color: number = 0x2e7d32,
+  segments: number = 8
+): THREE.Mesh {
+  const geo = new THREE.ConeGeometry(radius, height, segments, 2);
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i);
+    if (y < -height / 2 + 0.1) {
+      // Base sits flush at ground level
+      pos.setY(i, -height / 2);
+    } else if (y > height / 2 - 0.1) {
+      // Apex point
+      pos.setY(i, height / 2);
+    } else {
+      // Middle ring: introduce organic asymmetry for faceted natural look
+      const x = pos.getX(i);
+      const z = pos.getZ(i);
+      const perturb = (Math.sin(x * 0.15) + Math.cos(z * 0.15)) * 0.12 * radius;
+      pos.setX(i, x * (1.06 + Math.sin(z * 0.08) * 0.08));
+      pos.setZ(i, z * (0.94 + Math.cos(x * 0.08) * 0.08));
+      pos.setY(i, y + perturb);
+    }
+  }
+  geo.computeVertexNormals();
+
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.88,
+    metalness: 0.04,
+    flatShading: true,
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = height / 2;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
 }
 
 /**
  * Builds the complete, geographically accurate 3D city of Guwahati:
- * - Expansive natural Assam valley terrain (3600 x 3200) with seamless downward horizon skirt
+ * - Expansive natural Assam valley terrain with seamless downward horizon skirt
  * - Majestic curving Brahmaputra River following authentic geography with sandbars (chars) and Umananda Island
+ * - Iconic Low-Poly Faceted Hills across North Guwahati and city landmarks (Kamakhya, Sarania, Kharghuli)
  * - Deepor Beel, Dighalipukhuri, Silpukhuri, Borsola Beel, Silsako Beel & continuous Bharalu urban stream
  * - Iconic 3D Saraighat Double-Deck Truss Bridge bridging South and North Guwahati
- * - 117 interconnected GIS-accurate road segments covering all arterial & neighborhood avenues
- * - Low-poly rolling hills (Kamakhya Nilachal, Sarania Gandhi Mandap, Fatasil, North Guwahati, Khasi Foothills)
- * - 400 instanced lush low-poly trees distributed across hills, riverfronts, and lakes
+ * - Fully interconnected GIS-accurate road network covering all arterial & neighborhood avenues
+ * - 1,200 instanced lush low-poly trees distributed across hills, riverfronts, and lakes
  * - 12 official commercial colonies & verified flagship storefronts dynamically facing the road
- * - Calibrated peaceful traffic (Auto, ASTC bus, City bus, Sedan, Delivery Van) cruising road waypoints
+ * - Calibrated peaceful traffic cruising road waypoints and across Saraighat Bridge
  */
 export function buildGuwahatiCity(
   storefronts: BusinessStorefront[]
@@ -312,7 +411,6 @@ export function buildGuwahatiCity(
   const plots: StorefrontMeshResult[] = [];
   const disposables: { dispose: () => void }[] = [];
 
-  // Filter storefronts active in Guwahati
   const guwahatiStorefronts = storefronts.filter(
     (s) => !s?.city_name || s.city_name.toLowerCase() === "guwahati"
   );
@@ -322,8 +420,8 @@ export function buildGuwahatiCity(
   // 1. EXPANSIVE ASSAM VALLEY NATURAL TERRAIN (3600 x 3200)
   const terrainWidth = 3600;
   const terrainHeight = 3200;
-  const segX = 140;
-  const segZ = 120;
+  const segX = 100;
+  const segZ = 90;
 
   const terrainGeo = new THREE.PlaneGeometry(terrainWidth, terrainHeight, segX, segZ);
   terrainGeo.rotateX(-Math.PI / 2);
@@ -339,100 +437,15 @@ export function buildGuwahatiCity(
 
     let elev = 0;
 
-    // A. Brahmaputra River Basin depression along the north
+    // Brahmaputra River Basin depression along the north
     if (z >= zN - 6 && z <= zS + 6 && Math.abs(x) < 1750) {
       elev = -0.95; // River water level sits cleanly at Y = 0.04
-    } else {
-      // Calculate clearance to the nearest road corridor
-      let minRoadDist = Infinity;
-      let matchingRoadWidth = 8.5;
-      for (let r = 0; r < roads.length; r++) {
-        const rd = roads[r];
-        // Bounding box pre-check
-        const minX = Math.min(rd.x1, rd.x2) - 15;
-        const maxX = Math.max(rd.x1, rd.x2) + 15;
-        const minZ = Math.min(rd.z1, rd.z2) - 15;
-        const maxZ = Math.max(rd.z1, rd.z2) + 15;
-        if (x < minX || x > maxX || z < minZ || z > maxZ) continue;
-
-        const d = distToSegment(x, z, rd.x1, rd.z1, rd.x2, rd.z2);
-        if (d < minRoadDist) {
-          minRoadDist = d;
-          matchingRoadWidth = rd.width;
-        }
-      }
-
-      // Strictly flat along all road corridors and storefront plots
-      const safeFlatMargin = matchingRoadWidth / 2 + 5.5;
-      let roadClearanceFactor = 1.0;
-      if (minRoadDist <= safeFlatMargin) {
-        roadClearanceFactor = 0.0;
-      } else if (minRoadDist < safeFlatMargin + 18.0) {
-        const t = (minRoadDist - safeFlatMargin) / 18.0;
-        roadClearanceFactor = t * t;
-      }
-
-      // B. Surrounding Natural Hills
-      // 1. Nilachal / Kamakhya Hills (x = -85, z = 12)
-      const distKamakhya = Math.hypot(x - -85, z - 12);
-      if (distKamakhya < 62) {
-        const kFactor = (1 + Math.cos((distKamakhya / 62) * Math.PI)) * 0.5;
-        elev = Math.max(elev, kFactor * 52 * roadClearanceFactor);
-      }
-
-      // 2. Sarania Hill (Gandhi Mandap) in Central Guwahati (x = 85, z = 20)
-      const distSarania = Math.hypot(x - 85, z - 20);
-      if (distSarania < 52) {
-        const sFactor = (1 + Math.cos((distSarania / 52) * Math.PI)) * 0.5;
-        elev = Math.max(elev, sFactor * 42 * roadClearanceFactor);
-      }
-
-      // 3. Fatasil / Naranarayan Hills in the South-Central (x = -45, z = 115)
-      const distFatasil = Math.hypot(x - -45, z - 115);
-      if (distFatasil < 65) {
-        const fFactor = (1 + Math.cos((distFatasil / 65) * Math.PI)) * 0.5;
-        elev = Math.max(elev, fFactor * 48 * roadClearanceFactor);
-      }
-
-      // 4. Kharghuli & Narengi River Hills (x = 220, z = -35)
-      const distKharghuli = Math.hypot(x - 220, z - -35);
-      if (distKharghuli < 58) {
-        const khFactor = (1 + Math.cos((distKharghuli / 58) * Math.PI)) * 0.5;
-        elev = Math.max(elev, khFactor * 46 * roadClearanceFactor);
-      }
-
-      // 5. Meghalaya / Khasi Foothills in the far South (z > 190)
-      if (z > 190) {
-        const southGrad = Math.min((z - 190) / 420, 1.0);
-        elev = Math.max(elev, southGrad * southGrad * 72 + Math.sin(x * 0.012) * 8);
-      }
-
-      // 6. North Guwahati Rolling Dome Hills across the Brahmaputra (z < zN - 15)
-      if (z < zN - 15) {
-        const northGrad = Math.min((zN - 15 - z) / 420, 1.0);
-        elev = northGrad * northGrad * 36;
-
-        const domeHills = [
-          { cx: -240, cz: -230, r: 120, h: 58 },
-          { cx: -110, cz: -250, r: 130, h: 68 },
-          { cx: 50, cz: -235, r: 125, h: 64 },
-          { cx: 200, cz: -220, r: 115, h: 56 },
-          { cx: 340, cz: -240, r: 110, h: 52 },
-        ];
-        for (const dh of domeHills) {
-          const d = Math.hypot(x - dh.cx, z - dh.cz);
-          if (d < dh.r) {
-            const factor = (1 + Math.cos((d / dh.r) * Math.PI)) * 0.5;
-            elev = Math.max(elev, factor * dh.h);
-          }
-        }
-      }
     }
 
-    // C. Outer Horizon Skirt: Curves down into horizon fog to eliminate square plane corners
-    if (radialDist > 1250) {
-      const skirtFactor = Math.min((radialDist - 1250) / 400, 1.0);
-      elev = elev * (1 - skirtFactor) - skirtFactor * 18.0;
+    // Outer Horizon Skirt: Curves down into horizon fog to eliminate square plane corners
+    if (radialDist > 1350) {
+      const skirtFactor = Math.min((radialDist - 1350) / 380, 1.0);
+      elev = elev * (1 - skirtFactor) - skirtFactor * 22.0;
     }
 
     posAttr.setY(i, elev);
@@ -440,10 +453,10 @@ export function buildGuwahatiCity(
   terrainGeo.computeVertexNormals();
 
   const terrainMat = new THREE.MeshStandardMaterial({
-    color: 0x247a3e, // Lush Assam Valley emerald green
+    color: 0x2e7d32, // Vibrant Assam Valley emerald green
     roughness: 0.88,
     metalness: 0.04,
-    flatShading: false,
+    flatShading: true,
   });
   const terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
   terrainMesh.receiveShadow = true;
@@ -451,7 +464,7 @@ export function buildGuwahatiCity(
   disposables.push(terrainGeo, terrainMat);
 
   // 2. THE MAJESTIC CURVING BRAHMAPUTRA RIVER
-  const riverSteps = 120;
+  const riverSteps = 140;
   const riverXMin = -1800;
   const riverXMax = 1800;
   const riverGeo = new THREE.BufferGeometry();
@@ -499,14 +512,14 @@ export function buildGuwahatiCity(
   group.add(riverMesh);
   disposables.push(riverGeo, riverMat);
 
-  // Sandy Riverbanks
+  // Sandy Riverbanks framing both shores
   const beachMat = new THREE.MeshStandardMaterial({
     color: 0xf1dfaa, // Golden silt river sand
     roughness: 0.92,
   });
   disposables.push(beachMat);
 
-  // South Beach Ribbon (Width: 12m)
+  // South Beach Ribbon (Width: 10m)
   const southBeachGeo = new THREE.BufferGeometry();
   const southBeachPos: number[] = [];
   const southBeachUVs: number[] = [];
@@ -517,34 +530,29 @@ export function buildGuwahatiCity(
     const rx = riverXMin + u * (riverXMax - riverXMin);
     const zS = getRiverSouthBankZ(rx);
 
-    southBeachPos.push(rx, 0.048, zS);
+    southBeachPos.push(rx, 0.045, zS);
     southBeachUVs.push(u, 0);
-
-    southBeachPos.push(rx, 0.05, zS + 12.0);
+    southBeachPos.push(rx, 0.05, zS + 10.0);
     southBeachUVs.push(u, 1);
   }
-
   for (let s = 0; s < riverSteps; s++) {
     const p0 = s * 2;
     const p1 = s * 2 + 1;
     const p2 = (s + 1) * 2;
     const p3 = (s + 1) * 2 + 1;
-
     southBeachIdx.push(p0, p2, p1);
     southBeachIdx.push(p1, p2, p3);
   }
-
   southBeachGeo.setAttribute("position", new THREE.Float32BufferAttribute(southBeachPos, 3));
   southBeachGeo.setAttribute("uv", new THREE.Float32BufferAttribute(southBeachUVs, 2));
   southBeachGeo.setIndex(southBeachIdx);
   southBeachGeo.computeVertexNormals();
-
-  const southBeach = new THREE.Mesh(southBeachGeo, beachMat);
-  southBeach.receiveShadow = true;
-  group.add(southBeach);
+  const southBeachMesh = new THREE.Mesh(southBeachGeo, beachMat);
+  southBeachMesh.receiveShadow = true;
+  group.add(southBeachMesh);
   disposables.push(southBeachGeo);
 
-  // North Beach Ribbon (Width: 14m)
+  // North Beach Ribbon (Width: 12m)
   const northBeachGeo = new THREE.BufferGeometry();
   const northBeachPos: number[] = [];
   const northBeachUVs: number[] = [];
@@ -555,128 +563,177 @@ export function buildGuwahatiCity(
     const rx = riverXMin + u * (riverXMax - riverXMin);
     const zN = getRiverNorthBankZ(rx);
 
-    northBeachPos.push(rx, 0.05, zN - 14.0);
+    northBeachPos.push(rx, 0.05, zN - 12.0);
     northBeachUVs.push(u, 0);
-
-    northBeachPos.push(rx, 0.048, zN);
+    northBeachPos.push(rx, 0.045, zN);
     northBeachUVs.push(u, 1);
   }
-
   for (let s = 0; s < riverSteps; s++) {
     const p0 = s * 2;
     const p1 = s * 2 + 1;
     const p2 = (s + 1) * 2;
     const p3 = (s + 1) * 2 + 1;
-
     northBeachIdx.push(p0, p2, p1);
     northBeachIdx.push(p1, p2, p3);
   }
-
   northBeachGeo.setAttribute("position", new THREE.Float32BufferAttribute(northBeachPos, 3));
   northBeachGeo.setAttribute("uv", new THREE.Float32BufferAttribute(northBeachUVs, 2));
   northBeachGeo.setIndex(northBeachIdx);
   northBeachGeo.computeVertexNormals();
-
-  const northBeach = new THREE.Mesh(northBeachGeo, beachMat);
-  northBeach.receiveShadow = true;
-  group.add(northBeach);
+  const northBeachMesh = new THREE.Mesh(northBeachGeo, beachMat);
+  northBeachMesh.receiveShadow = true;
+  group.add(northBeachMesh);
   disposables.push(northBeachGeo);
 
-  // 3. PEACOCK ISLAND (UMANANDA) & RIVER SANDBARS (CHARS)
+  // 3. ICONIC LOW-POLY FACETED HILLS (The Defining Landscape Feature of indiaagain.live)
+  const hillsGroup = new THREE.Group();
+  hillsGroup.name = "guwahati_faceted_hills";
+
+  // A. North Bank Dome Hills across the Brahmaputra (Matching Image 1 & 7)
+  const northHillsDef = [
+    { cx: -260, cz: -225, r: 85, h: 68, color: 0x388e3c },
+    { cx: -150, cz: -255, r: 100, h: 76, color: 0x2e7d32 },
+    { cx: -45, cz: -280, r: 110, h: 84, color: 0x1b5e20 },
+    { cx: 50, cz: -300, r: 115, h: 88, color: 0x2e7d32 },
+    { cx: 150, cz: -325, r: 105, h: 80, color: 0x388e3c },
+    { cx: 250, cz: -350, r: 110, h: 84, color: 0x2e7d32 },
+    { cx: 360, cz: -380, r: 100, h: 74, color: 0x1b5e20 },
+  ];
+  for (const h of northHillsDef) {
+    const hillMesh = createLowPolyFacetedHill(h.r, h.h, h.color, 8);
+    hillMesh.position.set(h.cx, h.h / 2, h.cz);
+    hillsGroup.add(hillMesh);
+    disposables.push(hillMesh.geometry, hillMesh.material as THREE.Material);
+  }
+
+  // B. Kamakhya Nilachal Mountain (South Bank near Saraighat Bridge)
+  const kamakhyaMain = createLowPolyFacetedHill(56, 44, 0x2e7d32, 8);
+  kamakhyaMain.position.set(-95, 22, -2);
+  hillsGroup.add(kamakhyaMain);
+  const kamakhyaSub = createLowPolyFacetedHill(42, 34, 0x388e3c, 8);
+  kamakhyaSub.position.set(-75, 17, 14);
+  hillsGroup.add(kamakhyaSub);
+  disposables.push(kamakhyaMain.geometry, kamakhyaMain.material as THREE.Material, kamakhyaSub.geometry, kamakhyaSub.material as THREE.Material);
+
+  // C. Sarania Hill - Gandhi Mandap (Central Guwahati, between Ulubari & Rajgarh)
+  const saraniaHill = createLowPolyFacetedHill(42, 32, 0x2e7d32, 8);
+  saraniaHill.position.set(75, 16, -2);
+  hillsGroup.add(saraniaHill);
+  disposables.push(saraniaHill.geometry, saraniaHill.material as THREE.Material);
+
+  // D. Kharghuli Riverfront Hills (Overlooking the northeast river bend)
+  const kharghuli1 = createLowPolyFacetedHill(46, 36, 0x2e7d32, 8);
+  kharghuli1.position.set(180, 18, -65);
+  hillsGroup.add(kharghuli1);
+  const kharghuli2 = createLowPolyFacetedHill(42, 32, 0x388e3c, 8);
+  kharghuli2.position.set(235, 16, -85);
+  hillsGroup.add(kharghuli2);
+  disposables.push(kharghuli1.geometry, kharghuli1.material as THREE.Material, kharghuli2.geometry, kharghuli2.material as THREE.Material);
+
+  // E. Narakasur & Kahilipara Hills (South Central city)
+  const narakasur1 = createLowPolyFacetedHill(50, 36, 0x1b5e20, 8);
+  narakasur1.position.set(55, 18, 115);
+  hillsGroup.add(narakasur1);
+  const narakasur2 = createLowPolyFacetedHill(44, 30, 0x2e7d32, 8);
+  narakasur2.position.set(-15, 15, 110);
+  hillsGroup.add(narakasur2);
+  disposables.push(narakasur1.geometry, narakasur1.material as THREE.Material, narakasur2.geometry, narakasur2.material as THREE.Material);
+
+  // F. Fatasil Hills (South-West)
+  const fatasilHill = createLowPolyFacetedHill(42, 28, 0x2e7d32, 8);
+  fatasilHill.position.set(-65, 14, 95);
+  hillsGroup.add(fatasilHill);
+  disposables.push(fatasilHill.geometry, fatasilHill.material as THREE.Material);
+
+  // G. Khanapara / Meghalaya Foothills Range (Southern Horizon)
+  const southFoothillsDef = [
+    { cx: -100, cz: 245, r: 85, h: 65, color: 0x1b5e20 },
+    { cx: 0, cz: 260, r: 95, h: 74, color: 0x2e7d32 },
+    { cx: 110, cz: 270, r: 105, h: 82, color: 0x1b5e20 },
+    { cx: 220, cz: 275, r: 110, h: 88, color: 0x2e7d32 },
+    { cx: 330, cz: 285, r: 100, h: 78, color: 0x388e3c },
+  ];
+  for (const sf of southFoothillsDef) {
+    const sHill = createLowPolyFacetedHill(sf.r, sf.h, sf.color, 8);
+    sHill.position.set(sf.cx, sf.h / 2, sf.cz);
+    hillsGroup.add(sHill);
+    disposables.push(sHill.geometry, sHill.material as THREE.Material);
+  }
+
+  group.add(hillsGroup);
+
+  // 4. NATURAL RIVER SANDBARS (Chars) & UMANANDA ISLAND
+  const sandbarMat = new THREE.MeshStandardMaterial({ color: 0xeadbb6, roughness: 0.92 });
+  const marshGrassMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.88 });
+  disposables.push(sandbarMat, marshGrassMat);
+
+  const sandbarsDef = [
+    { cx: -40, cz: -95, rx: 42, rz: 18, rot: 0.06 },
+    { cx: -220, cz: -110, rx: 38, rz: 15, rot: -0.04 },
+    { cx: 150, cz: -140, rx: 48, rz: 20, rot: 0.08 },
+  ];
+  for (const sb of sandbarsDef) {
+    const sbGeo = new THREE.CylinderGeometry(sb.rz, sb.rz * 1.25, 0.35, 18);
+    sbGeo.scale(sb.rx / sb.rz, 1, 1);
+    const sbMesh = new THREE.Mesh(sbGeo, sandbarMat);
+    sbMesh.position.set(sb.cx, 0.1, sb.cz);
+    sbMesh.rotation.y = sb.rot;
+    group.add(sbMesh);
+
+    // Green marsh patch on center of sandbar
+    const turfGeo = new THREE.CylinderGeometry(sb.rz * 0.7, sb.rz * 0.75, 0.38, 14);
+    turfGeo.scale(sb.rx / sb.rz, 1, 1);
+    const turfMesh = new THREE.Mesh(turfGeo, marshGrassMat);
+    turfMesh.position.set(sb.cx, 0.12, sb.cz);
+    turfMesh.rotation.y = sb.rot;
+    group.add(turfMesh);
+
+    disposables.push(sbGeo, turfGeo);
+  }
+
+  // Umananda Island (Peacock Island) at (55, 0.15, -115)
   const umanandaGroup = new THREE.Group();
   umanandaGroup.name = "umananda_peacock_island";
 
-  const rockGeo = new THREE.CylinderGeometry(14, 18, 2.4, 14);
-  const rockMat = new THREE.MeshStandardMaterial({
-    color: 0x475569, // Weathered grey Brahmaputra granite
-    roughness: 0.94,
-    flatShading: true,
-  });
+  const rockMat = new THREE.MeshStandardMaterial({ color: 0x52525b, roughness: 0.95 });
+  const rockGeo = new THREE.CylinderGeometry(14, 18, 4.5, 9);
+  rockGeo.scale(1.7, 1.0, 1.1);
   const rockMesh = new THREE.Mesh(rockGeo, rockMat);
-  rockMesh.position.set(55, 0.9, -96);
+  rockMesh.position.set(55, 2.25, -115);
   rockMesh.receiveShadow = true;
+  rockMesh.castShadow = true;
   umanandaGroup.add(rockMesh);
 
-  const islandBeachGeo = new THREE.RingGeometry(14, 21, 16);
-  islandBeachGeo.rotateX(-Math.PI / 2);
+  // Golden silt shoreline beach
+  const islandBeachGeo = new THREE.CylinderGeometry(17, 21, 0.5, 12);
+  islandBeachGeo.scale(1.7, 1.0, 1.1);
   const islandBeach = new THREE.Mesh(islandBeachGeo, beachMat);
-  islandBeach.position.set(55, 0.06, -96);
+  islandBeach.position.set(55, 0.15, -115);
+  islandBeach.receiveShadow = true;
   umanandaGroup.add(islandBeach);
 
-  const templeSanctumGeo = new THREE.BoxGeometry(4.2, 3.6, 4.2);
-  const templeSanctumMat = new THREE.MeshStandardMaterial({
-    color: 0xb45309, // Terracotta temple stone
-    roughness: 0.75,
-  });
+  // Ancient Shiva Temple Sanctum
+  const templeSanctumMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.8 });
+  const templeSanctumGeo = new THREE.BoxGeometry(4.5, 3.2, 4.5);
   const templeSanctum = new THREE.Mesh(templeSanctumGeo, templeSanctumMat);
-  templeSanctum.position.set(55, 3.2, -96);
+  templeSanctum.position.set(55, 5.8, -115);
   templeSanctum.castShadow = true;
   umanandaGroup.add(templeSanctum);
 
-  const spireGeo = new THREE.ConeGeometry(2.0, 5.5, 8);
-  const spireMat = new THREE.MeshStandardMaterial({
-    color: 0xf59e0b, // Radiant golden amber
-    metalness: 0.65,
-    roughness: 0.35,
-  });
+  // Golden Spire (Shikhara)
+  const spireMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.45, roughness: 0.35 });
+  const spireGeo = new THREE.ConeGeometry(2.0, 4.8, 8);
   const spire = new THREE.Mesh(spireGeo, spireMat);
-  spire.position.set(55, 7.5, -96);
+  spire.position.set(55, 9.8, -115);
   spire.castShadow = true;
   umanandaGroup.add(spire);
 
-  const islandTreeGeo = new THREE.DodecahedronGeometry(1.6, 0);
-  const islandTreeMat = new THREE.MeshStandardMaterial({
-    color: 0x14532d, // Deep temple grove emerald
-    roughness: 0.9,
-    flatShading: true,
-  });
-  for (const [tx, tz] of [
-    [-6, -4],
-    [-7, 5],
-    [5, -6],
-    [6, 5],
-    [-4, 8],
-    [7, 1],
-  ]) {
-    const tMesh = new THREE.Mesh(islandTreeGeo, islandTreeMat);
-    tMesh.position.set(55 + tx, 2.8, -96 + tz);
-    tMesh.scale.set(1.1, 1.3, 1.1);
-    tMesh.castShadow = true;
-    umanandaGroup.add(tMesh);
-  }
-
   group.add(umanandaGroup);
-  disposables.push(rockGeo, rockMat, islandBeachGeo, templeSanctumGeo, templeSanctumMat, spireGeo, spireMat, islandTreeGeo, islandTreeMat);
+  disposables.push(rockGeo, rockMat, islandBeachGeo, templeSanctumGeo, templeSanctumMat, spireGeo, spireMat);
 
-  // Natural River Sandbars (Chars / Alluvial sandbanks)
-  const sandbarMat = new THREE.MeshStandardMaterial({ color: 0xeadbb6, roughness: 0.9 });
-  disposables.push(sandbarMat);
-
-  const char1Geo = new THREE.CylinderGeometry(26, 34, 0.4, 16);
-  char1Geo.scale(2.2, 1, 0.65);
-  const char1 = new THREE.Mesh(char1Geo, sandbarMat);
-  char1.position.set(-40, 0.1, -88);
-  char1.rotation.y = 0.06;
-  group.add(char1);
-
-  const char2Geo = new THREE.CylinderGeometry(20, 26, 0.4, 14);
-  char2Geo.scale(2.0, 1, 0.55);
-  const char2 = new THREE.Mesh(char2Geo, sandbarMat);
-  char2.position.set(-260, 0.1, -94);
-  char2.rotation.y = -0.04;
-  group.add(char2);
-
-  const char3Geo = new THREE.CylinderGeometry(22, 30, 0.4, 14);
-  char3Geo.scale(2.4, 1, 0.6);
-  const char3 = new THREE.Mesh(char3Geo, sandbarMat);
-  char3.position.set(120, 0.1, -92);
-  char3.rotation.y = 0.05;
-  group.add(char3);
-  disposables.push(char1Geo, char2Geo, char3Geo);
-
-  // 4. WATER BODIES: DEEPOR BEEL, DIGHALIPUKHURI, SILPUKHURI, BORSOLA BEEL & SILSAKO BEEL
+  // 5. WATER BODIES: DEEPOR BEEL, DIGHALIPUKHURI, SILPUKHURI, BORSOLA BEEL & SILSAKO BEEL
   const waterMat = new THREE.MeshStandardMaterial({
-    color: 0x0284c7, // Deep water reflection
+    color: 0x0284c7, // Reflective deep sky blue water
     roughness: 0.18,
     metalness: 0.35,
     transparent: true,
@@ -687,7 +744,7 @@ export function buildGuwahatiCity(
     roughness: 0.82,
   });
   const marshShoreMat = new THREE.MeshStandardMaterial({
-    color: 0x15803d, // Lush marshy wetland reeds & embankment
+    color: 0x15803d, // Lush marshy wetland reeds
     roughness: 0.92,
   });
   disposables.push(waterMat, lakeBorderMat, marshShoreMat);
@@ -757,20 +814,20 @@ export function buildGuwahatiCity(
   group.add(silsakoMesh);
   disposables.push(silsakoGeo);
 
-  // 5. CONTINUOUS BHARALU URBAN STREAM (Winding from southern foothills into Brahmaputra)
-  const canalPoints: [number, number][] = [
-    [70, 165],   // Southern Foothills origin
-    [95, 130],   // Dispur / Bhangagarh upstream
-    [45, 80],    // Arya Nagar
-    [0, 55],     // South Paltan
-    [-30, 48],   // AT Road approach
-    [-60, 45],   // Bharalumukh South
-    [-58, 12],   // Mid canal
-    [-60, -26],  // Discharge into Brahmaputra River at Bharalumukh
+  // F. Continuous Bharalu Urban Stream (From Ulubari through Bharalumukh into Brahmaputra)
+  const bharaluPts: [number, number][] = [
+    [105, 0],
+    [60, 15],
+    [35, 25],
+    [15, 45],
+    [-25, 45],
+    [-60, 45],
+    [-60, -26],
+    [-60, -36],
   ];
-  for (let c = 0; c < canalPoints.length - 1; c++) {
-    const p1 = canalPoints[c];
-    const p2 = canalPoints[c + 1];
+  for (let b = 0; b < bharaluPts.length - 1; b++) {
+    const p1 = bharaluPts[b];
+    const p2 = bharaluPts[b + 1];
     const dx = p2[0] - p1[0];
     const dz = p2[1] - p1[1];
     const len = Math.hypot(dx, dz);
@@ -791,7 +848,7 @@ export function buildGuwahatiCity(
 
   const bridgeX = -130;
   const bridgeDeckW = 9.4;
-  const bridgeDeckL = 120; // River span from Z = -29 to Z = -149
+  const bridgeDeckL = 128; // River span from South bank Z = -20 to North bank Z = -148
   const bridgeDeckY = 4.8;
 
   const bridgeDeckMat = new THREE.MeshStandardMaterial({
@@ -812,13 +869,13 @@ export function buildGuwahatiCity(
   // Main Bridge Road Deck
   const bridgeDeckGeo = new THREE.BoxGeometry(bridgeDeckW, 1.2, bridgeDeckL);
   const bridgeDeck = new THREE.Mesh(bridgeDeckGeo, bridgeDeckMat);
-  bridgeDeck.position.set(bridgeX, bridgeDeckY - 0.6, -89);
+  bridgeDeck.position.set(bridgeX, bridgeDeckY - 0.6, -84);
   bridgeDeck.receiveShadow = true;
   bridgeDeck.castShadow = true;
   bridgeGroup.add(bridgeDeck);
 
   // 6 Heavy Concrete Caisson Piers deep in Riverbed
-  for (const pz of [-44, -64, -84, -104, -124, -144]) {
+  for (const pz of [-38, -58, -78, -98, -118, -138]) {
     const pierGeo = new THREE.CylinderGeometry(2.8, 3.6, 12.0, 16);
     const pier = new THREE.Mesh(pierGeo, pierMat);
     pier.position.set(bridgeX, 1.0, pz);
@@ -827,7 +884,7 @@ export function buildGuwahatiCity(
   }
 
   // South & North Concrete Abutment Portal Towers
-  for (const portalZ of [-29, -149]) {
+  for (const portalZ of [-20, -148]) {
     for (const side of [-1, 1]) {
       const postGeo = new THREE.BoxGeometry(1.6, 8.5, 3.2);
       const post = new THREE.Mesh(postGeo, pierMat);
@@ -845,11 +902,11 @@ export function buildGuwahatiCity(
   for (const side of [-1, 1]) {
     const trussBarGeo = new THREE.BoxGeometry(0.5, 4.4, bridgeDeckL);
     const truss = new THREE.Mesh(trussBarGeo, trussMat);
-    truss.position.set(bridgeX + side * (bridgeDeckW / 2 + 0.25), bridgeDeckY + 2.2, -89);
+    truss.position.set(bridgeX + side * (bridgeDeckW / 2 + 0.25), bridgeDeckY + 2.2, -84);
     truss.castShadow = true;
     bridgeGroup.add(truss);
 
-    for (let bz = -141; bz <= -37; bz += 12) {
+    for (let bz = -140; bz <= -28; bz += 12) {
       const topBeamGeo = new THREE.BoxGeometry(bridgeDeckW + 0.6, 0.45, 0.45);
       const topBeam = new THREE.Mesh(topBeamGeo, trussMat);
       topBeam.position.set(bridgeX, bridgeDeckY + 4.4, bz);
@@ -857,13 +914,13 @@ export function buildGuwahatiCity(
     }
   }
 
-  // South Approach Ramp (Connecting Bridge Deck Z = -29, Y = 4.8 down to Ground Road Z = -8, Y = 0.32)
-  const rampSouthLen = 21.0;
+  // South Approach Ramp (Connecting Bridge Deck Z = -20, Y = 4.8 down to Ground Road Z = -8, Y = 0.32)
+  const rampSouthLen = 12.0;
   const rampAngle = Math.atan2(bridgeDeckY - 0.32, rampSouthLen);
   const rampSouthGeo = new THREE.BoxGeometry(bridgeDeckW, 0.8, rampSouthLen + 0.5);
   rampSouthGeo.rotateX(-rampAngle);
   const rampSouth = new THREE.Mesh(rampSouthGeo, bridgeDeckMat);
-  rampSouth.position.set(bridgeX, (bridgeDeckY + 0.32) / 2 - 0.1, -18.5);
+  rampSouth.position.set(bridgeX, (bridgeDeckY + 0.32) / 2 - 0.1, -14.0);
   rampSouth.receiveShadow = true;
   bridgeGroup.add(rampSouth);
 
@@ -872,24 +929,26 @@ export function buildGuwahatiCity(
     const wallGeo = new THREE.BoxGeometry(0.8, 1.8, rampSouthLen);
     wallGeo.rotateX(-rampAngle);
     const wall = new THREE.Mesh(wallGeo, pierMat);
-    wall.position.set(bridgeX + side * (bridgeDeckW / 2 + 0.4), (bridgeDeckY + 0.32) / 2 + 0.4, -18.5);
+    wall.position.set(bridgeX + side * (bridgeDeckW / 2 + 0.4), (bridgeDeckY + 0.32) / 2 + 0.4, -14.0);
     bridgeGroup.add(wall);
   }
 
-  // North Approach Ramp (Connecting Bridge Deck Z = -149, Y = 4.8 down to North Highway Z = -170, Y = 0.32)
-  const rampNorthGeo = new THREE.BoxGeometry(bridgeDeckW, 0.8, rampSouthLen + 0.5);
-  rampNorthGeo.rotateX(rampAngle);
+  // North Approach Ramp (Connecting Bridge Deck Z = -148, Y = 4.8 down to North Highway Z = -168, Y = 0.32)
+  const rampNorthLen = 20.0;
+  const rampNorthAngle = Math.atan2(bridgeDeckY - 0.32, rampNorthLen);
+  const rampNorthGeo = new THREE.BoxGeometry(bridgeDeckW, 0.8, rampNorthLen + 0.5);
+  rampNorthGeo.rotateX(rampNorthAngle);
   const rampNorth = new THREE.Mesh(rampNorthGeo, bridgeDeckMat);
-  rampNorth.position.set(bridgeX, (bridgeDeckY + 0.32) / 2 - 0.1, -159.5);
+  rampNorth.position.set(bridgeX, (bridgeDeckY + 0.32) / 2 - 0.1, -158.0);
   rampNorth.receiveShadow = true;
   bridgeGroup.add(rampNorth);
 
   // North Ramp Retaining Side Walls
   for (const side of [-1, 1]) {
-    const wallGeo = new THREE.BoxGeometry(0.8, 1.8, rampSouthLen);
-    wallGeo.rotateX(rampAngle);
+    const wallGeo = new THREE.BoxGeometry(0.8, 1.8, rampNorthLen);
+    wallGeo.rotateX(rampNorthAngle);
     const wall = new THREE.Mesh(wallGeo, pierMat);
-    wall.position.set(bridgeX + side * (bridgeDeckW / 2 + 0.4), (bridgeDeckY + 0.32) / 2 + 0.4, -159.5);
+    wall.position.set(bridgeX + side * (bridgeDeckW / 2 + 0.4), (bridgeDeckY + 0.32) / 2 + 0.4, -158.0);
     bridgeGroup.add(wall);
   }
 
@@ -898,7 +957,7 @@ export function buildGuwahatiCity(
 
   // 7. FULLY CONNECTED SOLID 3D ROAD NETWORK
   const roadMat = new THREE.MeshStandardMaterial({
-    color: 0x1e293b, // Dark Asphalt slate
+    color: 0x1e2430, // Solid dark slate/charcoal asphalt
     roughness: 0.82,
     metalness: 0.08,
   });
@@ -963,7 +1022,15 @@ export function buildGuwahatiCity(
   group.add(khanaparaIsland);
   disposables.push(khanaparaIslandGeo);
 
-  // Build each solid 3D road segment with Indian black-and-white striped curbs & dashed centerline
+  // Build physical 3D roads with concrete sidewalks & clean white dashed centerlines
+  const sidewalkMat = new THREE.MeshStandardMaterial({
+    color: 0xd4d4d8, // Paved light concrete sidewalk
+    roughness: 0.78,
+  });
+  const whiteStripeMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
+  const whiteDashMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  disposables.push(sidewalkMat, whiteStripeMat, whiteDashMat);
+
   for (const r of roads) {
     const dx = r.x2 - r.x1;
     const dz = r.z2 - r.z1;
@@ -973,6 +1040,7 @@ export function buildGuwahatiCity(
     const midX = (r.x1 + r.x2) / 2;
     const midZ = (r.z1 + r.z2) / 2;
 
+    // 1. Solid Dark Asphalt Road Bed (Y = 0.16)
     const roadGeo = new THREE.BoxGeometry(r.width, 0.32, len);
     const roadMesh = new THREE.Mesh(roadGeo, roadMat);
     roadMesh.position.set(midX, 0.16, midZ);
@@ -981,43 +1049,45 @@ export function buildGuwahatiCity(
     group.add(roadMesh);
     disposables.push(roadGeo);
 
-    // Calculate safe junction insets to guarantee clean, unblocked intersections
+    // 2. Safe Junction Insets
     const startJunction = junctionMap.get(`${r.x1.toFixed(1)},${r.z1.toFixed(1)}`);
     const endJunction = junctionMap.get(`${r.x2.toFixed(1)},${r.z2.toFixed(1)}`);
-    const startInset = Math.max(
-      r.width * 0.75,
-      startJunction ? startJunction.maxRadius * 1.15 : 0
-    );
-    const endInset = Math.max(
-      r.width * 0.75,
-      endJunction ? endJunction.maxRadius * 1.15 : 0
-    );
-
+    const startInset = Math.max(r.width * 0.65, startJunction ? startJunction.maxRadius * 1.05 : 0);
+    const endInset = Math.max(r.width * 0.65, endJunction ? endJunction.maxRadius * 1.05 : 0);
     const curbLen = len - startInset - endInset;
-    // Only place side curbs on major arterial avenues and longer road spans
-    const isMajorBoulevard = r.width >= 8.5 || r.name.includes("GS Road") || r.name.includes("MG Road") || r.name.includes("Zoo Road") || r.name.includes("Highway");
-    if (curbLen > 4.0 && isMajorBoulevard) {
+
+    // 3. Continuous Paved Sidewalk Curbs framing BOTH sides of EVERY road
+    if (curbLen > 2.5) {
       const startParam = startInset / len;
       const endParam = 1.0 - endInset / len;
       const midParam = (startParam + endParam) / 2;
       const curbCenterX = r.x1 + dx * midParam;
       const curbCenterZ = r.z1 + dz * midParam;
 
-      const curbW = 0.55;
-      const curbH = 0.18;
-      const curbTex = createStripedCurbTexture();
-      curbTex.repeat.set(1, Math.max(2, Math.round(curbLen / 2.5)));
-      const stripedCurbMat = new THREE.MeshStandardMaterial({
-        map: curbTex,
-        roughness: 0.8,
-        metalness: 0.08,
-      });
-      disposables.push(stripedCurbMat, curbTex);
+      const curbW = 1.0;
+      const curbH = 0.22;
+      const isMajorBoulevard =
+        r.width >= 9.0 ||
+        r.name.includes("GS Road") ||
+        r.name.includes("MG Road") ||
+        r.name.includes("Zoo Road") ||
+        r.name.includes("Highway");
 
-      // Left & Right Sleek Striped Curbs
+      let currentCurbMat = sidewalkMat;
+      if (isMajorBoulevard) {
+        const curbTex = createStripedCurbTexture();
+        curbTex.repeat.set(1, Math.max(2, Math.round(curbLen / 2.5)));
+        currentCurbMat = new THREE.MeshStandardMaterial({
+          map: curbTex,
+          roughness: 0.8,
+          metalness: 0.08,
+        });
+        disposables.push(currentCurbMat, curbTex);
+      }
+
       for (const side of [-1, 1]) {
         const curbGeo = new THREE.BoxGeometry(curbW, curbH, curbLen);
-        const curbMesh = new THREE.Mesh(curbGeo, stripedCurbMat);
+        const curbMesh = new THREE.Mesh(curbGeo, currentCurbMat);
         const perpDist = (r.width / 2 + curbW / 2) * side;
         const perpX = Math.cos(angle) * perpDist;
         const perpZ = -Math.sin(angle) * perpDist;
@@ -1029,32 +1099,61 @@ export function buildGuwahatiCity(
       }
     }
 
-    // Yellow / White Center Dashed Line along the road
-    const lineInset = Math.min(len * 0.2, 5.0);
-    if (len > lineInset * 2 + 2.0) {
-      const startParam = lineInset / len;
-      const endParam = 1.0 - lineInset / len;
-      const lineStart = new THREE.Vector3(
-        r.x1 + dx * startParam,
-        0.335,
-        r.z1 + dz * startParam
-      );
-      const lineEnd = new THREE.Vector3(
-        r.x1 + dx * endParam,
-        0.335,
-        r.z1 + dz * endParam
-      );
-      const dashLine = new THREE.LineSegments(
-        new THREE.BufferGeometry().setFromPoints([lineStart, lineEnd]),
-        new THREE.LineDashedMaterial({
-          color: 0xfacc15,
-          dashSize: 3.2,
-          gapSize: 2.2,
-          linewidth: 2,
-        })
-      );
-      dashLine.computeLineDistances();
-      group.add(dashLine);
+    const isArterialMarked =
+      r.width >= 8.5 ||
+      r.name.includes("GS Road") ||
+      r.name.includes("MG Road") ||
+      r.name.includes("Zoo Road") ||
+      r.name.includes("Highway") ||
+      r.name.includes("AT Road") ||
+      r.name.includes("VIP Road");
+
+    // 4. Clean White Road Shoulder Stripes (Only on major arterials & boulevards)
+    if (curbLen > 4.0 && isArterialMarked) {
+      const startParam = startInset / len;
+      const endParam = 1.0 - endInset / len;
+      const midParam = (startParam + endParam) / 2;
+      const stripeCenterX = r.x1 + dx * midParam;
+      const stripeCenterZ = r.z1 + dz * midParam;
+      const stripeW = 0.20;
+
+      for (const side of [-1, 1]) {
+        const stripeGeo = new THREE.BoxGeometry(stripeW, 0.015, curbLen);
+        const stripeMesh = new THREE.Mesh(stripeGeo, whiteStripeMat);
+        const perpDist = (r.width / 2 - stripeW * 1.2) * side;
+        const perpX = Math.cos(angle) * perpDist;
+        const perpZ = -Math.sin(angle) * perpDist;
+        stripeMesh.position.set(stripeCenterX + perpX, 0.328, stripeCenterZ + perpZ);
+        stripeMesh.rotation.y = angle;
+        group.add(stripeMesh);
+        disposables.push(stripeGeo);
+      }
+    }
+
+    // 5. Clean, Thin White Dashed Centerlines (Matching indiaagain.live)
+    if (len >= 16.0 && isArterialMarked) {
+      const dashW = 0.22;
+      const dashLen = 2.2;
+      const gapLen = 2.2;
+      const period = dashLen + gapLen;
+      const numDashes = Math.floor(len / period);
+      const minInset = Math.max(r.width * 0.9, 7.0);
+      const minParam = minInset / len;
+      const maxParam = 1.0 - minInset / len;
+
+      for (let d = 0; d < numDashes; d++) {
+        const tCenter = ((d + 0.5) * period) / len;
+        if (tCenter < minParam || tCenter > maxParam) continue;
+        const posX = r.x1 + dx * tCenter;
+        const posZ = r.z1 + dz * tCenter;
+
+        const dashGeo = new THREE.BoxGeometry(dashW, 0.015, dashLen);
+        const dashMesh = new THREE.Mesh(dashGeo, whiteDashMat);
+        dashMesh.position.set(posX, 0.328, posZ);
+        dashMesh.rotation.y = angle;
+        group.add(dashMesh);
+        disposables.push(dashGeo);
+      }
     }
   }
 
@@ -1092,55 +1191,61 @@ export function buildGuwahatiCity(
 
     // Floating Colony PIN Code Badge & Verified Business Banner
     const canvas = document.createElement("canvas");
-    canvas.width = 380;
-    canvas.height = 115;
+    canvas.width = 400;
+    canvas.height = 120;
     const ctx = canvas.getContext("2d")!;
-    ctx.clearRect(0, 0, 380, 115);
+    ctx.clearRect(0, 0, 400, 120);
 
     ctx.beginPath();
-    ctx.roundRect(8, 8, 364, 99, 22);
-    ctx.fillStyle = p.business ? "rgba(10, 15, 29, 0.94)" : "rgba(15, 23, 42, 0.88)";
+    ctx.roundRect(8, 8, 384, 104, 24);
+    ctx.fillStyle = p.business ? "rgba(10, 15, 29, 0.94)" : "rgba(16, 24, 40, 0.92)";
     ctx.fill();
-    ctx.lineWidth = p.business ? 3.0 : 1.5;
-    ctx.strokeStyle = p.business ? "#f59e0b" : "rgba(148, 163, 184, 0.4)";
+    ctx.lineWidth = p.business ? 3.0 : 1.8;
+    ctx.strokeStyle = p.business ? "#f59e0b" : "#10b981";
     ctx.stroke();
 
     const title = p.business ? p.business.name : p.colonyName;
-    ctx.font = "bold 23px -apple-system, BlinkMacSystemFont, sans-serif";
-    ctx.fillStyle = p.business ? "#ffffff" : "#f1f5f9";
+    ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.fillStyle = "#ffffff";
     ctx.textAlign = "left";
-    ctx.fillText(title, 24, 46);
+    ctx.fillText(title, 24, 48);
 
-    const sub = p.business
-      ? `🌿 PIN ${p.pincode} · ${p.business.starting_price || "Verified Flagship"}`
-      : `📍 PIN ${p.pincode} · Claim Plot ₹0`;
-    ctx.font = "600 16px 'JetBrains Mono', monospace";
-    ctx.fillStyle = p.business ? "#fbbf24" : "#94a3b8";
-    ctx.fillText(sub, 24, 80);
+    const subtitle = p.business
+      ? `★ 4.9 · PIN ${p.pincode} · ${p.business.category_id || "Studio"}`
+      : `📍 PIN ${p.pincode} · Available Plot · Claim ₹0`;
+    ctx.font = "600 18px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.fillStyle = p.business ? "#fbbf24" : "#34d399";
+    ctx.fillText(subtitle, 24, 88);
 
     const badgeTex = new THREE.CanvasTexture(canvas);
-    const spriteMat = new THREE.SpriteMaterial({
+    badgeTex.colorSpace = THREE.SRGBColorSpace;
+    const badgeMat = new THREE.SpriteMaterial({
       map: badgeTex,
       transparent: true,
-      depthTest: true,
       depthWrite: false,
     });
-    const sprite = new THREE.Sprite(spriteMat);
-    const badgeScale = p.business ? 12 : 8.5;
-    sprite.position.set(p.x, plotResult.badgePosition.y, p.z);
-    sprite.scale.set(badgeScale, badgeScale * (115 / 380), 1);
-    group.add(sprite);
+    const badgeSprite = new THREE.Sprite(badgeMat);
+    const badgeHeight = p.business ? 11.5 : 7.5;
+    badgeSprite.position.set(p.x, badgeHeight, p.z);
+    badgeSprite.scale.set(16, 4.8, 1);
+    group.add(badgeSprite);
+
+    disposables.push(badgeTex, badgeMat);
   });
 
-  // 9. PROCEDURAL FLORA (400 Instanced Lush Trees across Hills, Lakes & Riverfront)
-  const treeGeo = new THREE.DodecahedronGeometry(1.8, 0);
-  treeGeo.translate(0, 2.2, 0);
+  // 9. INSTANCED PROCEDURAL FLORA (1,200 Low-Poly Trees Clustered across Hills, Riverfront, and Lakes)
+  const totalTrees = 1200;
+  const treeGeo = new THREE.ConeGeometry(2.4, 6.2, 7);
+  treeGeo.translate(0, 3.1, 0);
+
   const treeMat = new THREE.MeshStandardMaterial({
-    color: 0x166534, // Assam deep tea-garden green
-    roughness: 0.88,
+    color: 0x166534, // Lush Assam deep forest green
+    roughness: 0.85,
+    metalness: 0.05,
     flatShading: true,
   });
-  const totalTrees = 400;
+  disposables.push(treeGeo, treeMat);
+
   const treeInst = new THREE.InstancedMesh(treeGeo, treeMat, totalTrees);
 
   const treeDummy = new THREE.Object3D();
@@ -1148,138 +1253,183 @@ export function buildGuwahatiCity(
 
   const isTreeClear = (tx: number, tz: number) => {
     for (const p of plotPlacements) {
-      if (Math.hypot(tx - p.x, tz - p.z) < 22) return false;
+      if (Math.hypot(tx - p.x, tz - p.z) < 18) return false;
     }
     for (const rd of roads) {
-      if (distToSegment(tx, tz, rd.x1, rd.z1, rd.x2, rd.z2) < rd.width / 2 + 3.8) return false;
+      const dx = rd.x2 - rd.x1;
+      const dz = rd.z2 - rd.z1;
+      const lenSq = dx * dx + dz * dz;
+      const t = lenSq === 0 ? 0 : Math.max(0, Math.min(1, ((tx - rd.x1) * dx + (tz - rd.z1) * dz) / lenSq));
+      const px = rd.x1 + t * dx;
+      const pz = rd.z1 + t * dz;
+      if (Math.hypot(tx - px, tz - pz) < rd.width / 2 + 3.8) return false;
     }
     return true;
   };
 
-  // A. Kamakhya / Nilachal Hill Groves
-  for (let a = 0; a < Math.PI * 2 && tIdx < 80; a += 0.18) {
-    const r = 18 + (Math.sin(a * 4) + 1) * 16;
-    const tx = -85 + Math.cos(a) * r;
-    const tz = 12 + Math.sin(a) * r;
+  // A. North Bank Hill Groves (280 trees)
+  for (const nh of northHillsDef) {
+    for (let a = 0; a < Math.PI * 2 && tIdx < 280; a += 0.25) {
+      const r = nh.r * (0.45 + (Math.sin(a * 3) + 1) * 0.25);
+      const tx = nh.cx + Math.cos(a) * r;
+      const tz = nh.cz + Math.sin(a) * r;
+      if (!isTreeClear(tx, tz)) continue;
+      const hillDist = Math.hypot(tx - nh.cx, tz - nh.cz);
+      const hillY = Math.max(0, (1 - hillDist / nh.r) * nh.h * 0.75);
+      treeDummy.position.set(tx, hillY, tz);
+      const s = 1.2 + Math.sin(tIdx * 1.3) * 0.4;
+      treeDummy.scale.set(s, s * 1.3, s);
+      treeDummy.rotation.y = tIdx * 1.2;
+      treeDummy.updateMatrix();
+      treeInst.setMatrixAt(tIdx++, treeDummy.matrix);
+    }
+  }
+
+  // B. Kamakhya / Nilachal Hill Groves (160 trees)
+  for (let a = 0; a < Math.PI * 2 && tIdx < 440; a += 0.08) {
+    const r = 16 + (Math.sin(a * 4) + 1) * 20;
+    const tx = -88 + Math.cos(a) * r;
+    const tz = 8 + Math.sin(a) * r;
     if (!isTreeClear(tx, tz)) continue;
-    treeDummy.position.set(tx, 14 + Math.sin(a * 2) * 8, tz);
-    const s = 1.1 + Math.sin(tIdx) * 0.3;
-    treeDummy.scale.set(s, s * 1.3, s);
+    treeDummy.position.set(tx, 4 + Math.sin(a * 2) * 8, tz);
+    const s = 1.1 + Math.sin(tIdx) * 0.35;
+    treeDummy.scale.set(s, s * 1.35, s);
     treeDummy.rotation.y = tIdx * 1.2;
     treeDummy.updateMatrix();
     treeInst.setMatrixAt(tIdx++, treeDummy.matrix);
   }
 
-  // B. Sarania Hill Groves (Gandhi Mandap)
-  for (let a = 0; a < Math.PI * 2 && tIdx < 150; a += 0.22) {
-    const r = 14 + (Math.cos(a * 3) + 1) * 14;
-    const tx = 85 + Math.cos(a) * r;
-    const tz = 20 + Math.sin(a) * r;
+  // C. Sarania Hill Groves - Gandhi Mandap (140 trees)
+  for (let a = 0; a < Math.PI * 2 && tIdx < 580; a += 0.09) {
+    const r = 10 + (Math.cos(a * 3) + 1) * 18;
+    const tx = 75 + Math.cos(a) * r;
+    const tz = -2 + Math.sin(a) * r;
     if (!isTreeClear(tx, tz)) continue;
-    treeDummy.position.set(tx, 12 + Math.cos(a * 2) * 6, tz);
-    const s = 1.0 + Math.sin(tIdx * 1.4) * 0.25;
-    treeDummy.scale.set(s, s * 1.25, s);
+    treeDummy.position.set(tx, 3 + Math.cos(a * 2) * 6, tz);
+    const s = 1.0 + Math.sin(tIdx * 1.4) * 0.3;
+    treeDummy.scale.set(s, s * 1.3, s);
     treeDummy.rotation.y = tIdx * 1.4;
     treeDummy.updateMatrix();
     treeInst.setMatrixAt(tIdx++, treeDummy.matrix);
   }
 
-  // C. Brahmaputra Riverfront Park (MG Road promenade)
-  for (let rx = -220; rx <= 220 && tIdx < 230; rx += 8) {
+  // D. Brahmaputra Riverfront Park along MG Road (180 trees)
+  for (let rx = -240; rx <= 240 && tIdx < 760; rx += 3.8) {
     if (Math.abs(rx - -130) < 18) continue; // Skip Saraighat bridge
     const rz = getRiverSouthBankZ(rx) + 6.0;
     if (!isTreeClear(rx, rz)) continue;
     treeDummy.position.set(rx, 0.32, rz);
-    const s = 1.2 + Math.cos(tIdx * 1.8) * 0.3;
-    treeDummy.scale.set(s, s * 1.3, s);
+    const s = 1.2 + Math.cos(tIdx * 1.8) * 0.35;
+    treeDummy.scale.set(s, s * 1.35, s);
     treeDummy.rotation.y = tIdx * 1.5;
     treeDummy.updateMatrix();
     treeInst.setMatrixAt(tIdx++, treeDummy.matrix);
   }
 
-  // D. Dighalipukhuri & Silpukhuri Heritage Promenades
-  for (let lx = 40; lx <= 90 && tIdx < 275; lx += 6) {
+  // E. Dighalipukhuri & Silpukhuri Heritage Promenades (140 trees)
+  for (let lx = 35; lx <= 95 && tIdx < 840; lx += 3.8) {
     for (const lz of [-24, 4]) {
       if (!isTreeClear(lx, lz)) continue;
-      treeDummy.position.set(lx + Math.sin(tIdx) * 1.5, 0.32, lz);
-      const s = 1.0 + Math.sin(tIdx * 2.1) * 0.25;
-      treeDummy.scale.set(s, s * 1.25, s);
+      treeDummy.position.set(lx, 0.32, lz);
+      const s = 0.95 + Math.sin(tIdx * 2.1) * 0.25;
+      treeDummy.scale.set(s, s * 1.2, s);
+      treeDummy.rotation.y = tIdx * 1.1;
+      treeDummy.updateMatrix();
+      treeInst.setMatrixAt(tIdx++, treeDummy.matrix);
+    }
+  }
+  for (let sx = 130; sx <= 170 && tIdx < 900; sx += 4) {
+    for (const sz of [-28, -2]) {
+      if (!isTreeClear(sx, sz)) continue;
+      treeDummy.position.set(sx, 0.32, sz);
+      const s = 0.95 + Math.cos(tIdx * 1.7) * 0.25;
+      treeDummy.scale.set(s, s * 1.2, s);
       treeDummy.rotation.y = tIdx * 1.3;
       treeDummy.updateMatrix();
       treeInst.setMatrixAt(tIdx++, treeDummy.matrix);
     }
   }
 
-  // E. Deepor Beel Wetland Embankment
-  for (let a = 0; a < Math.PI * 2 && tIdx < 330; a += 0.25) {
-    const bx = -190 + Math.cos(a) * 64;
-    const bz = 125 + Math.sin(a) * 44;
-    if (!isTreeClear(bx, bz)) continue;
-    treeDummy.position.set(bx, 0.1, bz);
-    const s = 1.1 + Math.sin(tIdx) * 0.2;
-    treeDummy.scale.set(s, s * 1.2, s);
-    treeDummy.rotation.y = tIdx;
+  // F. Deepor Beel Eco Wetland Shore (120 trees)
+  for (let a = 0; a < Math.PI * 2 && tIdx < 1020; a += 0.12) {
+    const r = 58 + (Math.sin(a * 5) + 1) * 8;
+    const tx = -190 + Math.cos(a) * r * 1.2;
+    const tz = 125 + Math.sin(a) * r * 0.65;
+    if (!isTreeClear(tx, tz)) continue;
+    treeDummy.position.set(tx, 0.32, tz);
+    const s = 1.05 + Math.sin(tIdx * 1.9) * 0.3;
+    treeDummy.scale.set(s, s * 1.25, s);
+    treeDummy.rotation.y = tIdx * 1.7;
     treeDummy.updateMatrix();
     treeInst.setMatrixAt(tIdx++, treeDummy.matrix);
   }
 
-  // F. North Bank Dome Hills
-  for (let nx = -200; nx <= 220 && tIdx < totalTrees; nx += 16) {
-    const nz = getRiverNorthBankZ(nx) - 25 - Math.sin(tIdx) * 35;
-    if (!isTreeClear(nx, nz)) continue;
-    treeDummy.position.set(nx, 16 + Math.cos(tIdx) * 8, nz);
-    const s = 1.3 + Math.sin(tIdx * 1.7) * 0.35;
-    treeDummy.scale.set(s, s * 1.3, s);
-    treeDummy.rotation.y = tIdx * 0.8;
-    treeDummy.updateMatrix();
-    treeInst.setMatrixAt(tIdx++, treeDummy.matrix);
+  // G. Southern Foothills & Khanapara Pine Clustered Forest (180 trees)
+  for (const sf of southFoothillsDef) {
+    for (let a = 0; a < Math.PI * 2 && tIdx < totalTrees; a += 0.3) {
+      const r = sf.r * (0.4 + (Math.cos(a * 4) + 1) * 0.25);
+      const tx = sf.cx + Math.cos(a) * r;
+      const tz = sf.cz + Math.sin(a) * r;
+      if (!isTreeClear(tx, tz)) continue;
+      const sDist = Math.hypot(tx - sf.cx, tz - sf.cz);
+      const sY = Math.max(0, (1 - sDist / sf.r) * sf.h * 0.7);
+      treeDummy.position.set(tx, sY, tz);
+      const s = 1.25 + Math.sin(tIdx * 1.1) * 0.35;
+      treeDummy.scale.set(s, s * 1.4, s);
+      treeDummy.rotation.y = tIdx * 1.8;
+      treeDummy.updateMatrix();
+      treeInst.setMatrixAt(tIdx++, treeDummy.matrix);
+    }
   }
 
+  treeInst.count = tIdx;
   treeInst.instanceMatrix.needsUpdate = true;
+  treeInst.castShadow = true;
+  treeInst.receiveShadow = true;
   group.add(treeInst);
-  disposables.push(treeGeo, treeMat);
+  disposables.push(treeInst);
 
-  // 10. REALISTIC TRAFFIC (6 Vehicles cruising on expanded road waypoints)
-  interface CityVehicle {
+  // 10. CALIBRATED REALISTIC TRAFFIC (Auto, City Bus, ASTC Bus, Hatchback, Van, Saraighat Bridge Transit)
+  interface VehicleEntry {
     mesh: THREE.Group;
-    waypoints: [number, number, number][]; // [x, y, z] strictly on road centerlines
+    waypoints: [number, number, number][];
     currentWp: number;
     t: number;
     speed: number;
   }
 
-  const vehicles: CityVehicle[] = [];
+  const vehicles: VehicleEntry[] = [];
 
   const buildAuto = () => {
     const v = new THREE.Group();
-    const body = new THREE.Mesh(
-      new THREE.BoxGeometry(1.6, 1.2, 2.6),
-      new THREE.MeshStandardMaterial({ color: 0x16a34a })
-    );
-    body.position.y = 0.8;
-    v.add(body);
-    const roof = new THREE.Mesh(
-      new THREE.BoxGeometry(1.5, 0.3, 2.2),
+    const yellowRoof = new THREE.Mesh(
+      new THREE.BoxGeometry(1.6, 0.3, 2.4),
       new THREE.MeshStandardMaterial({ color: 0xfacc15 })
     );
-    roof.position.y = 1.55;
-    v.add(roof);
+    yellowRoof.position.y = 1.4;
+    v.add(yellowRoof);
+    const greenBody = new THREE.Mesh(
+      new THREE.BoxGeometry(1.5, 0.6, 2.2),
+      new THREE.MeshStandardMaterial({ color: 0x15803d })
+    );
+    greenBody.position.y = 0.5;
+    v.add(greenBody);
     return v;
   };
 
   const buildBus = (colorHex: number = 0xb91c1c) => {
     const v = new THREE.Group();
     const body = new THREE.Mesh(
-      new THREE.BoxGeometry(2.4, 2.2, 8.0),
-      new THREE.MeshStandardMaterial({ color: colorHex }) // ASTC Red or Green City Bus
+      new THREE.BoxGeometry(2.5, 2.2, 7.8),
+      new THREE.MeshStandardMaterial({ color: colorHex })
     );
-    body.position.y = 1.3;
+    body.position.y = 1.5;
     v.add(body);
     const roof = new THREE.Mesh(
-      new THREE.BoxGeometry(2.3, 0.3, 7.8),
+      new THREE.BoxGeometry(2.4, 0.25, 7.6),
       new THREE.MeshStandardMaterial({ color: 0xf8fafc })
     );
-    roof.position.y = 2.5;
+    roof.position.y = 2.7;
     v.add(roof);
     return v;
   };
@@ -1322,43 +1472,14 @@ export function buildGuwahatiCity(
     ],
     currentWp: 0,
     t: 0,
-    speed: 4.2,
+    speed: 5.2,
   });
 
-  // Vehicle 2: ASTC Red Bus Crossing Saraighat Bridge seamlessly
-  const bus = buildBus(0xb91c1c);
-  group.add(bus);
+  // Vehicle 2: Red Hatchback on GS Road (Paltan Bazar -> Christian Basti -> Ganeshguri -> Dispur -> Khanapara)
+  const redCar = buildCar(0xef4444);
+  group.add(redCar);
   vehicles.push({
-    mesh: bus,
-    waypoints: [
-      [-130, 0.32, 45],
-      [-130, 0.32, -8],
-      [-130, 2.56, -18.5],
-      [-130, 4.8, -29],
-      [-130, 4.8, -89],
-      [-130, 4.8, -149],
-      [-130, 2.56, -159.5],
-      [-130, 0.32, -170],
-      [0, 0.32, -170],
-      [-130, 0.32, -170],
-      [-130, 2.56, -159.5],
-      [-130, 4.8, -149],
-      [-130, 4.8, -89],
-      [-130, 4.8, -29],
-      [-130, 2.56, -18.5],
-      [-130, 0.32, -8],
-      [-130, 0.32, 45],
-    ],
-    currentWp: 0,
-    t: 0.25,
-    speed: 3.8,
-  });
-
-  // Vehicle 3: White Sedan on GS Road Commercial Highway (Paltan to Khanapara)
-  const car = buildCar(0xf8fafc);
-  group.add(car);
-  vehicles.push({
-    mesh: car,
+    mesh: redCar,
     waypoints: [
       [15, 0.32, 45],
       [35, 0.32, 25],
@@ -1379,12 +1500,41 @@ export function buildGuwahatiCity(
       [15, 0.32, 45],
     ],
     currentWp: 0,
-    t: 0.6,
-    speed: 5.2,
+    t: 0.3,
+    speed: 6.8,
   });
 
-  // Vehicle 4: Green City Bus on the Zoo Road - GS Road Commercial Loop
-  const greenBus = buildBus(0x059669);
+  // Vehicle 3: City Bus crossing Saraighat Bridge between South (Jalukbari) and North Highway (Amingaon)
+  const bridgeBus = buildBus(0xb91c1c);
+  group.add(bridgeBus);
+  vehicles.push({
+    mesh: bridgeBus,
+    waypoints: [
+      [-130, 0.32, 45],     // Jalukbari Rotary
+      [-130, 0.32, -8],     // Saraighat South Approach Road
+      [-130, 2.56, -14],    // South Ramp climbing to bridge deck
+      [-130, 4.8, -20],     // South Portal Pier
+      [-130, 4.8, -84],     // Mid-Span over Brahmaputra River
+      [-130, 4.8, -148],    // North Portal Pier
+      [-130, 2.56, -158],   // North Ramp descending to ground
+      [-130, 0.32, -168],   // North Highway Junction
+      [0, 0.32, -168],      // North Highway Amingaon
+      [-130, 0.32, -168],   // Return to North Highway Junction
+      [-130, 2.56, -158],   // Ramp up
+      [-130, 4.8, -148],    // North Portal
+      [-130, 4.8, -84],     // Mid-Span
+      [-130, 4.8, -20],     // South Portal
+      [-130, 2.56, -14],    // South Ramp down
+      [-130, 0.32, -8],     // South Approach Road
+      [-130, 0.32, 45],     // Jalukbari Rotary
+    ],
+    currentWp: 0,
+    t: 0.2,
+    speed: 4.8,
+  });
+
+  // Vehicle 4: Green ASTC Bus on Zoo Road (Chandmari -> State Zoo -> Ganeshguri)
+  const greenBus = buildBus(0x15803d);
   group.add(greenBus);
   vehicles.push({
     mesh: greenBus,

@@ -1,0 +1,402 @@
+{
+  "type": "FeatureCollection",
+  "name": "delhi_roads",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Connaught Place Inner Circle NW",
+        "highway": "primary",
+        "width": 9.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.198767,
+            28.6139
+          ],
+          [
+            77.209,
+            28.622883
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Connaught Place Inner Circle NE",
+        "highway": "primary",
+        "width": 9.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.209,
+            28.622883
+          ],
+          [
+            77.219233,
+            28.6139
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Connaught Place Inner Circle SE",
+        "highway": "primary",
+        "width": 9.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.219233,
+            28.6139
+          ],
+          [
+            77.209,
+            28.604917
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Connaught Place Inner Circle SW",
+        "highway": "primary",
+        "width": 9.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.209,
+            28.604917
+          ],
+          [
+            77.198767,
+            28.6139
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Janpath Avenue (Central Cottage to Windsor)",
+        "highway": "primary",
+        "width": 9.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.209,
+            28.604917
+          ],
+          [
+            77.209,
+            28.590544
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Barakhamba Road (Mandi House Link)",
+        "highway": "primary",
+        "width": 9.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.219233,
+            28.6139
+          ],
+          [
+            77.237652,
+            28.6139
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Baba Kharak Singh Marg",
+        "highway": "primary",
+        "width": 9.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.198767,
+            28.6139
+          ],
+          [
+            77.180348,
+            28.6139
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Minto Road to New Delhi Railway",
+        "highway": "primary",
+        "width": 9.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.209,
+            28.622883
+          ],
+          [
+            77.209,
+            28.639053
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Ashoka Road to India Gate",
+        "highway": "primary",
+        "width": 9.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.209,
+            28.590544
+          ],
+          [
+            77.219233,
+            28.59773
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Shahjahan Road (Khan Market Approach)",
+        "highway": "primary",
+        "width": 9.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.219233,
+            28.59773
+          ],
+          [
+            77.219233,
+            28.583357
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Khan Market High Street Lane",
+        "highway": "secondary",
+        "width": 8.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.219233,
+            28.583357
+          ],
+          [
+            77.227419,
+            28.583357
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Mahatma Gandhi Ring Road (AIIMS)",
+        "highway": "trunk",
+        "width": 10.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.176255,
+            28.583357
+          ],
+          [
+            77.209,
+            28.583357
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Ring Road (South Extension Part 1 & 2)",
+        "highway": "trunk",
+        "width": 10.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.209,
+            28.583357
+          ],
+          [
+            77.237652,
+            28.583357
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Ring Road (Lajpat Nagar / Ashram)",
+        "highway": "trunk",
+        "width": 10.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.237652,
+            28.583357
+          ],
+          [
+            77.262211,
+            28.583357
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Sri Aurobindo Marg (Hauz Khas Approach)",
+        "highway": "primary",
+        "width": 8.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.209,
+            28.583357
+          ],
+          [
+            77.20286,
+            28.570781
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Hauz Khas Village Road",
+        "highway": "secondary",
+        "width": 8.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.20286,
+            28.570781
+          ],
+          [
+            77.194674,
+            28.561798
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "NH-48 Delhi-Gurgaon Expressway",
+        "highway": "trunk",
+        "width": 10.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.176255,
+            28.583357
+          ],
+          [
+            77.159882,
+            28.563594
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Cyber Hub & Golf Course Road",
+        "highway": "trunk",
+        "width": 10.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.159882,
+            28.563594
+          ],
+          [
+            77.159882,
+            28.549221
+          ]
+        ]
+      }
+    }
+  ]
+}

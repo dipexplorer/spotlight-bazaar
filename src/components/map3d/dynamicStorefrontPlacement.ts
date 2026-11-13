@@ -108,52 +108,99 @@ export function computeDynamicStorefrontPlacements(
     pincode: string;
     targetRoadName: string;
     isConstruction?: boolean;
-  }[] = [
-    {
-      colonyName: "GS Road Commercial District",
-      pincode: "781005",
-      targetRoadName: "GS Road (Paltan - Bhangagarh)",
-      isConstruction: true,
-    },
-    {
-      colonyName: "Pan Bazar Riverfront",
-      pincode: "781001",
-      targetRoadName: "MG Road (Bharalumukh - Pan Bazar)",
-    },
-    {
-      colonyName: "Uzan Bazar Lakefront",
-      pincode: "781004",
-      targetRoadName: "GNB Road (Dighalipukhuri Lake Promenade)",
-    },
-    {
-      colonyName: "Paltan Bazar Station Road",
-      pincode: "781008",
-      targetRoadName: "AT Road (Bharalumukh - Paltan Bazar)",
-    },
-    {
-      colonyName: "Dispur Secretariat Avenue",
-      pincode: "781006",
-      targetRoadName: "GS Road (Dispur Secretariat)",
-    },
-    {
-      colonyName: "Jalukbari Gateway",
-      pincode: "781014",
-      targetRoadName: "AT Road (Jalukbari - Maligaon)",
-    },
-    {
-      colonyName: "Chandmari & Zoo Road",
-      pincode: "781003",
-      targetRoadName: "Zoo Road (Chandmari - State Zoo)",
-    },
-    {
-      colonyName: "Ganeshguri Commercial Center",
-      pincode: "781005",
-      targetRoadName: "GS Road (Ganeshguri Flyover)",
-    },
-  ];
+  }[] = cityLower.includes("mumbai")
+    ? [
+        { colonyName: "Bandra West Linking Road", pincode: "400050", targetRoadName: "Linking Road" },
+        { colonyName: "BKC Financial Center", pincode: "400051", targetRoadName: "BKC Avenue" },
+        { colonyName: "Marine Drive Promenade", pincode: "400020", targetRoadName: "Marine Drive" },
+        { colonyName: "Andheri West Commercial", pincode: "400053", targetRoadName: "Western Express" },
+        { colonyName: "Worli Sea Face", pincode: "400018", targetRoadName: "Worli" },
+      ]
+    : cityLower.includes("bangalore") || cityLower.includes("bengaluru")
+    ? [
+        { colonyName: "MG Road Central Promenade", pincode: "560001", targetRoadName: "Mahatma Gandhi Road" },
+        { colonyName: "Indiranagar 100ft High Street", pincode: "560038", targetRoadName: "100 Feet Road" },
+        { colonyName: "Koramangala 80ft Food Street", pincode: "560034", targetRoadName: "80 Feet Road" },
+        { colonyName: "Brigade Road Commercial Walk", pincode: "560025", targetRoadName: "Brigade Road" },
+        { colonyName: "HSR Layout Sector 1", pincode: "560102", targetRoadName: "HSR 27th Main" },
+      ]
+    : cityLower.includes("delhi")
+    ? [
+        { colonyName: "Connaught Place Inner Circle", pincode: "110001", targetRoadName: "Connaught Place" },
+        { colonyName: "Janpath Heritage Boulevard", pincode: "110001", targetRoadName: "Janpath Avenue" },
+        { colonyName: "Hauz Khas Village High Street", pincode: "110016", targetRoadName: "Hauz Khas" },
+        { colonyName: "South Extension Part 1", pincode: "110049", targetRoadName: "Ring Road" },
+        { colonyName: "Cyber City Corporate Strip", pincode: "122002", targetRoadName: "Cyber Hub" },
+      ]
+    : [
+        {
+          colonyName: "GS Road & Christian Basti",
+          pincode: "781005",
+          targetRoadName: "GS Road (Ulubari - Christian Basti Flagship)",
+          isConstruction: true,
+        },
+        {
+          colonyName: "Pan Bazar Riverfront",
+          pincode: "781001",
+          targetRoadName: "MG Road (Bharalumukh - Pan Bazar)",
+        },
+        {
+          colonyName: "Uzan Bazar Lakefront",
+          pincode: "781004",
+          targetRoadName: "GNB Road (Dighalipukhuri Lake Promenade)",
+        },
+        {
+          colonyName: "Paltan Bazar Station Road",
+          pincode: "781008",
+          targetRoadName: "AT Road (Machkhowa - Paltan Bazar)",
+        },
+        {
+          colonyName: "Dispur Secretariat Avenue",
+          pincode: "781006",
+          targetRoadName: "GS Road (Ganeshguri - Dispur Secretariat)",
+        },
+        {
+          colonyName: "Ganeshguri Commercial Center",
+          pincode: "781005",
+          targetRoadName: "GS Road (Walford - Ganeshguri Flyover)",
+        },
+        {
+          colonyName: "Jalukbari & Saraighat Gateway",
+          pincode: "781014",
+          targetRoadName: "AT Road (Jalukbari - Maligaon)",
+        },
+        {
+          colonyName: "Chandmari & Zoo Road",
+          pincode: "781003",
+          targetRoadName: "Zoo Road (Zoo Tiniali - Assam State Zoo)",
+        },
+        {
+          colonyName: "Six Mile Commercial Corridor",
+          pincode: "781022",
+          targetRoadName: "GS Road (Downtown - Six Mile Flyover)",
+        },
+        {
+          colonyName: "Beltola Historic Market",
+          pincode: "781028",
+          targetRoadName: "Beltola Bazar Chariali",
+        },
+        {
+          colonyName: "Uzan Bazar Riverfront",
+          pincode: "781004",
+          targetRoadName: "MG Road (Uzan Bazar Riverfront)",
+        },
+        {
+          colonyName: "Kharghuli Scenic Boulevard",
+          pincode: "781004",
+          targetRoadName: "Kharghuli - Ramsa Hill Road",
+        },
+      ];
 
   for (const ap of defaultAvailablePlots) {
-    const road = roads.find((r) => r.name.toLowerCase().includes(ap.targetRoadName.toLowerCase())) || roads[0];
+    const road =
+      roads.find((r) => r.name.toLowerCase().includes(ap.targetRoadName.toLowerCase())) ||
+      roads.find((r) => r.name.toLowerCase().includes(ap.colonyName.split(" ")[0].toLowerCase())) ||
+      roads[Math.min(placements.length, roads.length - 1)];
     if (road) {
       // Place midway along the road on the opposite side
       const midPoint: Vector2D = {
@@ -191,3 +238,4 @@ export function computeDynamicStorefrontPlacements(
 
   return placements;
 }
+

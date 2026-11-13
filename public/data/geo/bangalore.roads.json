@@ -1,0 +1,468 @@
+{
+  "type": "FeatureCollection",
+  "name": "bangalore_roads",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Mahatma Gandhi Road West (Trinity to Anil Kumble)",
+        "highway": "primary",
+        "width": 9.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.578007,
+            12.9716
+          ],
+          [
+            77.5946,
+            12.9716
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "MG Road East (Boulevard & Metro)",
+        "highway": "primary",
+        "width": 9.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.5946,
+            12.9716
+          ],
+          [
+            77.611193,
+            12.9716
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Brigade Road Commercial Promenade",
+        "highway": "primary",
+        "width": 8.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.5946,
+            12.9716
+          ],
+          [
+            77.5946,
+            12.95543
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Hosur Road (Richmond to Dairy Circle)",
+        "highway": "primary",
+        "width": 8.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.5946,
+            12.95543
+          ],
+          [
+            77.5946,
+            12.941057
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Residency Road Commercial Avenue",
+        "highway": "primary",
+        "width": 8.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.578007,
+            12.9716
+          ],
+          [
+            77.578007,
+            12.95543
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Commissariat Road Link",
+        "highway": "secondary",
+        "width": 8.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.578007,
+            12.95543
+          ],
+          [
+            77.5946,
+            12.95543
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Old Airport Road (Domlur Flyover)",
+        "highway": "primary",
+        "width": 9.0,
+        "isBridge": true
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.611193,
+            12.9716
+          ],
+          [
+            77.618568,
+            12.97699
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "100 Feet Road (Indiranagar High Street)",
+        "highway": "primary",
+        "width": 9.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.618568,
+            12.97699
+          ],
+          [
+            77.618568,
+            12.998549
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "CMH Road Indiranagar",
+        "highway": "primary",
+        "width": 8.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.618568,
+            12.998549
+          ],
+          [
+            77.611193,
+            12.998549
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Old Madras Road Connector",
+        "highway": "secondary",
+        "width": 8.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.611193,
+            12.998549
+          ],
+          [
+            77.611193,
+            12.9716
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "12th Main Road Gourmet Street",
+        "highway": "secondary",
+        "width": 7.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.618568,
+            12.98777
+          ],
+          [
+            77.62963,
+            12.98777
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Intermediate Ring Road (Domlur to Koramangala)",
+        "highway": "primary",
+        "width": 9.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.5946,
+            12.941057
+          ],
+          [
+            77.611193,
+            12.944651
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "80 Feet Road (Koramangala 4th Block)",
+        "highway": "primary",
+        "width": 9.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.611193,
+            12.944651
+          ],
+          [
+            77.611193,
+            12.932074
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Koramangala 100ft Inner Ring",
+        "highway": "primary",
+        "width": 8.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.611193,
+            12.932074
+          ],
+          [
+            77.625943,
+            12.932074
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Sony World Junction Avenue",
+        "highway": "secondary",
+        "width": 8.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.611193,
+            12.932074
+          ],
+          [
+            77.5946,
+            12.932074
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Outer Ring Road (Embassy GolfLinks)",
+        "highway": "trunk",
+        "width": 10.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.611193,
+            12.944651
+          ],
+          [
+            77.62963,
+            12.95543
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Outer Ring Road (Bellandur EcoSpace)",
+        "highway": "trunk",
+        "width": 10.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.62963,
+            12.95543
+          ],
+          [
+            77.644379,
+            12.944651
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Outer Ring Road (Marathahalli Flyover)",
+        "highway": "trunk",
+        "width": 10.0,
+        "isBridge": true
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.644379,
+            12.944651
+          ],
+          [
+            77.653598,
+            12.932074
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Sarjapur Road Link",
+        "highway": "primary",
+        "width": 8.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.625943,
+            12.932074
+          ],
+          [
+            77.644379,
+            12.944651
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "HSR Layout Sector 1 Main Road",
+        "highway": "primary",
+        "width": 8.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.625943,
+            12.932074
+          ],
+          [
+            77.622255,
+            12.921294
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "HSR 27th Main Commercial High Street",
+        "highway": "primary",
+        "width": 8.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            77.622255,
+            12.921294
+          ],
+          [
+            77.611193,
+            12.921294
+          ]
+        ]
+      }
+    }
+  ]
+}

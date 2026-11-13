@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { MapPin, Navigation, Check, Sparkles } from "lucide-react";
+import { getCityGeoConfig } from "@/lib/geo/cityGeoRegistry";
+import { unproject3DToGps } from "@/lib/geo/geoProjection";
 
 interface LocationMapPickerProps {
   city: string;
@@ -19,87 +21,58 @@ interface LandmarkPreset {
   area: string;
 }
 
-const GUWAHATI_LANDMARKS: LandmarkPreset[] = [
-  {
-    name: "GS Road & Christian Basti",
-    pincode: "781005",
-    lat: 26.1550,
-    lon: 91.7750,
-    area: "Christian Basti Commercial Boulevard",
-  },
-  {
-    name: "Pan Bazar Riverfront",
-    pincode: "781001",
-    lat: 26.1850,
-    lon: 91.7450,
-    area: "Pan Bazar Riverfront & Cotton Univ",
-  },
-  {
-    name: "Uzan Bazar Lakefront",
-    pincode: "781004",
-    lat: 26.1900,
-    lon: 91.7650,
-    area: "Dighalipukhuri Heritage Promenade",
-  },
-  {
-    name: "Paltan Bazar Junction",
-    pincode: "781008",
-    lat: 26.1720,
-    lon: 91.7520,
-    area: "Guwahati Railway Junction / Transit Hub",
-  },
-  {
-    name: "Dispur Secretariat",
-    pincode: "781006",
-    lat: 26.1280,
-    lon: 91.8040,
-    area: "Capital Commercial District",
-  },
-  {
-    name: "Zoo Road & Chandmari",
-    pincode: "781003",
-    lat: 26.1680,
-    lon: 91.7850,
-    area: "R.G. Baruah Road Media & Retail Spine",
-  },
-  {
-    name: "Ganeshguri Commercial Center",
-    pincode: "781005",
-    lat: 26.1380,
-    lon: 91.7940,
-    area: "Ganeshguri Flyover Retail Hub",
-  },
-  {
-    name: "Jalukbari Gateway",
-    pincode: "781014",
-    lat: 26.1500,
-    lon: 91.6850,
-    area: "Saraighat Bridge & Gauhati University",
-  },
-];
-
 export function LocationMapPicker({
   city,
-  initialLat = 26.1550,
-  initialLon = 91.7750,
-  initialPincode = "781005",
+  initialLat,
+  initialLon,
+  initialPincode,
   onLocationChange,
 }: LocationMapPickerProps) {
-  const [lat, setLat] = useState<number>(initialLat);
-  const [lon, setLon] = useState<number>(initialLon);
-  const [pincode, setPincode] = useState<string>(initialPincode);
-  const [selectedPreset, setSelectedPreset] = useState<string>("GS Road & Christian Basti");
+  const geoConfig = useMemo(() => getCityGeoConfig(city), [city]);
+
+  const presets: LandmarkPreset[] = useMemo(() => {
+    return geoConfig.colonies.map((c) => {
+      const rawGps = unproject3DToGps({ x: c.x, z: c.z }, geoConfig.anchor);
+      return {
+        name: c.name,
+        pincode: c.pincode,
+        lat: rawGps.lat,
+        lon: rawGps.lon,
+        area: c.description || c.zone,
+      };
+    });
+  }, [geoConfig]);
+
+  const defaultPreset = presets[0] || {
+    name: "City Central Avenue",
+    pincode: "781001",
+    lat: geoConfig.anchor.centerLat,
+    lon: geoConfig.anchor.centerLon,
+    area: "Central Commercial District",
+  };
+
+  const [lat, setLat] = useState<number>(initialLat || defaultPreset.lat);
+  const [lon, setLon] = useState<number>(initialLon || defaultPreset.lon);
+  const [pincode, setPincode] = useState<string>(initialPincode || defaultPreset.pincode);
+  const [selectedPreset, setSelectedPreset] = useState<string>(defaultPreset.name);
   const [gpsActive, setGpsActive] = useState<boolean>(false);
 
-  // Trigger initial change
+  // Update selection when city changes
   useEffect(() => {
-    onLocationChange({
-      lat,
-      lon,
-      pincode,
-      addressName: selectedPreset,
-    });
-  }, []);
+    if (presets.length > 0) {
+      const first = presets[0];
+      setLat(first.lat);
+      setLon(first.lon);
+      setPincode(first.pincode);
+      setSelectedPreset(first.name);
+      onLocationChange({
+        lat: first.lat,
+        lon: first.lon,
+        pincode: first.pincode,
+        addressName: first.area,
+      });
+    }
+  }, [city, presets, onLocationChange]);
 
   const handlePresetSelect = (preset: LandmarkPreset) => {
     setLat(preset.lat);
@@ -172,7 +145,7 @@ export function LocationMapPicker({
           Select Landmark & Postal PIN Zone in {city}:
         </span>
         <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto no-scrollbar pr-1">
-          {GUWAHATI_LANDMARKS.map((landmark) => {
+          {presets.map((landmark) => {
             const isSelected = selectedPreset === landmark.name;
             return (
               <button
@@ -219,3 +192,4 @@ export function LocationMapPicker({
     </div>
   );
 }
+

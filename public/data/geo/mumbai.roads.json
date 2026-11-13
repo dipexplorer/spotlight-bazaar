@@ -1,0 +1,534 @@
+{
+  "type": "FeatureCollection",
+  "name": "mumbai_roads",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Western Express Highway (Andheri)",
+        "highway": "trunk",
+        "width": 10.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.8295,
+            19.124279
+          ],
+          [
+            72.8295,
+            19.102719
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Western Express Highway (Santacruz)",
+        "highway": "trunk",
+        "width": 10.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.8295,
+            19.102719
+          ],
+          [
+            72.8295,
+            19.08116
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Western Express Highway (Bandra Kalanagar)",
+        "highway": "trunk",
+        "width": 10.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.8295,
+            19.08116
+          ],
+          [
+            72.8295,
+            19.0596
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Sion-Bandra Link Road",
+        "highway": "primary",
+        "width": 10.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.8295,
+            19.0596
+          ],
+          [
+            72.835203,
+            19.04343
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Bandra Sea Link Approach",
+        "highway": "trunk",
+        "width": 9.5,
+        "isBridge": true
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.818095,
+            19.073973
+          ],
+          [
+            72.808591,
+            19.0596
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Bandra-Worli Sea Link",
+        "highway": "trunk",
+        "width": 10.0,
+        "isBridge": true
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.808591,
+            19.0596
+          ],
+          [
+            72.812392,
+            19.039837
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Worli Sea Face Connector",
+        "highway": "trunk",
+        "width": 9.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.812392,
+            19.039837
+          ],
+          [
+            72.821897,
+            19.036244
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "SV Road (Andheri - Juhu Link)",
+        "highway": "primary",
+        "width": 8.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.812392,
+            19.117092
+          ],
+          [
+            72.812392,
+            19.091939
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "SV Road (Santacruz - Bandra)",
+        "highway": "primary",
+        "width": 8.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.812392,
+            19.091939
+          ],
+          [
+            72.818095,
+            19.073973
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "SV Road Bandra Terminus",
+        "highway": "primary",
+        "width": 8.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.818095,
+            19.073973
+          ],
+          [
+            72.825698,
+            19.0596
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Linking Road (Bandra Shopping High Street)",
+        "highway": "primary",
+        "width": 8.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.818095,
+            19.073973
+          ],
+          [
+            72.814293,
+            19.068583
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Linking Road South",
+        "highway": "primary",
+        "width": 8.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.814293,
+            19.068583
+          ],
+          [
+            72.816194,
+            19.056007
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Hill Road Bandra West",
+        "highway": "secondary",
+        "width": 7.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.814293,
+            19.068583
+          ],
+          [
+            72.808591,
+            19.068583
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Bandstand Promenade Drive",
+        "highway": "secondary",
+        "width": 7.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.808591,
+            19.068583
+          ],
+          [
+            72.804789,
+            19.06499
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "BKC Connector Boulevard",
+        "highway": "primary",
+        "width": 9.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.8295,
+            19.0596
+          ],
+          [
+            72.846608,
+            19.068583
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "BKC Avenue 1 (Finance Center)",
+        "highway": "primary",
+        "width": 9.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.846608,
+            19.068583
+          ],
+          [
+            72.863715,
+            19.068583
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "BKC G-Block Main Road",
+        "highway": "primary",
+        "width": 9.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.846608,
+            19.068583
+          ],
+          [
+            72.846608,
+            19.052413
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "BKC Bharat Diamond Bourse Link",
+        "highway": "secondary",
+        "width": 9.0,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.846608,
+            19.052413
+          ],
+          [
+            72.863715,
+            19.052413
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "BKC East Avenue",
+        "highway": "secondary",
+        "width": 8.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.863715,
+            19.068583
+          ],
+          [
+            72.863715,
+            19.052413
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Dr. Annie Besant Road (Worli)",
+        "highway": "primary",
+        "width": 9.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.821897,
+            19.036244
+          ],
+          [
+            72.821897,
+            19.020074
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Marine Drive (Queen's Necklace)",
+        "highway": "primary",
+        "width": 9.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.821897,
+            19.020074
+          ],
+          [
+            72.821897,
+            19.005701
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Nariman Point Promenade",
+        "highway": "primary",
+        "width": 9.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.821897,
+            19.005701
+          ],
+          [
+            72.825698,
+            18.994921
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Churchgate Station Road",
+        "highway": "secondary",
+        "width": 8.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.821897,
+            19.005701
+          ],
+          [
+            72.835203,
+            19.005701
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Fort & Kala Ghoda Heritage Avenue",
+        "highway": "secondary",
+        "width": 8.5,
+        "isBridge": false
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            72.835203,
+            19.005701
+          ],
+          [
+            72.835203,
+            19.016481
+          ]
+        ]
+      }
+    }
+  ]
+}
