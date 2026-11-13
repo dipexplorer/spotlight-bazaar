@@ -148,8 +148,8 @@ export function ThreeMapCanvas({
       }
     } else {
       // Cinematic Drone Overview Perspective (Matching IndiaAgain's high drone shoot across Guwahati)
-      targetCamPosRef.current = new THREE.Vector3(isGuwahati ? 45 : 0, isGuwahati ? 110 : 22, isGuwahati ? 155 : -18);
-      targetLookAtRef.current = new THREE.Vector3(isGuwahati ? 45 : 0, isGuwahati ? 2 : 3.5, isGuwahati ? 10 : 15);
+      targetCamPosRef.current = new THREE.Vector3(isGuwahati ? 40 : 0, isGuwahati ? 120 : 22, isGuwahati ? 165 : -18);
+      targetLookAtRef.current = new THREE.Vector3(isGuwahati ? 35 : 0, isGuwahati ? 2 : 3.5, isGuwahati ? 5 : 15);
     }
   }, []);
 
@@ -836,7 +836,7 @@ export function ThreeMapCanvas({
         {/* Center: Omnibox Search Bar */}
         <div className="relative flex-1 max-w-md pointer-events-auto">
           <div className="relative flex items-center">
-            <Search className="absolute left-3.5 w-4 h-4 text-neutral-400 pointer-events-none" />
+            <Search className="absolute left-3.5 w-4 h-4 text-neutral-300 pointer-events-none" />
             <input
               id="bazaar-search-input"
               name="bazaarSearch"
@@ -849,7 +849,7 @@ export function ThreeMapCanvas({
               }}
               onFocus={() => setSearchOpen(true)}
               placeholder="Search Nerqiva Studio, Guwahati, or services..."
-              className="w-full pl-10 pr-4 py-2 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800/90 text-white text-xs placeholder:text-neutral-500 focus:outline-none focus:border-amber-500/80 focus:ring-1 focus:ring-amber-500/80 shadow-2xl transition-all"
+              className="w-full pl-10 pr-4 py-2 rounded-2xl bg-neutral-950/95 backdrop-blur-xl border border-neutral-700/80 text-white text-xs font-medium placeholder:text-neutral-300 placeholder:opacity-100 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50 shadow-2xl transition-all"
             />
           </div>
 
