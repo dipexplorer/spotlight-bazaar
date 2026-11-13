@@ -148,8 +148,8 @@ export function ThreeMapCanvas({
       }
     } else {
       // Cinematic Drone Overview Perspective (Matching IndiaAgain's high drone shoot across Guwahati)
-      targetCamPosRef.current = new THREE.Vector3(isGuwahati ? 40 : 0, isGuwahati ? 120 : 22, isGuwahati ? 165 : -18);
-      targetLookAtRef.current = new THREE.Vector3(isGuwahati ? 35 : 0, isGuwahati ? 2 : 3.5, isGuwahati ? 5 : 15);
+      targetCamPosRef.current = new THREE.Vector3(isGuwahati ? 65 : 0, isGuwahati ? 230 : 22, isGuwahati ? 320 : -18);
+      targetLookAtRef.current = new THREE.Vector3(isGuwahati ? 65 : 0, isGuwahati ? 2 : 3.5, isGuwahati ? 45 : 15);
     }
   }, []);
 
@@ -195,18 +195,15 @@ export function ThreeMapCanvas({
       if (plot) {
         const worldPos = new THREE.Vector3();
         plot.mesh.getWorldPosition(worldPos);
-        const isLeft = plot.mesh.position.x < 0;
+        const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(plot.mesh.quaternion);
 
-        targetCamPosRef.current = new THREE.Vector3(
-          worldPos.x + (isLeft ? 8 : -8),
-          worldPos.y + 2.5,
-          worldPos.z
-        );
-        targetLookAtRef.current = new THREE.Vector3(
-          worldPos.x,
-          worldPos.y + 1.2,
-          worldPos.z
-        );
+        targetCamPosRef.current = worldPos
+          .clone()
+          .add(forward.clone().multiplyScalar(18))
+          .add(new THREE.Vector3(0, 4.8, 0));
+        targetLookAtRef.current = worldPos
+          .clone()
+          .add(new THREE.Vector3(0, 2.5, 0));
       }
 
       if (onStorefrontSelectRef.current) {
@@ -372,12 +369,12 @@ export function ThreeMapCanvas({
 
     // 2. Camera: Positioned to frame India prominently at initial load
     const aspect = container.clientWidth / container.clientHeight;
-    const camera = new THREE.PerspectiveCamera(40, aspect, 2, 6000);
+    const camera = new THREE.PerspectiveCamera(40, aspect, 2, 8000);
     const isGuwahati =
       selectedCityRef.current?.slug === "guwahati" ||
       selectedCityRef.current?.name.toLowerCase() === "guwahati";
     if (selectedCityRef.current) {
-      camera.position.set(isGuwahati ? 45 : 0, isGuwahati ? 110 : 24, isGuwahati ? 155 : -18);
+      camera.position.set(isGuwahati ? 65 : 0, isGuwahati ? 230 : 24, isGuwahati ? 320 : -18);
     } else {
       // Heroic isometric 3D framing of India with sky and Sun above
       camera.position.set(0, 840, 720);
@@ -399,7 +396,7 @@ export function ThreeMapCanvas({
     // 4. Orbit Controls (Unlocked Google Earth style spatial navigation)
     const controls = new OrbitControls(camera, canvas);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
+    controls.dampingFactor = 0.08;
     controls.enablePan = true;
     controls.screenSpacePanning = true;
 
@@ -407,22 +404,22 @@ export function ThreeMapCanvas({
       const isGuw =
         selectedCityRef.current.slug === "guwahati" ||
         selectedCityRef.current.name.toLowerCase() === "guwahati";
-      controls.minDistance = 3.2;
-      controls.maxDistance = 750;
+      controls.minDistance = 2.8;
+      controls.maxDistance = 2600;
       controls.maxPolarAngle = Math.PI / 2.02;
-      controls.target.set(isGuw ? 45 : 60, 2, isGuw ? 10 : 15);
+      controls.target.set(isGuw ? 65 : 60, 2, isGuw ? 45 : 15);
     } else {
       // National Map: Unlocked deep zoom down to regional level
       controls.minDistance = 35;
-      controls.maxDistance = 2400;
+      controls.maxDistance = 2800;
       controls.maxPolarAngle = Math.PI / 2.05;
       controls.target.set(0, 0, 30);
     }
 
     controls.mouseButtons = {
-      LEFT: THREE.MOUSE.PAN,
+      LEFT: THREE.MOUSE.ROTATE,
       MIDDLE: THREE.MOUSE.DOLLY,
-      RIGHT: THREE.MOUSE.ROTATE,
+      RIGHT: THREE.MOUSE.PAN,
     };
     controls.touches = {
       ONE: THREE.TOUCH.PAN,
@@ -697,6 +694,43 @@ export function ThreeMapCanvas({
             }
           }
           setNearbyStorefront(closest);
+        }
+      }
+
+      // Cinematic Drone Fly Mode (WASD / Arrow navigation when in City view)
+      if (!isWalkModeRef.current && selectedCityRef.current) {
+        const keys = keysDownRef.current;
+        const isShift = Boolean(keys["ShiftLeft"] || keys["ShiftRight"]);
+        const speed = (isShift ? 220 : 85) * delta;
+
+        const forwardDir = new THREE.Vector3();
+        camera.getWorldDirection(forwardDir);
+        forwardDir.y = 0;
+        forwardDir.normalize();
+
+        const rightDir = new THREE.Vector3().crossVectors(forwardDir, new THREE.Vector3(0, 1, 0)).normalize();
+        const moveVec = new THREE.Vector3();
+
+        if (keys["KeyW"] || keys["ArrowUp"]) moveVec.addScaledVector(forwardDir, speed);
+        if (keys["KeyS"] || keys["ArrowDown"]) moveVec.addScaledVector(forwardDir, -speed);
+        if (keys["KeyD"] || keys["ArrowRight"]) moveVec.addScaledVector(rightDir, speed);
+        if (keys["KeyA"] || keys["ArrowLeft"]) moveVec.addScaledVector(rightDir, -speed);
+
+        if (moveVec.lengthSq() > 0) {
+          camera.position.add(moveVec);
+          controls.target.add(moveVec);
+        }
+
+        // Q / E Smooth Camera Yaw Rotation
+        if (keys["KeyQ"]) {
+          const offset = camera.position.clone().sub(controls.target);
+          offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), 1.6 * delta);
+          camera.position.copy(controls.target).add(offset);
+        }
+        if (keys["KeyE"]) {
+          const offset = camera.position.clone().sub(controls.target);
+          offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), -1.6 * delta);
+          camera.position.copy(controls.target).add(offset);
         }
       }
 
@@ -1248,8 +1282,8 @@ export function ThreeMapCanvas({
           <div className="px-3.5 py-1.5 rounded-xl bg-neutral-950/70 backdrop-blur-md border border-neutral-800/60 text-[10px] text-neutral-400 font-mono flex items-center gap-2 shadow-lg">
             <span>
               {isWalkMode
-                ? "WASD / Arrows walk avatar · Shift sprint · [E] talk · Esc exit walk"
-                : "Drag pan · Right-drag look 360° · Scroll zoom · WASD / Arrows shift view"}
+                ? "W A S D walk · Shift sprint · [E] talk · Esc exit walk"
+                : "W A S D fly · Drag look 360° · Scroll zoom · Q / E turn · Shift faster"}
             </span>
           </div>
         </div>

@@ -12,7 +12,10 @@
       },
       "geometry": {
         "type": "Point",
-        "coordinates": [91.7750, 26.1550]
+        "coordinates": [
+          91.775,
+          26.155
+        ]
       }
     },
     {
@@ -25,7 +28,10 @@
       },
       "geometry": {
         "type": "Point",
-        "coordinates": [91.7450, 26.1850]
+        "coordinates": [
+          91.745,
+          26.185
+        ]
       }
     },
     {
@@ -38,7 +44,10 @@
       },
       "geometry": {
         "type": "Point",
-        "coordinates": [91.7650, 26.1900]
+        "coordinates": [
+          91.765,
+          26.19
+        ]
       }
     },
     {
@@ -51,46 +60,10 @@
       },
       "geometry": {
         "type": "Point",
-        "coordinates": [91.7520, 26.1720]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "name": "Dispur Secretariat Avenue",
-        "pincode": "781006",
-        "zone": "Capital Commercial District",
-        "description": "Government Secretariat, tea auction center & premier retail"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [91.8040, 26.1280]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "name": "Jalukbari & Saraighat Bridge",
-        "pincode": "781014",
-        "zone": "University & Gateway Hub",
-        "description": "Gateway rotary, Gauhati University & Saraighat Bridge approach"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [91.6850, 26.1500]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "name": "Chandmari & Zoo Road",
-        "pincode": "781003",
-        "zone": "Media & Commercial Arts Hub",
-        "description": "Assam State Zoo, media houses & premier shopping promenade"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [91.7850, 26.1680]
+        "coordinates": [
+          91.758,
+          26.175
+        ]
       }
     },
     {
@@ -103,7 +76,122 @@
       },
       "geometry": {
         "type": "Point",
-        "coordinates": [91.7940, 26.1380]
+        "coordinates": [
+          91.785,
+          26.145
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Dispur Secretariat Avenue",
+        "pincode": "781006",
+        "zone": "Capital Commercial District",
+        "description": "Government Secretariat, tea auction center & premier retail"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.795,
+          26.138
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Chandmari & Zoo Road",
+        "pincode": "781003",
+        "zone": "Media & Commercial Arts Hub",
+        "description": "Assam State Zoo, media houses & premier shopping promenade"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.78,
+          26.182
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Jalukbari & Saraighat Bridge",
+        "pincode": "781014",
+        "zone": "University & Gateway Hub",
+        "description": "Gateway rotary, Gauhati University & Saraighat Bridge approach"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.685,
+          26.155
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Beltola & Jayanagar",
+        "pincode": "781028",
+        "zone": "Historic Market & Residential Hub",
+        "description": "Bi-weekly traditional Beltola market, lifestyle cafes & residential hub"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.79,
+          26.128
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Six Mile & VIP Road",
+        "pincode": "781022",
+        "zone": "Modern Healthcare & Retail Corridor",
+        "description": "Super specialty hospitals, premier retail complexes & Silsako lake link"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.81,
+          26.132
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Bharalumukh & Shantipur",
+        "pincode": "781009",
+        "zone": "Riverfront Promenade & Commerce",
+        "description": "Bharalu river discharge, riverfront walkways & traditional commerce"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.73,
+          26.172
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Maligaon Commercial Center",
+        "pincode": "781011",
+        "zone": "NFR Headquarters & Transit",
+        "description": "Northeast Frontier Railway HQ, bustling markets & Kamakhya approach"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.705,
+          26.16
+        ]
       }
     }
   ]
