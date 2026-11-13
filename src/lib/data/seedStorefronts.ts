@@ -10,7 +10,7 @@ export const SEED_STOREFRONTS: BusinessStorefront[] = [
     category_id: "tech-freelance",
     city_name: "Guwahati",
     state_name: "Assam",
-    pincode: "781001",
+    pincode: "781005",
     lat: 26.1445,
     lon: 91.7362,
     whatsapp_phone: "9864012345",

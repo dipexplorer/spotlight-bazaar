@@ -221,8 +221,8 @@ export default function RegisterPage() {
       <div className="w-full max-w-xl flex-1 flex flex-col justify-center my-4">
         <div className="rounded-3xl bg-neutral-950 border border-neutral-800 p-6 md:p-8 shadow-2xl">
           {errorMsg && (
-            <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center gap-3 text-rose-300 text-xs">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+            <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3 text-amber-300 text-xs">
+              <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
               <span>{errorMsg}</span>
             </div>
           )}
@@ -264,7 +264,7 @@ export default function RegisterPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Nerqiva Studio, Cafe Guwahati, Assam Crafts"
-                  className="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 focus:border-rose-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/20 text-sm text-white placeholder:text-neutral-500 transition-colors"
+                  className="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 focus:border-amber-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/20 text-sm text-white placeholder:text-neutral-500 transition-colors"
                 />
               </div>
 
@@ -277,7 +277,7 @@ export default function RegisterPage() {
                   value={tagline}
                   onChange={(e) => setTagline(e.target.value)}
                   placeholder="e.g. Candid Wedding Photography across Assam"
-                  className="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 focus:border-rose-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/20 text-sm text-white placeholder:text-neutral-500 transition-colors"
+                  className="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 focus:border-amber-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/20 text-sm text-white placeholder:text-neutral-500 transition-colors"
                 />
               </div>
 
@@ -293,11 +293,11 @@ export default function RegisterPage() {
                       onClick={() => setCategory(cat.id)}
                       className={`p-3 rounded-xl border text-left text-xs font-medium transition-all flex items-center gap-2 ${
                         category === cat.id
-                          ? "bg-rose-500/10 border-rose-500 text-white shadow-sm"
+                          ? "bg-amber-500/15 border-amber-500 text-amber-300 shadow-sm"
                           : "bg-neutral-900 border-neutral-800 text-neutral-400 hover:border-neutral-700"
                       }`}
                     >
-                      <Sparkles className={`w-3.5 h-3.5 ${category === cat.id ? "text-rose-400" : "text-neutral-500"}`} />
+                      <Sparkles className={`w-3.5 h-3.5 ${category === cat.id ? "text-amber-400" : "text-neutral-500"}`} />
                       <span className="truncate">{cat.name}</span>
                     </button>
                   ))}
@@ -312,7 +312,7 @@ export default function RegisterPage() {
                   <select
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    className="w-full px-3 py-3 rounded-xl bg-neutral-900 border border-neutral-800 focus:border-rose-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/20 text-sm text-white"
+                    className="w-full px-3 py-3 rounded-xl bg-neutral-900 border border-neutral-800 focus:border-amber-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/20 text-sm text-white"
                   >
                     {INITIAL_CITIES.map((c) => (
                       <option key={c.id} value={c.name}>
@@ -333,7 +333,7 @@ export default function RegisterPage() {
                     value={pincode}
                     onChange={(e) => setPincode(e.target.value.replace(/[^0-9]/g, ""))}
                     placeholder="e.g. 781001"
-                    className="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 focus:border-rose-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/20 text-sm text-white placeholder:text-neutral-500 tabular-nums"
+                    className="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 focus:border-amber-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/20 text-sm text-white placeholder:text-neutral-500 tabular-nums"
                   />
                 </div>
               </div>
@@ -342,7 +342,7 @@ export default function RegisterPage() {
                 type="button"
                 disabled={!canProceedStep1}
                 onClick={() => setStep(2)}
-                className="w-full mt-2 py-3.5 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-[0.99] disabled:opacity-40 disabled:hover:bg-rose-600 text-white font-medium text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-rose-950/40"
+                className="w-full mt-2 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:opacity-40 disabled:hover:bg-amber-500 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-950/30"
               >
                 <span>Continue to Rates & Contact</span>
                 <ArrowRight className="w-4 h-4" />
@@ -366,7 +366,7 @@ export default function RegisterPage() {
                 <label className="block text-xs font-medium text-neutral-300 mb-1.5">
                   WhatsApp Business Number *
                 </label>
-                <div className="flex items-center rounded-xl bg-neutral-900 border border-neutral-800 focus-within:border-rose-500 overflow-hidden">
+                <div className="flex items-center rounded-xl bg-neutral-900 border border-neutral-800 focus-within:border-amber-500 overflow-hidden">
                   <span className="px-3 py-3 text-xs text-neutral-400 font-mono border-r border-neutral-800 bg-neutral-950">
                     +91
                   </span>
@@ -395,7 +395,7 @@ export default function RegisterPage() {
                   value={startingPrice}
                   onChange={(e) => setStartingPrice(e.target.value)}
                   placeholder="e.g. Starts ₹25,000 / day, or Coffee from ₹150"
-                  className="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 focus:border-rose-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/20 text-sm text-white placeholder:text-neutral-500"
+                  className="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 focus:border-amber-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/20 text-sm text-white placeholder:text-neutral-500"
                 />
                 <p className="text-[11px] text-neutral-400 mt-1">
                   Transparent starting prices filter out tire-kickers and bring qualified buyers.
@@ -406,7 +406,7 @@ export default function RegisterPage() {
                 <label className="block text-xs font-medium text-neutral-300 mb-1.5">
                   Instagram Handle (Optional)
                 </label>
-                <div className="flex items-center rounded-xl bg-neutral-900 border border-neutral-800 focus-within:border-rose-500 overflow-hidden">
+                <div className="flex items-center rounded-xl bg-neutral-900 border border-neutral-800 focus-within:border-amber-500 overflow-hidden">
                   <span className="px-3 py-3 text-xs text-neutral-400 font-mono border-r border-neutral-800 bg-neutral-950">
                     @
                   </span>
@@ -432,7 +432,7 @@ export default function RegisterPage() {
                   type="button"
                   disabled={!canProceedStep2}
                   onClick={() => setStep(3)}
-                  className="flex-1 py-3.5 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-[0.99] disabled:opacity-40 disabled:hover:bg-rose-600 text-white font-medium text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-rose-950/40"
+                  className="flex-1 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:opacity-40 disabled:hover:bg-amber-500 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-950/30"
                 >
                   <span>Continue to Portfolio</span>
                   <ArrowRight className="w-4 h-4" />
@@ -455,7 +455,7 @@ export default function RegisterPage() {
 
               {/* Upload Dropzone */}
               {portfolio.length < 6 && (
-                <label className="border-2 border-dashed border-neutral-800 hover:border-rose-500/50 rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors bg-neutral-900/40">
+                <label className="border-2 border-dashed border-neutral-800 hover:border-amber-500/50 rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors bg-neutral-900/40">
                   <input
                     type="file"
                     multiple
@@ -465,13 +465,13 @@ export default function RegisterPage() {
                     className="hidden"
                   />
                   {compressing ? (
-                    <div className="flex items-center gap-2 text-xs text-rose-400">
+                    <div className="flex items-center gap-2 text-xs text-amber-400">
                       <Loader2 className="w-5 h-5 animate-spin" />
                       <span>Optimizing image resolution...</span>
                     </div>
                   ) : (
                     <>
-                      <div className="w-10 h-10 rounded-full bg-rose-600/10 flex items-center justify-center text-rose-500">
+                      <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-400">
                         <Upload className="w-5 h-5" />
                       </div>
                       <span className="text-xs font-medium text-white">Tap to upload photos</span>
@@ -494,13 +494,13 @@ export default function RegisterPage() {
                       <button
                         type="button"
                         onClick={() => removeImage(idx)}
-                        className="absolute top-1 right-1 p-1 rounded-full bg-black/80 text-white hover:bg-rose-600 transition-colors"
+                        className="absolute top-1 right-1 p-1 rounded-full bg-black/80 text-white hover:bg-amber-500 hover:text-slate-950 transition-colors"
                         aria-label="Remove image"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
                       {idx === 0 && (
-                        <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[9px] uppercase bg-rose-600 text-white font-semibold">
+                        <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[9px] uppercase bg-amber-500 text-slate-950 font-bold">
                           Cover
                         </span>
                       )}
@@ -521,7 +521,7 @@ export default function RegisterPage() {
                   type="button"
                   disabled={!canProceedStep3 || compressing}
                   onClick={() => setStep(4)}
-                  className="flex-1 py-3.5 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-[0.99] disabled:opacity-40 disabled:hover:bg-rose-600 text-white font-medium text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-rose-950/40"
+                  className="flex-1 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:opacity-40 disabled:hover:bg-amber-500 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-950/30"
                 >
                   <span>Review & Claim</span>
                   <ArrowRight className="w-4 h-4" />
@@ -572,7 +572,7 @@ export default function RegisterPage() {
                   type="checkbox"
                   checked={consent}
                   onChange={(e) => setConsent(e.target.checked)}
-                  className="mt-0.5 rounded border-neutral-700 text-rose-600 focus:ring-0"
+                  className="mt-0.5 rounded border-neutral-700 text-amber-500 focus:ring-0"
                 />
                 <span className="text-[11px] text-neutral-300 leading-relaxed">
                   I consent to publicly listing my business details (Name, City, Category, Portfolio, and WhatsApp number) on Spotlight Bazaar for direct client discovery under India&apos;s DPDP Act standards.
@@ -592,7 +592,7 @@ export default function RegisterPage() {
                   type="button"
                   disabled={!consent || submitting}
                   onClick={handleSubmit}
-                  className="flex-1 py-3.5 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-[0.99] disabled:opacity-40 disabled:hover:bg-rose-600 text-white font-medium text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-rose-950/40"
+                  className="flex-1 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:opacity-40 disabled:hover:bg-amber-500 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-950/30"
                 >
                   {submitting ? (
                     <>

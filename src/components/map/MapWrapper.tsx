@@ -9,7 +9,7 @@ const InteractiveCanvas = dynamic(
     ssr: false,
     loading: () => (
       <div className="w-full h-full min-h-[75vh] bg-[#09090b] flex flex-col items-center justify-center text-xs text-neutral-500 gap-3">
-        <div className="w-8 h-8 rounded-full border-2 border-rose-500 border-t-transparent animate-spin" />
+        <div className="w-8 h-8 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" />
         <span>Loading India&apos;s Open Business Map...</span>
       </div>
     ),

@@ -28,7 +28,7 @@ const TALK_CATEGORIES = [
       "Great portfolio! 📸",
       "What are your rates? 💰",
       "Bookmarked for my wedding! 💍",
-      "Chai break time! ☕",
+      "Direct WhatsApp inquiry sent! 📱",
       "Support local artisans! 🇮🇳",
     ],
   },
@@ -37,7 +37,7 @@ const TALK_CATEGORIES = [
     phrases: [
       "Come see my storefront!",
       "Follow me down the lane!",
-      "Let's play cricket! 🏏",
+      "Inquiring about project dates! 📅",
       "Nice to meet you!",
       "So creative!",
       "See you around! 👋",
@@ -45,7 +45,7 @@ const TALK_CATEGORIES = [
   },
 ];
 
-const QUICK_EMOJIS = ["👋", "🙏", "🔥", "❤️", "👏", "☕", "🏏", "✨", "🎉", "🦏", "⭐", "🇮🇳"];
+const QUICK_EMOJIS = ["👋", "🙏", "🔥", "❤️", "👏", "📱", "💼", "✨", "🎉", "🦏", "⭐", "🇮🇳"];
 
 export function QuickTalkModal({
   isOpen,

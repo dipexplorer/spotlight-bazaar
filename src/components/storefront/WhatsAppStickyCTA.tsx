@@ -78,7 +78,7 @@ export function WhatsAppStickyCTA({
         <div className="flex items-center gap-2.5 w-full sm:w-auto">
           <button
             onClick={handleShare}
-            className="p-3.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] border border-neutral-800 text-neutral-300 hover:text-white transition-all focus-visible:ring-2 focus-visible:ring-rose-500"
+            className="p-3.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] border border-neutral-800 text-neutral-300 hover:text-white transition-all focus-visible:ring-2 focus-visible:ring-amber-500"
             title="Share storefront"
             aria-label="Share storefront link"
           >

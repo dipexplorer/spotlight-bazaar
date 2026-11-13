@@ -81,9 +81,9 @@ export function StorefrontView({ initialStorefront, slug }: StorefrontViewProps)
     <main className="min-h-screen bg-[#09090b] text-neutral-100 pb-36">
       {/* Newly Claimed Celebration Alert */}
       {isNew && (
-        <div className="w-full bg-rose-600/10 border-b border-rose-500/20 py-2.5 px-4 text-center">
-          <p className="text-xs text-rose-400 font-medium flex items-center justify-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5" />
+        <div className="w-full bg-amber-500/10 border-b border-amber-500/20 py-2.5 px-4 text-center">
+          <p className="text-xs text-amber-300 font-medium flex items-center justify-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             <span>Congratulations! Your storefront is officially live on the map.</span>
           </p>
         </div>
@@ -153,7 +153,7 @@ export function StorefrontView({ initialStorefront, slug }: StorefrontViewProps)
             {/* Badges / Metadata */}
             <div className="flex flex-wrap items-center gap-2.5 pt-1 text-xs text-neutral-300">
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-neutral-900 border border-neutral-800">
-                <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                <MapPin className="w-3.5 h-3.5 text-amber-400" />
                 <span>{storefront.city_name}</span>
                 {storefront.pincode && <span className="text-neutral-400 font-mono">({storefront.pincode})</span>}
               </span>
@@ -169,7 +169,7 @@ export function StorefrontView({ initialStorefront, slug }: StorefrontViewProps)
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-neutral-300 hover:text-white transition-colors"
                 >
-                  <InstagramIcon className="w-3.5 h-3.5 text-rose-400" />
+                  <InstagramIcon className="w-3.5 h-3.5 text-pink-400" />
                   <span>@{storefront.instagram_handle}</span>
                 </a>
               )}
@@ -200,7 +200,7 @@ export function StorefrontView({ initialStorefront, slug }: StorefrontViewProps)
               Activity & Discovery
             </span>
             <div className="my-2 flex items-center gap-2">
-              <Eye className="w-5 h-5 text-rose-500" />
+              <Eye className="w-5 h-5 text-amber-400" />
               <span className="text-2xl font-bold text-white tabular-nums">
                 {storefront.total_views || 1}
               </span>

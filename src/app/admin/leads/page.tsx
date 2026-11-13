@@ -44,7 +44,7 @@ export default async function AdminLeadsPage() {
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-neutral-800">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-rose-500 tracking-tight">
+            <span className="text-xs font-semibold text-amber-400 tracking-tight">
               Spotlight Bazaar Command
             </span>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -66,7 +66,7 @@ export default async function AdminLeadsPage() {
           </Link>
           <Link
             href="/register"
-            className="text-xs font-semibold px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition-colors shadow-md shadow-rose-950/40"
+            className="text-xs font-bold px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors shadow-md shadow-amber-950/40"
           >
             + New Listing
           </Link>
@@ -78,11 +78,13 @@ export default async function AdminLeadsPage() {
         <div className="p-5 rounded-3xl bg-neutral-950 border border-neutral-800 flex flex-col justify-between shadow-lg">
           <div className="flex items-center justify-between text-neutral-400">
             <span className="text-xs">Active Storefronts</span>
-            <Store className="w-4 h-4 text-rose-500" />
+            <Store className="w-4 h-4 text-amber-400" />
           </div>
           <div className="mt-3">
             <span className="text-2xl sm:text-3xl font-bold text-white tabular-nums">{totalStorefronts}</span>
-            <span className="text-xs text-neutral-400 ml-1.5">businesses</span>
+            <span className="text-xs text-neutral-400 ml-1.5">
+              {totalStorefronts === 1 ? "business" : "businesses"}
+            </span>
           </div>
         </div>
 
@@ -115,7 +117,9 @@ export default async function AdminLeadsPage() {
           </div>
           <div className="mt-3">
             <span className="text-2xl sm:text-3xl font-bold text-white tabular-nums">{verifiedCount}</span>
-            <span className="text-xs text-neutral-400 ml-1.5">studios</span>
+            <span className="text-xs text-neutral-400 ml-1.5">
+              {verifiedCount === 1 ? "studio" : "studios"}
+            </span>
           </div>
         </div>
       </section>
@@ -124,7 +128,7 @@ export default async function AdminLeadsPage() {
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-white tracking-tight flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-rose-500" />
+            <TrendingUp className="w-4 h-4 text-amber-400" />
             <span>Storefront Performance Leaderboard</span>
           </h2>
           <span className="text-xs text-neutral-400">Sorted by WhatsApp Leads</span>
@@ -176,7 +180,7 @@ export default async function AdminLeadsPage() {
                       </td>
                       <td className="py-3.5 px-4">
                         <span className="inline-flex items-center gap-1 text-neutral-300">
-                          <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                          <MapPin className="w-3.5 h-3.5 text-amber-400" />
                           {s.city_name}
                         </span>
                       </td>
@@ -192,7 +196,7 @@ export default async function AdminLeadsPage() {
                       <td className="py-3.5 px-4 text-right">
                         <Link
                           href={`/b/${s.slug}`}
-                          className="inline-flex items-center gap-1 text-xs text-rose-400 hover:text-rose-300 font-medium transition-colors"
+                          className="inline-flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300 font-medium transition-colors"
                         >
                           <span>View</span>
                           <ArrowUpRight className="w-3.5 h-3.5" />

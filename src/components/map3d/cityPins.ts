@@ -49,25 +49,24 @@ function createCityLabelTexture(
   const h = 140;
   ctx.roundRect(x, y, w, h, radius);
 
-  // Background gradient: Rich midnight slate with amber or rose accent
-  const bgGrad = ctx.createLinearGradient(x, y, x + w, y + h);
+  // Background: High-contrast white or golden amber like IndiaAgain hubs
   if (isFeatured) {
-    bgGrad.addColorStop(0, "rgba(225, 29, 72, 0.95)");
-    bgGrad.addColorStop(1, "rgba(159, 18, 57, 0.92)");
+    const bgGrad = ctx.createLinearGradient(x, y, x + w, y + h);
+    bgGrad.addColorStop(0, "#fbbf24");
+    bgGrad.addColorStop(1, "#f59e0b");
+    ctx.fillStyle = bgGrad;
   } else {
-    bgGrad.addColorStop(0, "rgba(15, 23, 42, 0.94)");
-    bgGrad.addColorStop(1, "rgba(30, 41, 59, 0.92)");
+    ctx.fillStyle = "rgba(255, 255, 255, 0.96)";
   }
-  ctx.fillStyle = bgGrad;
   ctx.fill();
 
-  ctx.lineWidth = 3.5;
-  ctx.strokeStyle = isFeatured ? "#fb7185" : "rgba(251, 191, 36, 0.85)";
+  ctx.lineWidth = isFeatured ? 4 : 2.5;
+  ctx.strokeStyle = isFeatured ? "#d97706" : "rgba(203, 213, 225, 0.9)";
   ctx.stroke();
 
   // City Name Text
-  ctx.font = "bold 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  ctx.fillStyle = "#09090b";
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
   ctx.fillText(city.name, x + 28, y + 45);
@@ -83,15 +82,20 @@ function createCityLabelTexture(
 
   ctx.beginPath();
   ctx.roundRect(badgeX, badgeY, badgeWidth, 44, 22);
-  ctx.fillStyle = isFeatured ? "#ffffff" : "#f59e0b"; // Warm Indian Amber
+  ctx.fillStyle = isFeatured ? "#09090b" : "#f59e0b";
   ctx.fill();
 
-  ctx.fillStyle = isFeatured ? "#e11d48" : "#0f172a";
+  ctx.fillStyle = isFeatured ? "#f59e0b" : "#09090b";
   ctx.textAlign = "center";
   ctx.fillText(badgeText, badgeX + badgeWidth / 2, badgeY + 23);
 
   // Commercial Tag / Specialty District Badge (Sub-bar inside pill)
-  if (commercial) {
+  if (isFeatured) {
+    ctx.font = "bold 23px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.fillStyle = "#451a03";
+    ctx.textAlign = "left";
+    ctx.fillText("⭐ Living 3D Street · Active Hub", x + 28, y + 101);
+  } else if (commercial) {
     const tagX = x + 26;
     const tagY = y + 84;
     const tagH = 34;
@@ -110,10 +114,10 @@ function createCityLabelTexture(
     ctx.fillText(commercial.tag, tagX + 12, tagY + tagH / 2 + 1);
   } else {
     // Default open plot banner
-    ctx.font = "500 22px -apple-system, BlinkMacSystemFont, sans-serif";
-    ctx.fillStyle = "#94a3b8";
+    ctx.font = "600 22px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.fillStyle = "#64748b";
     ctx.textAlign = "left";
-    ctx.fillText("📍 Open Business Street · Free Plots", x + 28, y + 101);
+    ctx.fillText("📍 3D High Street · Free Plots", x + 28, y + 101);
   }
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -178,7 +182,7 @@ export function buildCityPins(
     pinGroup.position.set(x, 4.7, z);
 
     // 1. Ground Glowing Disc
-    const discSize = isFeatured ? 48 : 34;
+    const discSize = isFeatured ? 56 : 38;
     const groundGeo = new THREE.PlaneGeometry(discSize, discSize);
     const groundMat = new THREE.MeshBasicMaterial({
       map: glowTexture,
@@ -191,22 +195,22 @@ export function buildCityPins(
     pinGroup.add(groundDisc);
 
     // 2. Vertical Light Beacon Pillar
-    const beaconHeight = isFeatured ? 34 : 24;
+    const beaconHeight = isFeatured ? 42 : 30;
     const beaconPoints = [
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(0, beaconHeight, 0),
     ];
     const beaconGeo = new THREE.BufferGeometry().setFromPoints(beaconPoints);
     const beaconMat = new THREE.LineBasicMaterial({
-      color: isFeatured ? 0xf43f5e : 0xf59e0b,
+      color: isFeatured ? 0xf59e0b : 0xfbbf24,
       transparent: true,
-      opacity: isFeatured ? 0.9 : 0.75,
-      linewidth: 2,
+      opacity: isFeatured ? 0.95 : 0.8,
+      linewidth: 3,
     });
     const beacon = new THREE.Line(beaconGeo, beaconMat);
     pinGroup.add(beacon);
 
-    // 3. Floating Billboarding City Label Sprite
+    // 3. Floating Billboarding City Label Sprite (Larger, bold, readable from national altitude)
     const labelTex = createCityLabelTexture(city, count, isFeatured);
     const spriteMat = new THREE.SpriteMaterial({
       map: labelTex,
@@ -215,13 +219,13 @@ export function buildCityPins(
       depthWrite: false,
     });
     const sprite = new THREE.Sprite(spriteMat);
-    sprite.position.set(0, beaconHeight + 10, 0);
-    const spriteWidth = isFeatured ? 54 : 44;
+    sprite.position.set(0, beaconHeight + 14, 0);
+    const spriteWidth = isFeatured ? 128 : 102;
     sprite.scale.set(spriteWidth, spriteWidth * (180 / 512), 1);
     pinGroup.add(sprite);
 
     // 4. Click Target Sphere for fast Raycasting (transparent so raycaster hits it)
-    const hitGeo = new THREE.SphereGeometry(24, 8, 8);
+    const hitGeo = new THREE.SphereGeometry(32, 8, 8);
     const hitMat = new THREE.MeshBasicMaterial({
       transparent: true,
       opacity: 0,

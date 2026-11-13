@@ -29,7 +29,7 @@ export function ShareCardModal({ storefront, isOpen, onClose }: ShareCardModalPr
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl animate-fade-in">
-      <div className="relative w-full max-w-sm rounded-3xl bg-neutral-950 border border-neutral-800 p-6 flex flex-col items-center shadow-2xl shadow-rose-950/20">
+      <div className="relative w-full max-w-sm rounded-3xl bg-neutral-950 border border-neutral-800 p-6 flex flex-col items-center shadow-2xl shadow-amber-950/20">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -51,16 +51,16 @@ export function ShareCardModal({ storefront, isOpen, onClose }: ShareCardModalPr
         {/* 9:16 Instagram Story Preview Card */}
         <div
           ref={cardRef}
-          className="w-full aspect-[9/14] rounded-2xl bg-neutral-900 border border-rose-500/30 p-5 flex flex-col justify-between relative overflow-hidden shadow-2xl"
+          className="w-full aspect-[9/14] rounded-2xl bg-neutral-900 border border-amber-500/30 p-5 flex flex-col justify-between relative overflow-hidden shadow-2xl"
         >
           {/* Subtle Ambient Glow */}
-          <div className="absolute -top-16 -right-16 w-32 h-32 bg-rose-600/15 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -top-16 -right-16 w-32 h-32 bg-amber-500/15 rounded-full blur-2xl pointer-events-none" />
           <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
 
           {/* Card Top */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-[10px] font-medium text-rose-400">
-              <Sparkles className="w-3 h-3 text-rose-400" />
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-[10px] font-medium text-amber-400">
+              <Sparkles className="w-3 h-3 text-amber-400" />
               <span>OFFICIAL STOREFRONT</span>
             </div>
             <span className="text-[10px] font-medium tracking-wider uppercase text-neutral-400">
@@ -95,7 +95,7 @@ export function ShareCardModal({ storefront, isOpen, onClose }: ShareCardModalPr
 
             <div className="flex flex-wrap items-center gap-2 text-[11px] text-neutral-300">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-neutral-950 border border-neutral-800">
-                <MapPin className="w-3 h-3 text-rose-400" />
+                <MapPin className="w-3 h-3 text-amber-400" />
                 {storefront.city_name}
               </span>
               <span className="px-2 py-0.5 rounded-md bg-neutral-950 border border-neutral-800">

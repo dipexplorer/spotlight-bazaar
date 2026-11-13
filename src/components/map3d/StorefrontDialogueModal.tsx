@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { BusinessStorefront } from "@/types";
 import {
   X,
@@ -157,18 +158,19 @@ export function StorefrontDialogueModal({
           )}
 
           {/* Full Profile & Portfolio */}
-          {onOpenFullProfile && (
-            <button
-              onClick={() => {
-                onClose();
+          <Link
+            href={`/b/${storefront.slug}`}
+            onClick={() => {
+              onClose();
+              if (onOpenFullProfile) {
                 onOpenFullProfile(storefront);
-              }}
-              className="w-full py-2.5 px-4 rounded-xl bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/60 font-medium text-xs text-slate-200 flex items-center justify-center gap-2 transition-all"
-            >
-              <span>View Full Services & Portfolio</span>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-            </button>
-          )}
+              }
+            }}
+            className="w-full py-2.5 px-4 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 font-medium text-xs text-amber-300 hover:text-amber-200 flex items-center justify-center gap-2 transition-all shadow-md group"
+          >
+            <span>View Full Services & Portfolio</span>
+            <ChevronRight className="w-3.5 h-3.5 text-amber-400 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
         </div>
 
         {/* Microcopy note */}
