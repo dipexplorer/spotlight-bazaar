@@ -821,8 +821,8 @@ export function ThreeMapCanvas({
               <button
                 type="button"
                 onClick={() => onCitySelect(null)}
-                aria-label="Return to 3D India Map"
-                title="Return to 3D India Map"
+                aria-label="Return to India Map"
+                title="Return to India Map"
                 className="px-2.5 sm:px-3.5 py-1.5 rounded-2xl bg-neutral-950/90 hover:bg-neutral-900 border border-amber-500/60 text-amber-400 text-xs font-bold flex items-center gap-1.5 shadow-2xl backdrop-blur-xl transition-all group shrink-0"
               >
                 <ArrowLeft className="w-3.5 h-3.5 text-amber-400 group-hover:-translate-x-0.5 transition-transform" />
@@ -830,12 +830,7 @@ export function ThreeMapCanvas({
                 <span className="hidden sm:inline">← Return to India Map</span>
               </button>
             )
-          ) : (
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-neutral-950/80 backdrop-blur-xl border border-neutral-800 text-xs font-semibold text-neutral-300">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-              <span>3D India Map</span>
-            </div>
-          )}
+          ) : null}
         </div>
 
         {/* Center: Omnibox Search Bar */}

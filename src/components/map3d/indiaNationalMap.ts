@@ -5,7 +5,6 @@ import { buildRibbonRivers } from "./ribbonRivers";
 import { buildTopographyMountains } from "./topographyMountains";
 import { buildTopographyBeaches } from "./topographyBeaches";
 import { buildProceduralFlora } from "./proceduralFlora";
-import { buildHighwayNetwork, HighwayNetworkResult } from "./highwayNetwork";
 
 export interface IndiaLandData {
   source?: string;
@@ -240,10 +239,6 @@ export function buildIndiaNationalMap(
   const flora = buildProceduralFlora();
   group.add(flora);
 
-  // 7. National Highway Spine & Commercial Energy Pulses
-  const highways: HighwayNetworkResult = buildHighwayNetwork(cities);
-  group.add(highways.group);
-
   // 4. Clean, Handcrafted City Hotspots (NO "Plot Available" text)
   const countsByCity = new Map<string, { count: number; firstShopName?: string }>();
   for (const s of storefronts) {
@@ -314,15 +309,14 @@ export function buildIndiaNationalMap(
     hitBoxes.push(hitBox);
   }
 
-  const update = (delta: number, _isNight: boolean, _camera: THREE.Camera) => {
-    highways.update(delta);
+  const update = (_delta: number, _isNight: boolean, _camera: THREE.Camera) => {
+    // Pure clean national map — zero clutter lines or distracting pulses
   };
 
   const dispose = () => {
     topMaterial.dispose();
     sideMaterial.dispose();
     outlineMaterial.dispose();
-    highways.dispose();
     ribbonRivers.geometry.dispose();
     if (ribbonRivers.material instanceof THREE.Material) {
       ribbonRivers.material.dispose();
