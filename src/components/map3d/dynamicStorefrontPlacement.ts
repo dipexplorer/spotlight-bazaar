@@ -49,11 +49,22 @@ export function computeDynamicStorefrontPlacements(
     (s) => !s?.city_name || s.city_name.toLowerCase() === cityLower
   );
 
-  // 1. Anchor businesses with real GPS coordinates
+  // 1. Anchor businesses with real GPS coordinates or Colony Postal Fallback
   for (const b of activeBusinesses) {
-    if (typeof b.lat === "number" && typeof b.lon === "number" && b.lat !== 0) {
-      const raw3D = projectGpsTo3D({ lat: b.lat, lon: b.lon }, anchor);
+    let raw3D: Vector2D | null = null;
+    const matchedColony =
+      colonies.find((c) => c.pincode === b.pincode) ||
+      colonies.find((c) => b.description?.toLowerCase().includes(c.name.toLowerCase())) ||
+      colonies[0];
 
+    if (typeof b.lat === "number" && typeof b.lon === "number" && b.lat !== 0) {
+      raw3D = projectGpsTo3D({ lat: b.lat, lon: b.lon }, anchor);
+    } else if (matchedColony) {
+      // Graceful Postal / Colony fallback: anchor at colony center
+      raw3D = { x: matchedColony.x, z: matchedColony.z };
+    }
+
+    if (raw3D) {
       // Find closest road segment
       let bestDist = Infinity;
       let bestRoad: RoadSegment2D | null = null;
@@ -83,9 +94,6 @@ export function computeDynamicStorefrontPlacements(
         const toRoadX = bestSnap.point.x - plotX;
         const toRoadZ = bestSnap.point.z - plotZ;
         const rotationY = Math.atan2(toRoadX, toRoadZ);
-
-        // Find matching colony by PIN
-        const matchedColony = colonies.find((c) => c.pincode === b.pincode) || colonies[0];
 
         placements.push({
           business: b,

@@ -203,39 +203,19 @@ export function buildIndiaNationalMap(
     group.add(mesh);
   }
 
-  // 2. Glowing Cyan Coastline Outline Contour
-  const outlineMaterial = new THREE.LineBasicMaterial({
-    color: 0x06b6d4, // Cyan glow
-    transparent: true,
-    opacity: 0.75,
-    linewidth: 2,
-  });
-
-  for (const ring of landData.rings) {
-    if (!ring || ring.length < 3) continue;
-    const points: THREE.Vector3[] = [];
-    for (const [lon, lat] of ring) {
-      const [x, z] = toWorld(lon, lat);
-      points.push(new THREE.Vector3(x, 6.02, z));
-    }
-    const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
-    const line = new THREE.Line(lineGeo, outlineMaterial);
-    group.add(line);
-  }
-
-  // 3. Volumetric Ribbon Rivers (Wide 3D strips visible from orbit to ground)
+  // 2. Volumetric Ribbon Rivers (Wide 3D waterways visible from orbit to ground)
   const ribbonRivers = buildRibbonRivers(riversData);
   group.add(ribbonRivers);
 
-  // 4. Golden Beach Coastline & Shallow Turquoise Ocean Reef Shelf
+  // 3. Golden Beach Coastline & Shallow Turquoise Ocean Reef Shelf
   const beaches = buildTopographyBeaches(landData);
   group.add(beaches);
 
-  // 5. Procedural 3D Mountain Topography (Himalayas, Western Ghats, Vindhyas, Satpuras, Shillong)
+  // 4. Procedural 3D Mountain Topography (Himalayas, Western Ghats, Vindhyas, Satpuras, Shillong)
   const mountains = buildTopographyMountains();
   group.add(mountains);
 
-  // 6. Instanced Flora and Tree Clusters across fertile river basins
+  // 5. Instanced Flora and Tree Clusters across fertile river basins
   const flora = buildProceduralFlora();
   group.add(flora);
 
@@ -316,7 +296,6 @@ export function buildIndiaNationalMap(
   const dispose = () => {
     topMaterial.dispose();
     sideMaterial.dispose();
-    outlineMaterial.dispose();
     ribbonRivers.geometry.dispose();
     if (ribbonRivers.material instanceof THREE.Material) {
       ribbonRivers.material.dispose();

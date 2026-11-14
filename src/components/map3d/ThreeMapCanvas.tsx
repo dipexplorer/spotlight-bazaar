@@ -9,7 +9,7 @@ import {
   buildIndiaNationalMap,
   NationalMapBuildResult,
 } from "./indiaNationalMap";
-import { buildBazaarStreet } from "./bazaarStreet";
+import { buildUniversalCity } from "./universalCityModel";
 import { GUWAHATI_COLONIES, ColonyDefinition } from "./guwahatiCityModel";
 import { getCityGeoConfig } from "@/lib/geo/cityGeoRegistry";
 import { TrafficSystem } from "./trafficSystem";
@@ -285,7 +285,7 @@ export function ThreeMapCanvas({
 
       try {
         console.log("[Spotlight 3D] Building Town High-Street for:", selectedCity.name);
-        const { group: bazaarGroup, hitBoxes, traffic, pedestrians, plots } = buildBazaarStreet(
+        const { group: bazaarGroup, hitBoxes, traffic, pedestrians, plots } = buildUniversalCity(
           selectedCity,
           storefronts
         );
