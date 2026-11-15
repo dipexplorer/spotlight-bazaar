@@ -49,6 +49,12 @@ export const DEFAULT_CITY_ANCHORS: Record<string, CityGeoAnchor> = {
     centerLon: 77.209,
     scaleFactor: 0.025,
   },
+  shillong: {
+    cityName: "Shillong",
+    centerLat: 25.5788,
+    centerLon: 91.8933,
+    scaleFactor: 0.025,
+  },
 };
 
 /**

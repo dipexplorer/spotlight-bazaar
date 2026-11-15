@@ -112,7 +112,8 @@ export function getLoadedCityRoads(citySlug: string): RoadSegment2D[] | null {
 }
 
 /**
- * Dynamically fetches and parses a city's GeoJSON road vector dataset from /data/geo/{citySlug}.roads.json
+ * Dynamically fetches and parses a city's GeoJSON road vector dataset from /api/geo/osm
+ * Falls back to /data/geo/{citySlug}.roads.json if needed.
  */
 export async function fetchCityRoadsGeoJson(
   citySlug: string,
@@ -121,6 +122,24 @@ export async function fetchCityRoadsGeoJson(
   const key = citySlug.toLowerCase().trim();
   if (roadCache.has(key)) {
     return roadCache.get(key)!;
+  }
+
+  try {
+    const lat = anchor.centerLat;
+    const lon = anchor.centerLon;
+    const res = await fetch(`/api/geo/osm?slug=${encodeURIComponent(key)}&lat=${lat}&lon=${lon}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.roads && data.roads.features) {
+        const segments = parseGeoJsonToRoads(data.roads, anchor);
+        if (segments.length > 0) {
+          roadCache.set(key, segments);
+          return segments;
+        }
+      }
+    }
+  } catch (apiErr) {
+    console.warn(`[DynamicRoadLoader] API fetch failed for ${key}, falling back to static file:`, apiErr);
   }
 
   try {
@@ -137,3 +156,4 @@ export async function fetchCityRoadsGeoJson(
     return [];
   }
 }
+

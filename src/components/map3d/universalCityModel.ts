@@ -1,3 +1,7 @@
+
+
+
+
 import * as THREE from "three";
 import { BusinessStorefront, City } from "@/types";
 import { buildCartoonStorefrontPlot, StorefrontMeshResult } from "./cartoonStorefront";
@@ -90,6 +94,18 @@ export const DELHI_ROADS: RoadSegmentDef[] = [
   { x1: -120.0, z1: 140.0, x2: -120.0, z2: 180.0, width: 10.0, name: "Cyber Hub & Golf Course Road" },
 ];
 
+export const SHILLONG_ROADS: RoadSegmentDef[] = [
+  { x1: -40.0, z1: 0.0, x2: 0.0, z2: 0.0, width: 9.0, name: "Police Bazar Commercial Circle" },
+  { x1: 0.0, z1: 0.0, x2: 30.0, z2: -15.0, width: 8.5, name: "Ward's Lake Promenade" },
+  { x1: 0.0, z1: 0.0, x2: 45.0, z2: 25.0, width: 9.0, name: "Laitumkhrah Main High Street" },
+  { x1: 45.0, z1: 25.0, x2: 85.0, z2: 40.0, width: 8.5, name: "Don Bosco / Cathedral Avenue" },
+  { x1: 0.0, z1: 0.0, x2: -25.0, z2: -45.0, width: 8.5, name: "Polo Ground Sports Boulevard" },
+  { x1: -25.0, z1: -45.0, x2: 20.0, z2: -65.0, width: 8.0, name: "Golf Links Scenic Drive" },
+  { x1: -40.0, z1: 0.0, x2: -50.0, z2: 35.0, width: 8.5, name: "GS Road Shillong Gateway" },
+  { x1: -50.0, z1: 35.0, x2: -65.0, z2: 80.0, width: 9.0, name: "Upper Shillong & Peak Road" },
+  { x1: -65.0, z1: 80.0, x2: -110.0, z2: 120.0, width: 8.5, name: "Elephant Falls Approach" },
+];
+
 /**
  * Returns the road segments for a given city slug.
  */
@@ -98,6 +114,7 @@ export function getCityRoads(slug: string): RoadSegmentDef[] {
   if (s.includes("mumbai")) return MUMBAI_ROADS;
   if (s.includes("bangalore") || s.includes("bengaluru")) return BANGALORE_ROADS;
   if (s.includes("delhi")) return DELHI_ROADS;
+  if (s.includes("shillong")) return SHILLONG_ROADS;
   // Default regional arterial grid for other cities
   return [
     { x1: -120, z1: 0, x2: 120, z2: 0, width: 9.5, name: "Grand Trunk Commercial Boulevard" },
@@ -119,11 +136,13 @@ export function getCityRoads(slug: string): RoadSegmentDef[] {
  */
 export function buildUniversalCity(
   city: City,
-  storefronts: BusinessStorefront[]
+  storefronts: BusinessStorefront[],
+  dynamicRoads?: RoadSegmentDef[]
 ): BazaarStreetBuildResult {
   const slug = (city.slug || city.name).toLowerCase();
 
-  // If Guwahati, delegate directly to the dedicated, comprehensive Guwahati model
+  // Guwahati has a dedicated, handcrafted GIS 3D model with Saraighat Bridge,
+  // Brahmaputra S-curve, Umananda Island, Nilachal/Kamakhya hills & Google Maps road network.
   if (slug === "guwahati") {
     const guwahati = buildGuwahatiCity(storefronts);
     return {
@@ -151,7 +170,7 @@ export function buildUniversalCity(
   const disposables: { dispose: () => void }[] = [];
 
   const config: CityGeoConfig = getCityGeoConfig(slug);
-  const roads = getCityRoads(slug);
+  const roads = dynamicRoads && dynamicRoads.length > 0 ? dynamicRoads : getCityRoads(slug);
 
   // 1. TERRAIN & NATURAL LANDSCAPE
   const terrainGeo = new THREE.PlaneGeometry(3200, 2800, 80, 70);
@@ -161,6 +180,7 @@ export function buildUniversalCity(
   const isCoastal = config.landscapeType === "coastal_peninsula"; // Mumbai
   const isPlateau = config.landscapeType === "plateau_lakes";     // Bangalore
   const isRiverPlain = config.landscapeType === "river_plain";    // Delhi
+  const isMountain = config.landscapeType === "mountain_highland"; // Shillong
 
   const groundColor = isCoastal
     ? 0x2e7d32 // Coastal lush palm green
@@ -168,6 +188,8 @@ export function buildUniversalCity(
     ? 0x15803d // Garden City emerald green
     : isRiverPlain
     ? 0x3f6212 // Gangetic plain olive green
+    : isMountain
+    ? 0x1b4332 // Alpine pine mountain green
     : 0x247a3e;
 
   const terrainMat = new THREE.MeshStandardMaterial({
@@ -188,7 +210,14 @@ export function buildUniversalCity(
     transparent: true,
     opacity: 0.94,
   });
-  disposables.push(waterMat);
+  const cyanRimMat = new THREE.MeshStandardMaterial({
+    color: 0x38bdf8, // Signature cartoon cyan shallow water rim (matching indiaagain)
+    roughness: 0.15,
+    metalness: 0.25,
+    transparent: true,
+    opacity: 0.95,
+  });
+  disposables.push(waterMat, cyanRimMat);
 
   for (const wb of config.waterBodies) {
     const wGeo = new THREE.PlaneGeometry(wb.width, wb.length);
@@ -198,11 +227,20 @@ export function buildUniversalCity(
     wMesh.position.set(wb.x, 0.04, wb.z);
     wMesh.receiveShadow = true;
     group.add(wMesh);
-    disposables.push(wGeo);
+
+    // Cyan shallow water border rim
+    const rimGeo = new THREE.PlaneGeometry(wb.width + 8, wb.length + 8);
+    rimGeo.rotateX(-Math.PI / 2);
+    if (wb.rotationY) rimGeo.rotateY(wb.rotationY);
+    const rimMesh = new THREE.Mesh(rimGeo, cyanRimMat);
+    rimMesh.position.set(wb.x, 0.038, wb.z);
+    group.add(rimMesh);
+
+    disposables.push(wGeo, rimGeo);
 
     // Sandy coast/beach for oceans & lakes
     if (wb.type === "ocean" || wb.type === "lake") {
-      const sandGeo = new THREE.PlaneGeometry(wb.width + 16, wb.length + 16);
+      const sandGeo = new THREE.PlaneGeometry(wb.width + 18, wb.length + 18);
       sandGeo.rotateX(-Math.PI / 2);
       const sandMat = new THREE.MeshStandardMaterial({ color: 0xf1dfaa, roughness: 0.9 });
       const sandMesh = new THREE.Mesh(sandGeo, sandMat);
@@ -210,6 +248,32 @@ export function buildUniversalCity(
       sandMesh.receiveShadow = true;
       group.add(sandMesh);
       disposables.push(sandGeo, sandMat);
+    }
+  }
+
+  // Faceted Mountain Ridge Hills for Highland landscapes (Shillong)
+  if (isMountain) {
+    const hillMat = new THREE.MeshStandardMaterial({
+      color: 0x1b4332,
+      roughness: 0.88,
+      flatShading: true,
+    });
+    disposables.push(hillMat);
+    const hillOffsets = [
+      { x: -140, z: -160, r: 80, h: 55 },
+      { x: 0, z: -200, r: 95, h: 65 },
+      { x: 150, z: -170, r: 85, h: 60 },
+      { x: -180, z: 80, r: 90, h: 60 },
+      { x: 160, z: 120, r: 85, h: 58 },
+      { x: -90, z: 200, r: 100, h: 70 },
+      { x: 90, z: 210, r: 95, h: 68 },
+    ];
+    for (const ho of hillOffsets) {
+      const hGeo = new THREE.ConeGeometry(ho.r, ho.h, 7);
+      const hMesh = new THREE.Mesh(hGeo, hillMat);
+      hMesh.position.set(ho.x, ho.h / 2, ho.z);
+      group.add(hMesh);
+      disposables.push(hGeo);
     }
   }
 

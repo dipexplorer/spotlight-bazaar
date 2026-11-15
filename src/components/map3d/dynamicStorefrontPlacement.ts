@@ -25,6 +25,7 @@ export interface DynamicPlotPlacement {
   isLeft: boolean;
   isConstruction?: boolean;
   isEmptyPlot?: boolean;
+  isResidential?: boolean;
   colonyName: string;
   pincode: string;
   tier: number;
@@ -241,6 +242,80 @@ export function computeDynamicStorefrontPlacements(
         pincode: ap.pincode,
         tier: 1,
       });
+    }
+  }
+
+  // 3. Populate All Road Corridors with Living Cottages, Available Plots & Construction (IndiaAgain Style)
+  // Ensures every avenue has charming rhythmic plots without empty ghost-town voids
+  const isTooClose = (x: number, z: number, minDist = 13.5) => {
+    return placements.some((p) => Math.hypot(p.x - x, p.z - z) < minDist);
+  };
+
+  let globalPlotCounter = 0;
+  for (const r of roads) {
+    // Skip water bridge spans and ramps
+    if (
+      r.name.includes("Saraighat Bridge") ||
+      r.name.includes("Ramp") ||
+      r.name.includes("Over Brahmaputra")
+    ) {
+      continue;
+    }
+
+    const dx = r.x2 - r.x1;
+    const dz = r.z2 - r.z1;
+    const len = Math.hypot(dx, dz);
+    if (len < 22.0) continue;
+
+    const ux = dx / len;
+    const uz = dz / len;
+    const nx = -uz;
+    const nz = ux;
+
+    const offsetDist = r.width / 2 + 7.2;
+    const stepSize = 15.5;
+    const startInset = Math.min(len * 0.15, 12.0);
+    const endInset = len - startInset;
+
+    for (let dist = startInset; dist <= endInset; dist += stepSize) {
+      const midX = r.x1 + ux * dist;
+      const midZ = r.z1 + uz * dist;
+
+      // Alternate left and right side of street
+      for (const side of [-1, 1]) {
+        const plotX = midX + nx * offsetDist * side;
+        const plotZ = midZ + nz * offsetDist * side;
+
+        // Skip if too close to existing plots or in river water
+        if (isTooClose(plotX, plotZ, 13.0)) continue;
+        // Avoid northern river basin
+        if (plotZ < -130 && Math.abs(plotX) < 180) continue;
+        // Keep western cricket meadow clear
+        if (Math.hypot(plotX - -85, plotZ - 85) < 32.0) continue;
+
+        const toRoadX = midX - plotX;
+        const toRoadZ = midZ - plotZ;
+        const rotationY = Math.atan2(toRoadX, toRoadZ);
+
+        globalPlotCounter++;
+        const isAvail = globalPlotCounter % 5 === 0;
+        const isConst = !isAvail && globalPlotCounter % 7 === 0;
+        const isRes = !isAvail && !isConst;
+
+        placements.push({
+          business: null,
+          x: Number(plotX.toFixed(2)),
+          z: Number(plotZ.toFixed(2)),
+          rotationY,
+          isLeft: side === -1,
+          isConstruction: isConst,
+          isEmptyPlot: isAvail,
+          isResidential: isRes,
+          colonyName: r.name,
+          pincode: "781005",
+          tier: 1,
+        });
+      }
     }
   }
 

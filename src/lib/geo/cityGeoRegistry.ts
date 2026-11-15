@@ -6,6 +6,7 @@ export type CityLandscapeType =
   | "coastal_peninsula"   // Mumbai (Arabian Sea, Marine Drive, Coastline)
   | "plateau_lakes"       // Bangalore (Deccan Plateau, Lakes, Cubbon Park)
   | "river_plain"         // Delhi (Yamuna River, Ring Roads, Aravalli Ridge)
+  | "mountain_highland"   // Shillong (Pine Hills, Ward's Lake, Serpentine Ridges)
   | "heritage_delta";     // Kolkata (Hooghly River & Delta)
 
 export interface WaterBodyConfig {
@@ -51,8 +52,8 @@ export const CITY_GEO_REGISTRY: Record<string, CityGeoConfig> = {
       { type: "lake", name: "Silsako Beel", x: 185, z: 110, width: 60, length: 28, color: 0x0284c7 },
     ],
     droneCamera: {
-      pos: [110, 180, 260],
-      target: [10, 2, 5],
+      pos: [50, 240, 290],
+      target: [15, 0, 35],
     },
     roadsGeoJsonPath: "/data/geo/guwahati.roads.json",
   },
@@ -126,6 +127,28 @@ export const CITY_GEO_REGISTRY: Record<string, CityGeoConfig> = {
       target: [0, 2, 30],
     },
     roadsGeoJsonPath: "/data/geo/delhi.roads.json",
+  },
+  shillong: {
+    slug: "shillong",
+    cityName: "Shillong",
+    state: "Meghalaya",
+    anchor: DEFAULT_CITY_ANCHORS.shillong,
+    landscapeType: "mountain_highland",
+    colonies: [
+      { name: "Police Bazar Commercial Circle", pincode: "793001", zone: "Retail & Cultural Hub", x: 0, z: 0, description: "Heart of Shillong, bustling bazaars, street cafes & handicraft emporiums" },
+      { name: "Laitumkhrah Main High Street", pincode: "793003", zone: "Academic & Gourmet Corridor", x: 45, z: 25, description: "Vibrant indie cafes, bakeries & student avenue" },
+      { name: "Ward's Lake & Botanical Gardens", pincode: "793001", zone: "Heritage Lakefront", x: 10, z: -25, description: "Horseshoe lake, wooden bridges & cherry blossoms" },
+      { name: "Polo Grounds & Sports Enclave", pincode: "793001", zone: "Sports & Traditional Markets", x: -25, z: -45, description: "Stadiums, archery grounds & local produce bazars" },
+      { name: "Upper Shillong & Peak Road", pincode: "793005", zone: "Highland Tea & Pine Ridge", x: -60, z: 75, description: "Panoramic valley viewpoints & pine-covered ridges" },
+    ],
+    waterBodies: [
+      { type: "lake", name: "Ward's Lake", x: 10, z: -25, width: 48, length: 26, color: 0x0ea5e9 },
+    ],
+    droneCamera: {
+      pos: [35, 190, 240],
+      target: [0, 2, 0],
+    },
+    roadsGeoJsonPath: "/data/geo/shillong.roads.json",
   },
 };
 

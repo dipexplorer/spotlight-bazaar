@@ -121,16 +121,15 @@ export function buildCartoonStorefrontPlot(
   zOffset: number,
   isConstruction = false,
   isEmptyPlot = false,
-  customRotationY?: number
+  customRotationY?: number,
+  isResidential = false
 ): StorefrontMeshResult {
   const parts: THREE.BufferGeometry[] = [];
 
-  // Plot Dimensions (18m wide x 18m deep)
-  const plotW = 18;
-  const plotD = 18;
+  // Plot Dimensions (14m wide x 14m deep)
+  const plotW = 14;
+  const plotD = 14;
   // Positive Z (facade/entrance) faces the street:
-  // When isLeft is true (plot on right/east side of street at x=74, street at x=60),
-  // facade must face West (-X), so rotationY = -Math.PI / 2.
   const rotationY = customRotationY !== undefined ? customRotationY : (isLeft ? -Math.PI / 2 : Math.PI / 2);
 
   // 1. Plot Base Grounds (Lush Green Lawn)
@@ -141,66 +140,146 @@ export function buildCartoonStorefrontPlot(
   if (isEmptyPlot) {
     // CLEAN LANDSCAPED OPEN COMMERCIAL PLOT ("Claim Plot ₹0")
     // Lush manicured turf
-    parts.push(box(plotW - 1.0, 0.1, plotD - 1.0, "#166534", 0, 0.04, 0));
+    parts.push(box(plotW - 0.8, 0.1, plotD - 0.8, "#166534", 0, 0.04, 0));
 
     // Survey boundary corner posts
-    for (const sx of [-7.5, 7.5]) {
-      for (const sz of [-7.5, 7.5]) {
-        parts.push(box(0.4, 0.8, 0.4, "#f1f5f9", sx, 0, sz));
-        parts.push(box(0.48, 0.15, 0.48, "#38bdf8", sx, 0.8, sz));
+    for (const sx of [-5.5, 5.5]) {
+      for (const sz of [-5.5, 5.5]) {
+        parts.push(box(0.35, 0.7, 0.35, "#f1f5f9", sx, 0, sz));
+        parts.push(box(0.42, 0.12, 0.42, "#38bdf8", sx, 0.7, sz));
       }
     }
 
     // Low wooden post-and-rail perimeter boundary fence
     for (const side of [-1, 1]) {
-      parts.push(box(0.12, 0.65, plotD - 3, "#d97706", side * 7.5, 0, 0));
-      parts.push(box(plotW - 3, 0.65, 0.12, "#d97706", 0, 0, side * 7.5));
+      parts.push(box(0.1, 0.55, plotD - 2.5, "#d97706", side * 5.5, 0, 0));
+      parts.push(box(plotW - 2.5, 0.55, 0.1, "#d97706", 0, 0, side * 5.5));
     }
 
-    // Centered survey peg & marker
+    // Centered survey peg & claim plot signboard
     parts.push(cylinder(0.08, 0.08, 1.4, 6, "#cbd5e1", 0, 0, 0));
-    parts.push(box(0.8, 0.4, 0.05, "#38bdf8", 0.4, 1.0, 0));
+    parts.push(box(1.4, 0.65, 0.08, "#f59e0b", 0, 1.1, 0));
 
     badgeY = 2.4;
   } else if (isConstruction) {
     // UNDER CONSTRUCTION PLOT: Concrete foundations, rebar columns, scaffolding, crane
     // Concrete foundation plinth
-    parts.push(box(13, 0.4, 11, "#cbd5e1", -1, 0, -1));
+    parts.push(box(10.5, 0.4, 9.5, "#cbd5e1", -0.5, 0, -0.5));
 
     // Exposed red brick masonry wall segments
-    parts.push(box(11.5, 2.2, 0.4, "#b91c1c", -1, 0.4, 4.2));
-    parts.push(box(0.4, 2.2, 9.5, "#b91c1c", -6.5, 0.4, -0.5));
-    parts.push(box(4.5, 2.2, 0.4, "#991b1b", 2.5, 0.4, -5.2));
+    parts.push(box(9.5, 2.0, 0.35, "#b91c1c", -0.5, 0.4, 3.8));
+    parts.push(box(0.35, 2.0, 8.0, "#b91c1c", -5.0, 0.4, -0.5));
+    parts.push(box(4.0, 2.0, 0.35, "#991b1b", 2.0, 0.4, -4.5));
 
-    // 8 Reinforced concrete columns with protruding rebar steel cages
-    for (const cx of [-6, -2, 2, 5]) {
-      for (const cz of [-5, 4]) {
-        parts.push(box(0.55, 4.2, 0.55, "#94a3b8", cx, 0.4, cz));
-        // Steel rebar extending out top
-        for (let r = 0; r < 4; r++) {
-          const rox = (r % 2 === 0 ? -0.15 : 0.15);
-          const roz = (r < 2 ? -0.15 : 0.15);
-          parts.push(cylinder(0.02, 0.02, 1.2, 4, "#ea580c", cx + rox, 4.6, cz + roz));
-        }
+    // Reinforced concrete columns with protruding rebar steel cages
+    for (const cx of [-4.5, -1.5, 1.5, 4.0]) {
+      for (const cz of [-4.0, 3.5]) {
+        parts.push(box(0.48, 3.6, 0.48, "#94a3b8", cx, 0.4, cz));
+        parts.push(cylinder(0.02, 0.02, 1.0, 4, "#ea580c", cx, 4.0, cz));
       }
     }
 
     // Timber Scaffolding Poles & Crossbeams
     const scaffoldColor = "#78350f";
-    for (const sx of [-6.8, -1.5, 3.8]) {
-      for (const sz of [-5.8, 4.8]) {
-        parts.push(cylinder(0.07, 0.07, 6.2, 6, scaffoldColor, sx, 0, sz));
+    for (const sx of [-5.2, -1.0, 3.2]) {
+      for (const sz of [-4.6, 4.2]) {
+        parts.push(cylinder(0.06, 0.06, 5.2, 6, scaffoldColor, sx, 0, sz));
       }
     }
-    parts.push(box(11, 0.1, 0.1, scaffoldColor, -1.5, 3.0, 4.8));
-    parts.push(box(11, 0.1, 0.1, scaffoldColor, -1.5, 5.2, 4.8));
+    parts.push(box(9.0, 0.08, 0.08, scaffoldColor, -1.0, 2.5, 4.2));
 
     // Yellow Construction Crane Mast & Jib
-    parts.push(box(0.65, 13.5, 0.65, "#facc15", 6.2, 0, -5.5));
-    parts.push(box(9.5, 0.55, 0.55, "#facc15", 2.5, 13.5, -5.5));
-    parts.push(cylinder(0.04, 0.04, 4.5, 4, "#334155", 0.5, 9.0, -5.5)); // Cable
+    parts.push(box(0.55, 10.5, 0.55, "#facc15", 5.0, 0, -4.5));
+    parts.push(box(7.5, 0.45, 0.45, "#facc15", 2.0, 10.5, -4.5));
+    parts.push(cylinder(0.03, 0.03, 3.5, 4, "#334155", 0.5, 7.0, -4.5)); // Cable
 
-    badgeY = 8.6;
+    badgeY = 7.5;
+  } else if (isResidential || !business) {
+    // CHARMING LOW-POLY COTTAGE VILLA (Matching the iconic indiaagain.live aesthetic)
+    // Terracotta red, warm clay orange, deep crimson, and navy tile roofs
+    const roofColors = ["#dc2626", "#ea580c", "#b91c1c", "#c2410c", "#1e3a8a", "#15803d", "#d97706"];
+    const roofColor = roofColors[plotIndex % roofColors.length];
+    const wallColors = ["#f8fafc", "#fef3c7", "#f1f5f9", "#ffedd5"];
+    const wallColor = wallColors[(plotIndex * 3) % wallColors.length];
+
+    // 1. Manicured lawn pad
+    parts.push(box(plotW - 0.8, 0.1, plotD - 0.8, "#166534", 0, 0.04, 0));
+
+    // 2. Driveway / pathway to front door
+    parts.push(box(2.2, 0.1, plotD / 2, "#cbd5e1", 2.2, 0, plotD / 4));
+
+    // 3. Foundation plinth
+    const plinthH = 0.35;
+    const houseW = 8.2;
+    const houseD = 7.0;
+    const houseH = 3.2;
+    parts.push(box(houseW + 0.5, plinthH, houseD + 0.5, "#94a3b8", -0.4, 0, -0.6));
+
+    // 4. Main House Body Walls
+    parts.push(box(houseW, houseH, houseD, wallColor, -0.4, plinthH, -0.6));
+
+    // 5. Classic Gabled / Pitched Roof (Slanted roof slopes meeting at apex ridge)
+    const ridgeH = 2.3;
+    const slopeW = 4.9;
+    const angle = Math.atan2(ridgeH, houseW / 2 + 0.3);
+    const roofLen = houseD + 1.0;
+
+    // Left roof slope
+    const leftSlopeGeo = new THREE.BoxGeometry(slopeW, 0.22, roofLen);
+    leftSlopeGeo.rotateZ(angle);
+    leftSlopeGeo.translate(-0.4 - (houseW / 4 + 0.15), plinthH + houseH + ridgeH / 2, -0.6);
+    parts.push(paint(leftSlopeGeo, roofColor));
+
+    // Right roof slope
+    const rightSlopeGeo = new THREE.BoxGeometry(slopeW, 0.22, roofLen);
+    rightSlopeGeo.rotateZ(-angle);
+    rightSlopeGeo.translate(-0.4 + (houseW / 4 + 0.15), plinthH + houseH + ridgeH / 2, -0.6);
+    parts.push(paint(rightSlopeGeo, roofColor));
+
+    // Front & Back triangular gables
+    const frontGableShape = new THREE.Shape();
+    frontGableShape.moveTo(-houseW / 2, 0);
+    frontGableShape.lineTo(0, ridgeH);
+    frontGableShape.lineTo(houseW / 2, 0);
+    frontGableShape.closePath();
+    const frontGableGeo = new THREE.ShapeGeometry(frontGableShape);
+    frontGableGeo.translate(-0.4, plinthH + houseH, -0.6 + houseD / 2 - 0.05);
+    parts.push(paint(frontGableGeo, wallColor));
+
+    const backGableGeo = frontGableGeo.clone();
+    backGableGeo.translate(0, 0, -houseD + 0.1);
+    parts.push(paint(backGableGeo, wallColor));
+
+    // 6. Brick Chimney
+    if (plotIndex % 2 === 0) {
+      parts.push(box(0.7, 1.8, 0.7, "#b91c1c", -2.8, plinthH + houseH + 0.6, -1.8));
+      parts.push(box(0.85, 0.12, 0.85, "#334155", -2.8, plinthH + houseH + 2.4, -1.8));
+    }
+
+    // 7. Front Porch, Door & Windows
+    // Front wooden door
+    parts.push(box(1.2, 2.1, 0.1, "#78350f", -0.4, plinthH, -0.6 + houseD / 2 + 0.02));
+    parts.push(box(0.08, 0.18, 0.08, "#fbbf24", 0.1, plinthH + 1.0, -0.6 + houseD / 2 + 0.08));
+
+    // Front Porch awning
+    parts.push(box(2.0, 0.12, 1.3, roofColor, -0.4, plinthH + 2.3, -0.6 + houseD / 2 + 0.65));
+    parts.push(cylinder(0.05, 0.05, 2.3, 6, "#78350f", -1.3, plinthH, -0.6 + houseD / 2 + 1.2));
+    parts.push(cylinder(0.05, 0.05, 2.3, 6, "#78350f", 0.5, plinthH, -0.6 + houseD / 2 + 1.2));
+
+    // Front windows (two glowing cyan window panes with dark charcoal frames)
+    const windowCyan = "#38bdf8";
+    parts.push(box(1.4, 1.3, 0.08, windowCyan, -2.6, plinthH + 1.1, -0.6 + houseD / 2 + 0.02));
+    parts.push(box(1.5, 0.08, 0.1, "#1e293b", -2.6, plinthH + 1.1, -0.6 + houseD / 2 + 0.03));
+    parts.push(box(0.08, 1.4, 0.1, "#1e293b", -2.6, plinthH + 1.1, -0.6 + houseD / 2 + 0.03));
+
+    parts.push(box(1.4, 1.3, 0.08, windowCyan, 1.8, plinthH + 1.1, -0.6 + houseD / 2 + 0.02));
+    parts.push(box(1.5, 0.08, 0.1, "#1e293b", 1.8, plinthH + 1.1, -0.6 + houseD / 2 + 0.03));
+    parts.push(box(0.08, 1.4, 0.1, "#1e293b", 1.8, plinthH + 1.1, -0.6 + houseD / 2 + 0.03));
+
+    // 8. Low front garden hedge along roadside
+    parts.push(box(plotW - 3.8, 0.5, 0.5, "#15803d", -1.5, 0, plotD / 2 - 0.35));
+
+    badgeY = plinthH + houseH + ridgeH + 1.5;
   } else {
     // FULLY BUILT MODERN LUXURY ARCHITECTURAL VILLA / DIGITAL STUDIO
     // (Nerqiva Studio Flagship and premier commercial studios)

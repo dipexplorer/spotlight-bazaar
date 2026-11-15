@@ -12,6 +12,7 @@ import {
 import { buildUniversalCity } from "./universalCityModel";
 import { GUWAHATI_COLONIES, ColonyDefinition } from "./guwahatiCityModel";
 import { getCityGeoConfig } from "@/lib/geo/cityGeoRegistry";
+import { fetchCityRoadsGeoJson } from "@/lib/geo/dynamicRoadLoader";
 import { TrafficSystem } from "./trafficSystem";
 import { PedestrianSystem } from "./pedestrianSystem";
 import { StorefrontMeshResult } from "./cartoonStorefront";
@@ -277,53 +278,83 @@ export function ThreeMapCanvas({
       plotsRef.current = [];
     }
 
+    let isCancelled = false;
+
     if (selectedCity) {
       // Hide National Map in Town view
       if (nationalMapRef.current) {
         nationalMapRef.current.group.visible = false;
       }
 
-      try {
-        console.log("[Spotlight 3D] Building Town High-Street for:", selectedCity.name);
-        const { group: bazaarGroup, hitBoxes, traffic, pedestrians, plots } = buildUniversalCity(
-          selectedCity,
-          storefronts
-        );
-        scene.add(bazaarGroup);
-        currentBazaarGroupRef.current = bazaarGroup;
-        trafficRef.current = traffic;
-        pedestriansRef.current = pedestrians;
-        hitBoxesRef.current = hitBoxes;
-        plotsRef.current = plots;
-
-        // Instantiate controllable 3D Player Avatar outside Nerqiva Studio gate
-        const isGuwahati = selectedCity.slug === "guwahati" || selectedCity.name.toLowerCase() === "guwahati";
-        const playerAvatar = createPlayerAvatarSystem(
-          isGuwahati ? 64 : -8.2,
-          0.44,
-          isGuwahati ? 2 : 16,
-          "@spotlight.bazaar"
-        );
-        scene.add(playerAvatar.group);
-        playerAvatarRef.current = playerAvatar;
-
-        // UNLOCKED DEEP DRONE ZOOM & STREET NAVIGATION:
-        // Wide-range zooming from high-altitude orbital drone overview (2400m) down to intimate street inspection (1.8m)
-        if (controlsRef.current) {
-          controlsRef.current.minDistance = 1.8;
-          controlsRef.current.maxDistance = 2400;
-          controlsRef.current.maxPolarAngle = Math.PI / 2.02;
+      const loadCityEnvironment = async () => {
+        try {
+          console.log("[Spotlight 3D] Dynamically building City 3D Map for:", selectedCity.name);
           const cityGeo = getCityGeoConfig(selectedCity.slug || selectedCity.name);
-          const targetCoords = cityGeo.droneCamera.target;
-          controlsRef.current.target.set(targetCoords[0], targetCoords[1], targetCoords[2]);
-          controlsRef.current.screenSpacePanning = true;
-        }
 
-        updateEnvironmentLighting(isNightRef.current);
-        flyToCityStreet(selectedCity, isWalkModeRef.current);
-      } catch (err) {
-        console.error("[Spotlight 3D] Failed to build Town Street:", err);
-      }
+          let dynamicRoads = undefined;
+          try {
+            const loadedRoads = await fetchCityRoadsGeoJson(
+              selectedCity.slug || selectedCity.name,
+              cityGeo.anchor
+            );
+            if (loadedRoads && loadedRoads.length > 0) {
+              dynamicRoads = loadedRoads;
+              console.log(
+                `[Spotlight 3D] Loaded ${loadedRoads.length} dynamic OSM road segments for ${selectedCity.name}`
+              );
+            }
+          } catch (geoErr) {
+            console.warn(`[Spotlight 3D] Dynamic road fetch fallback:`, geoErr);
+          }
+
+          if (isCancelled) return;
+
+          const { group: bazaarGroup, hitBoxes, traffic, pedestrians, plots } = buildUniversalCity(
+            selectedCity,
+            storefronts,
+            dynamicRoads
+          );
+
+          if (isCancelled) return;
+
+          scene.add(bazaarGroup);
+          currentBazaarGroupRef.current = bazaarGroup;
+          trafficRef.current = traffic;
+          pedestriansRef.current = pedestrians;
+          hitBoxesRef.current = hitBoxes;
+          plotsRef.current = plots;
+
+          // Instantiate controllable 3D Player Avatar
+          const isGuwahati = selectedCity.slug === "guwahati" || selectedCity.name.toLowerCase() === "guwahati";
+          const playerAvatar = createPlayerAvatarSystem(
+            isGuwahati ? 64 : -8.2,
+            0.44,
+            isGuwahati ? 2 : 16,
+            "@spotlight.bazaar"
+          );
+          scene.add(playerAvatar.group);
+          playerAvatarRef.current = playerAvatar;
+
+          // OPTIMAL ORBIT & DRONE VIEWPORT CONTROLS:
+          // Clamped bounds to guarantee the city map stays in full, crisp view without sky blow-out
+          if (controlsRef.current) {
+            controlsRef.current.minDistance = 15;
+            controlsRef.current.maxDistance = 580;
+            controlsRef.current.minPolarAngle = Math.PI / 8;
+            controlsRef.current.maxPolarAngle = Math.PI / 2.18;
+            const targetCoords = cityGeo.droneCamera.target;
+            controlsRef.current.target.set(targetCoords[0], targetCoords[1], targetCoords[2]);
+            controlsRef.current.screenSpacePanning = false;
+          }
+
+          updateEnvironmentLighting(isNightRef.current);
+          flyToCityStreet(selectedCity, isWalkModeRef.current);
+        } catch (err) {
+          console.error("[Spotlight 3D] Failed to build Town Street:", err);
+        }
+      };
+
+      loadCityEnvironment();
     } else {
       // 3D India National Map Mode: Restore national orbit limits
       if (nationalMapRef.current) {
@@ -342,6 +373,10 @@ export function ThreeMapCanvas({
       updateEnvironmentLighting(isNightRef.current);
       resetCamera();
     }
+
+    return () => {
+      isCancelled = true;
+    };
   }, [selectedCity, storefronts, isSceneReady, flyToCityStreet, resetCamera, updateEnvironmentLighting]);
 
   // Toggle Day/Night Lighting
@@ -403,15 +438,17 @@ export function ThreeMapCanvas({
     controls.screenSpacePanning = true;
 
     if (selectedCityRef.current && currentGeoConfig) {
-      controls.minDistance = 2.8;
-      controls.maxDistance = 2600;
-      controls.maxPolarAngle = Math.PI / 2.02;
+      controls.minDistance = 15;
+      controls.maxDistance = 580;
+      controls.minPolarAngle = Math.PI / 8;
+      controls.maxPolarAngle = Math.PI / 2.18;
       controls.target.set(...currentGeoConfig.droneCamera.target);
+      controls.screenSpacePanning = false;
     } else {
       // National Map: Unlocked deep zoom down to regional level
       controls.minDistance = 35;
-      controls.maxDistance = 2800;
-      controls.maxPolarAngle = Math.PI / 2.05;
+      controls.maxDistance = 1800;
+      controls.maxPolarAngle = Math.PI / 2.1;
       controls.target.set(0, 0, 30);
     }
 
@@ -743,6 +780,14 @@ export function ThreeMapCanvas({
           targetCamPosRef.current = null;
           targetLookAtRef.current = null;
         }
+      }
+
+      if (selectedCityRef.current) {
+        // Firm bounds clamping on controls.target to keep city in view and prevent sky blow-out
+        controls.target.x = THREE.MathUtils.clamp(controls.target.x, -280, 280);
+        controls.target.z = THREE.MathUtils.clamp(controls.target.z, -220, 220);
+        controls.target.y = THREE.MathUtils.clamp(controls.target.y, 0, 25);
+        camera.position.y = Math.max(camera.position.y, 5.0);
       }
 
       controls.update();
