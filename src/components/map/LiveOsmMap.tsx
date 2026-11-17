@@ -161,6 +161,98 @@ function getConnectorRoadCoordinates(): [number, number][] {
   return coords;
 }
 
+// India-only hard bounds & national 3D island view constants
+const INDIA_CENTER: [number, number] = [81.5, 20.6];
+const INDIA_MAX_BOUNDS: [[number, number], [number, number]] = [
+  [58.0, 0.5],
+  [108.0, 42.5],
+];
+const INDIA_MIN_ZOOM = 3.9;
+
+interface IndiaGeoData {
+  landGeoJSON: GeoJSON.Feature<GeoJSON.MultiPolygon>;
+  oceanMaskGeoJSON: GeoJSON.Feature<GeoJSON.Polygon>;
+}
+
+let cachedIndiaGeoDataPromise: Promise<IndiaGeoData | null> | null = null;
+
+function ringSignedArea(ring: [number, number][]): number {
+  let area = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    area += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1];
+  }
+  return area / 2;
+}
+
+function normalizeClosedRing(raw: [number, number][], wantCCW: boolean): [number, number][] {
+  const pts: [number, number][] = raw.map(([lon, lat]) => [lon, lat]);
+  const first = pts[0];
+  const last = pts[pts.length - 1];
+  if (first[0] !== last[0] || first[1] !== last[1]) {
+    pts.push([first[0], first[1]]);
+  }
+  const isCCW = ringSignedArea(pts) > 0;
+  if (isCCW !== wantCCW) {
+    pts.reverse();
+  }
+  return pts;
+}
+
+function loadIndiaBoundaryData(): Promise<IndiaGeoData | null> {
+  if (cachedIndiaGeoDataPromise) return cachedIndiaGeoDataPromise;
+  cachedIndiaGeoDataPromise = fetch("/data/india-land.json")
+    .then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    })
+    .then((data: { rings?: [number, number][][] }) => {
+      if (!data?.rings || data.rings.length === 0) return null;
+
+      // MultiPolygon of official Survey of India landmass + Andaman & Nicobar + Lakshadweep (CCW exterior rings)
+      const multiPolyCoords = data.rings
+        .filter((r) => r.length >= 3)
+        .map((r) => [normalizeClosedRing(r, true)]);
+
+      const landGeoJSON: GeoJSON.Feature<GeoJSON.MultiPolygon> = {
+        type: "Feature",
+        properties: { name: "India" },
+        geometry: {
+          type: "MultiPolygon",
+          coordinates: multiPolyCoords,
+        },
+      };
+
+      // Inverted globe ocean mask: outer globe ring CCW + all official India rings as CW holes
+      const outerGlobeRing: [number, number][] = [
+        [-180, -85],
+        [180, -85],
+        [180, 85],
+        [-180, 85],
+        [-180, -85],
+      ];
+      const holeRings = data.rings
+        .filter((r) => r.length >= 3)
+        .map((r) => normalizeClosedRing(r, false));
+
+      const oceanMaskGeoJSON: GeoJSON.Feature<GeoJSON.Polygon> = {
+        type: "Feature",
+        properties: { name: "Ocean Mask" },
+        geometry: {
+          type: "Polygon",
+          coordinates: [outerGlobeRing, ...holeRings],
+        },
+      };
+
+      return { landGeoJSON, oceanMaskGeoJSON };
+    })
+    .catch((err) => {
+      console.warn("[LiveOsmMap] Failed to load india-land.json:", err);
+      cachedIndiaGeoDataPromise = null;
+      return null;
+    });
+  return cachedIndiaGeoDataPromise;
+}
+
 export function LiveOsmMap({
   cities,
   storefronts,
@@ -437,20 +529,27 @@ export function LiveOsmMap({
       created_at: new Date().toISOString(),
     };
 
-  // Initialize MapLibre GL Map with 3D Drone Perspective over real OpenStreetMap
+  // Initialize MapLibre GL Map locked strictly to India (3D India Island -> Real OSM Street View)
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    // Start directly focused on Nerqiva Studio at exact GPS coordinates
-    const initialCenter: [number, number] = NERQIVA_COORDS;
+    const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const hasCityDeepLink = Boolean(params?.get("city") || params?.get("shop"));
+
+    const initialCenter: [number, number] = hasCityDeepLink ? NERQIVA_COORDS : INDIA_CENTER;
+    const initialZoom = hasCityDeepLink ? 18.2 : 4.3;
+    const initialPitch = hasCityDeepLink ? 56 : 42;
+    const initialBearing = hasCityDeepLink ? 35 : -6;
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: isNightMode ? CARTO_DARK_MATTER_STYLE : CARTO_VOYAGER_STYLE,
       center: initialCenter,
-      zoom: 18.2,
-      pitch: 56,
-      bearing: 35,
+      zoom: initialZoom,
+      pitch: initialPitch,
+      bearing: initialBearing,
+      minZoom: INDIA_MIN_ZOOM,
+      maxBounds: INDIA_MAX_BOUNDS,
       maxPitch: 85,
       maxZoom: 22,
       attributionControl: false,
@@ -682,8 +781,12 @@ export function LiveOsmMap({
             map.setPaintProperty("background", "background-color", "#f8fafc");
           }
           if (map.getLayer("water")) {
-            map.setPaintProperty("water", "fill-color", "#38bdf8");
-            map.setPaintProperty("water", "fill-opacity", 0.95);
+            map.setPaintProperty("water", "fill-color", [
+              "interpolate", ["linear"], ["zoom"],
+              9.5, "#0284c7",
+              12.0, "#38bdf8",
+            ] as any);
+            map.setPaintProperty("water", "fill-opacity", 1.0);
           }
           if (map.getLayer("landcover")) {
             map.setPaintProperty("landcover", "fill-color", "#dcfce7");
@@ -988,6 +1091,183 @@ export function LiveOsmMap({
         console.warn("[LiveOsmMap] 3D extrusion warning:", e);
       }
 
+      // 4b. India-Only 3D Sculpted Continent & Pure Ocean Mask (Preserves 100% Real OpenStreetMap Inside India)
+      try {
+        const oceanColor = isDark ? "#040d1e" : "#0284c7";
+        const shadowColor = isDark ? "#000000" : "#075985";
+        const continentColor = isDark ? "#0f293a" : "#16a34a";
+        const rimColor = isDark ? "#f59e0b" : "#fde68a";
+
+        // Sync Night-mode water color so Bay of Bengal, Arabian Sea, and outer ocean mask are 100% seamless
+        if (isDark && map.getLayer("water")) {
+          map.setPaintProperty("water", "fill-color", [
+            "interpolate", ["linear"], ["zoom"],
+            9.5, "#040d1e",
+            12.0, "#0c243d",
+          ] as any);
+        }
+
+        // Suppress CARTO's disputed dotted country border lines at national zoom (replaced by official Survey of India outline)
+        for (const bLayer of ["boundary_country_outline", "boundary_country_inner"]) {
+          if (map.getLayer(bLayer)) {
+            map.setPaintProperty(bLayer, "line-opacity", [
+              "interpolate", ["linear"], ["zoom"],
+              10.5, 0,
+              12.5, 0.5,
+            ] as any);
+          }
+        }
+
+        // Directional 3D sunlight so India's raised continent cliffs have dramatic sunlit highlights & depth
+        map.setLight({
+          anchor: "viewport",
+          color: isDark ? "#38bdf8" : "#fff7ed",
+          intensity: isDark ? 0.35 : 0.48,
+          position: [1.5, 220, 48],
+        });
+
+        loadIndiaBoundaryData().then((geo) => {
+          if (!geo || !mapRef.current || mapRef.current !== map) return;
+          if (!map.getStyle()) return;
+
+          const darkNow = isNightModeRef.current || Boolean(map.getStyle()?.name?.toLowerCase().includes("dark"));
+          const liveOcean = darkNow ? "#040d1e" : "#0284c7";
+          const liveShadow = darkNow ? "#000000" : "#075985";
+          const liveContinent = darkNow ? "#0f293a" : "#16a34a";
+          const liveRim = darkNow ? "#38bdf8" : "#7dd3fc";
+
+          if (!map.getSource("india-ocean-mask-source")) {
+            map.addSource("india-ocean-mask-source", {
+              type: "geojson",
+              data: geo.oceanMaskGeoJSON,
+            });
+          }
+          if (!map.getSource("india-land-source")) {
+            map.addSource("india-land-source", {
+              type: "geojson",
+              data: geo.landGeoJSON,
+            });
+          }
+
+          const beforeCustom3D = map.getLayer("nerqiva-3d-commercial-layer")
+            ? "nerqiva-3d-commercial-layer"
+            : undefined;
+
+          // Layer A: Pure Ocean Mask covering everything outside official Survey of India borders (including foreign labels!)
+          if (!map.getLayer("india-ocean-mask")) {
+            map.addLayer(
+              {
+                id: "india-ocean-mask",
+                type: "fill",
+                source: "india-ocean-mask-source",
+                paint: {
+                  "fill-color": liveOcean,
+                  "fill-opacity": [
+                    "interpolate", ["linear"], ["zoom"],
+                    10.5, 1.0,
+                    13.0, 0.0,
+                  ],
+                },
+              },
+              beforeCustom3D
+            );
+          } else {
+            map.setPaintProperty("india-ocean-mask", "fill-color", liveOcean);
+          }
+
+          // Layer B: Ocean Contact Shadow cast beneath the raised 3D India landmass
+          if (!map.getLayer("india-island-shadow")) {
+            map.addLayer(
+              {
+                id: "india-island-shadow",
+                type: "fill",
+                source: "india-land-source",
+                paint: {
+                  "fill-color": liveShadow,
+                  "fill-translate": [14, 18],
+                  "fill-translate-anchor": "viewport",
+                  "fill-opacity": [
+                    "interpolate", ["linear"], ["zoom"],
+                    4.0, 0.55,
+                    7.5, 0.25,
+                    9.5, 0.0,
+                  ],
+                },
+              },
+              beforeCustom3D
+            );
+          } else {
+            map.setPaintProperty("india-island-shadow", "fill-color", liveShadow);
+          }
+
+          // Layer C: Soft Luminous Coastal Surf / Shoreline Halo at Ocean Edge (sits cleanly at water level below 3D cliff!)
+          if (!map.getLayer("india-coastline-rim")) {
+            map.addLayer(
+              {
+                id: "india-coastline-rim",
+                type: "line",
+                source: "india-land-source",
+                layout: { "line-join": "round", "line-cap": "round" },
+                paint: {
+                  "line-color": liveRim,
+                  "line-width": [
+                    "interpolate", ["linear"], ["zoom"],
+                    3.9, 5.5,
+                    8.0, 4.0,
+                    11.0, 1.5,
+                  ],
+                  "line-blur": 3.0,
+                  "line-opacity": [
+                    "interpolate", ["linear"], ["zoom"],
+                    3.9, 0.72,
+                    8.5, 0.45,
+                    10.8, 0.0,
+                  ],
+                },
+              },
+              beforeCustom3D
+            );
+          } else {
+            map.setPaintProperty("india-coastline-rim", "line-color", liveRim);
+          }
+
+          // Layer D: Sculpted 3D Raised India Continent Slab (smoothly melts into 100% real OSM as you zoom in!)
+          if (!map.getLayer("india-3d-continent-extrusion")) {
+            map.addLayer(
+              {
+                id: "india-3d-continent-extrusion",
+                type: "fill-extrusion",
+                source: "india-land-source",
+                paint: {
+                  "fill-extrusion-color": liveContinent,
+                  "fill-extrusion-height": [
+                    "interpolate", ["linear"], ["zoom"],
+                    3.9, 56000,
+                    6.5, 22000,
+                    8.5, 3500,
+                    9.5, 0,
+                  ],
+                  "fill-extrusion-base": 0,
+                  "fill-extrusion-vertical-gradient": true,
+                  "fill-extrusion-opacity": [
+                    "interpolate", ["linear"], ["zoom"],
+                    3.9, 0.88,
+                    6.2, 0.78,
+                    7.5, 0.45,
+                    9.2, 0.0,
+                  ],
+                },
+              },
+              beforeCustom3D
+            );
+          } else {
+            map.setPaintProperty("india-3d-continent-extrusion", "fill-extrusion-color", liveContinent);
+          }
+        });
+      } catch (indiaErr) {
+        console.warn("[LiveOsmMap] India 3D island mask setup warning:", indiaErr);
+      }
+
       // 5. Add True 3D Three.js Custom Building Layer (Nerqiva Studio Villa, Free Plots, Trees, Streetlights)
       if (!map.getLayer("nerqiva-3d-commercial-layer")) {
         try {
@@ -1009,11 +1289,12 @@ export function LiveOsmMap({
         "bottom-left"
       );
 
-      // Smooth dynamic 3D Drone Perspective <-> 2D Regional Map Transition + close-up card fade
+      // Smooth dynamic 3D Street Perspective <-> Regional OSM <-> 3D India Island + close-up card fade
       map.on("zoom", () => {
         const z = map.getZoom();
-        // Smoothly hide HTML floating card when zoomed ultra-close / 3rd-person so 3D "NERQIVA" facade signage stays unobstructed
+        // Smoothly hide HTML floating card in 3rd-person walk mode AND adapt vertical anchor offset between national map & 3D villa roof
         markersRef.current.forEach((m) => {
+          m.setOffset([0, z < 14 ? -16 : -125]);
           const el = m.getElement();
           if (el) {
             const hide = isWalkModeRef.current || z >= 19.9;
@@ -1023,10 +1304,9 @@ export function LiveOsmMap({
         });
 
         if (isFlightActiveRef.current) return;
-        if (z < 15.6) {
-          if (is3DMode) {
-            setIs3DMode(false);
-            map.easeTo({ pitch: 0, bearing: 0, duration: 400 });
+        if (z < 9.5) {
+          if (map.getPitch() < 28) {
+            map.easeTo({ pitch: 42, bearing: -6, duration: 450 });
           }
         } else if (z >= 16.5) {
           if (!is3DMode) {
@@ -1102,10 +1382,10 @@ export function LiveOsmMap({
     };
   }, []);
 
-  // Sync Camera when selected city changes
+  // Sync Camera ONLY when a specific city is explicitly selected (never hijack root "/" 3D India Island view!)
   useEffect(() => {
-    if (!mapRef.current || !mapLoaded) return;
-    if (currentCity.slug === "guwahati" || currentCity.name.toLowerCase() === "guwahati") {
+    if (!mapRef.current || !mapLoaded || !selectedCity) return;
+    if (selectedCity.slug === "guwahati" || selectedCity.name.toLowerCase() === "guwahati") {
       mapRef.current.flyTo({
         center: NERQIVA_COORDS,
         zoom: 18.2,
@@ -1116,7 +1396,7 @@ export function LiveOsmMap({
       });
     } else {
       mapRef.current.flyTo({
-        center: [currentCity.lon, currentCity.lat],
+        center: [selectedCity.lon, selectedCity.lat],
         zoom: 14.2,
         pitch: is3DMode ? 52 : 0,
         bearing: is3DMode ? 25 : 0,
@@ -1124,7 +1404,7 @@ export function LiveOsmMap({
         essential: true,
       });
     }
-  }, [currentCity, mapLoaded, is3DMode]);
+  }, [selectedCity, mapLoaded]);
 
   // Sync 3D Drone Mode (Tilt between 58° and 0°)
   const toggle3DDrone = useCallback(() => {
@@ -1309,19 +1589,25 @@ export function LiveOsmMap({
       <div class="w-2.5 h-2.5 -mt-1 bg-[#080B12] rotate-45 border-r border-b border-amber-500/75"></div>
     `;
     cardEl.addEventListener("click", () => {
+      if (mapRef.current && mapRef.current.getZoom() < 11) {
+        handleResetCamera();
+        bazaarAudio.playStorefrontChime();
+        return;
+      }
       if (onStorefrontSelect) onStorefrontSelect(nerqivaBusiness);
       bazaarAudio.playStorefrontChime();
     });
+    const initOffsetY = (mapRef.current?.getZoom() ?? 18) < 14 ? -16 : -125;
     const studioMarker = new maplibregl.Marker({
       element: cardEl,
       anchor: "bottom",
-      offset: [0, -125],
+      offset: [0, initOffsetY],
     })
       .setLngLat(NERQIVA_COORDS)
       .addTo(mapRef.current!);
     markersRef.current.push(studioMarker);
 
-  }, [mapLoaded, currentCity, nerqivaBusiness, onStorefrontSelect, showToast]);
+  }, [mapLoaded, currentCity, nerqivaBusiness, onStorefrontSelect, showToast, handleResetCamera]);
 
   // Autocomplete search filtering
   const q = (searchQuery || "").trim().toLowerCase();
@@ -1359,20 +1645,30 @@ export function LiveOsmMap({
             type="button"
             onClick={() => {
               if (mapRef.current) {
+                handleStopMove();
+                setIsWalkMode(false);
+                isWalkModeRef.current = false;
                 isFlightActiveRef.current = true;
-                setIs3DMode(false);
+                setIs3DMode(true);
+                markersRef.current.forEach((m) => {
+                  const el = m.getElement();
+                  if (el) {
+                    el.style.visibility = "visible";
+                    el.style.pointerEvents = "auto";
+                  }
+                });
                 mapRef.current.flyTo({
-                  center: [78.9629, 22.5937],
-                  zoom: 4.8,
-                  pitch: 0,
-                  bearing: 0,
+                  center: INDIA_CENTER,
+                  zoom: 4.3,
+                  pitch: 42,
+                  bearing: -6,
                   duration: 1400,
                 });
                 mapRef.current.once("moveend", () => {
                   isFlightActiveRef.current = false;
                 });
                 onCitySelect(null);
-                showToast("🇮🇳 Viewing India National Map");
+                showToast("🇮🇳 Viewing 3D India Map");
               }
             }}
             className="px-3 py-1.5 rounded-2xl bg-neutral-950/90 hover:bg-neutral-900 border border-amber-500/60 text-amber-400 text-xs font-bold flex items-center gap-1.5 shadow-2xl backdrop-blur-xl transition-all"
