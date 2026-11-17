@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { BusinessStorefront, City } from "@/types";
 import { INITIAL_CITIES } from "@/lib/constants/initialCities";
 import { StorefrontDrawer } from "@/components/map/StorefrontDrawer";
-import { ThreeMapCanvas } from "@/components/map3d/ThreeMapCanvas";
+import { LiveOsmMap } from "@/components/map/LiveOsmMap";
 
 interface InteractiveCanvasProps {
   initialStorefronts: BusinessStorefront[];
@@ -14,6 +14,7 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
   const [storefronts, setStorefronts] = useState<BusinessStorefront[]>(initialStorefronts);
   const [selectedCity, setSelectedCity] = useState<string>("all");
   const [activeStorefront, setActiveStorefront] = useState<BusinessStorefront | null>(null);
+  const [viewMode, setViewMode] = useState<"3d" | "osm">("3d");
 
   // Fetch updated edge snapshot from /api/boot on mount
   useEffect(() => {
@@ -29,13 +30,20 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
       .catch(() => {});
   }, []);
 
-  // Handle URL deep-linking: ?city=guwahati&shop=nerqiva-studio&new=1
+  // Handle URL deep-linking: ?city=guwahati&shop=nerqiva-studio&view=osm
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const cityParam = params.get("city");
     const shopSlug = params.get("shop");
     const isNew = params.get("new");
+    const viewParam = params.get("view");
+
+    if (viewParam === "osm") {
+      setViewMode("osm");
+    } else {
+      setViewMode("3d");
+    }
 
     if (cityParam) {
       const matched = INITIAL_CITIES.find(
@@ -89,9 +97,9 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
 
   return (
     <div className="relative w-full h-full flex flex-col bg-[#030712] overflow-hidden">
-      {/* 100% PURE 3D SPATIAL MAP & LIVING BAZAAR STREET */}
+      {/* 100% REAL LIVE OPENSTREETMAP BASE WITH TRUE 3D ARCHITECTURAL BUILDINGS */}
       <div className="w-full h-full relative overflow-hidden">
-        <ThreeMapCanvas
+        <LiveOsmMap
           cities={INITIAL_CITIES}
           storefronts={storefronts}
           selectedCity={selectedCityObject}

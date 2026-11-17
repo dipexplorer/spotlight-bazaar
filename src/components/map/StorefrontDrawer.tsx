@@ -13,6 +13,8 @@ import {
   Heart,
   Share2,
   Check,
+  Globe,
+  ExternalLink,
 } from "lucide-react";
 import { BusinessStorefront } from "@/types";
 import { CATEGORY_MAP } from "@/lib/constants/categories";
@@ -222,6 +224,20 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
               </span>
             </button>
           </div>
+
+          {/* Official Website Link */}
+          {storefront.website_url && (
+            <a
+              href={storefront.website_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-950/40"
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>Visit Official Website ({storefront.website_url.replace(/^https?:\/\//, "").replace(/\/$/, "")})</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
 
           {/* Action CTAs */}
           <div className="flex items-center gap-2 pt-1">

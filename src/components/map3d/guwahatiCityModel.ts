@@ -815,27 +815,36 @@ export function buildGuwahatiCity(
     disposables.push(cGeo, cRimGeo);
   }
 
-  // G. Historic Nehru Stadium / Judge's Field Cricket Oval (Western Open Meadow, matching indiaagain)
-  const cricketOvalGeo = new THREE.CylinderGeometry(28, 28, 0.15, 32);
-  const cricketOvalMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.88 });
-  const cricketOval = new THREE.Mesh(cricketOvalGeo, cricketOvalMat);
-  cricketOval.position.set(-85, 0.08, 85);
-  group.add(cricketOval);
+  // G. Umananda Island (Peacock Island) in the Brahmaputra River (Smallest inhabited river island in the world)
+  const islandGroup = new THREE.Group();
+  islandGroup.name = "umananda_island";
+  const islandRockGeo = new THREE.CylinderGeometry(14, 18, 2.8, 12);
+  const islandRockMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.92 });
+  const islandRock = new THREE.Mesh(islandRockGeo, islandRockMat);
+  islandRock.position.set(45, 1.2, -72);
+  islandGroup.add(islandRock);
 
-  const pitchGeo = new THREE.PlaneGeometry(4.5, 18);
-  pitchGeo.rotateX(-Math.PI / 2);
-  const pitchMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.95 });
-  const pitch = new THREE.Mesh(pitchGeo, pitchMat);
-  pitch.position.set(-85, 0.16, 85);
-  group.add(pitch);
+  const islandGrassGeo = new THREE.CylinderGeometry(13.2, 14, 0.4, 12);
+  const islandGrassMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.85 });
+  const islandGrass = new THREE.Mesh(islandGrassGeo, islandGrassMat);
+  islandGrass.position.set(45, 2.7, -72);
+  islandGroup.add(islandGrass);
 
-  const chalkRingGeo = new THREE.RingGeometry(25.5, 26.2, 32);
-  chalkRingGeo.rotateX(-Math.PI / 2);
-  const chalkRingMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc, side: THREE.DoubleSide });
-  const chalkRing = new THREE.Mesh(chalkRingGeo, chalkRingMat);
-  chalkRing.position.set(-85, 0.162, 85);
-  group.add(chalkRing);
-  disposables.push(cricketOvalGeo, cricketOvalMat, pitchGeo, pitchMat, chalkRingGeo, chalkRingMat);
+  // Umananda Shiva Temple Shrine on the Island
+  const templePlinthGeo = new THREE.BoxGeometry(4.2, 1.2, 4.2);
+  const templePlinthMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.8 });
+  const templePlinth = new THREE.Mesh(templePlinthGeo, templePlinthMat);
+  templePlinth.position.set(45, 3.4, -72);
+  islandGroup.add(templePlinth);
+
+  const shikharaGeo = new THREE.ConeGeometry(2.2, 4.5, 8);
+  const shikharaMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.6 });
+  const shikhara = new THREE.Mesh(shikharaGeo, shikharaMat);
+  shikhara.position.set(45, 6.2, -72);
+  islandGroup.add(shikhara);
+
+  group.add(islandGroup);
+  disposables.push(islandRockGeo, islandRockMat, islandGrassGeo, islandGrassMat, templePlinthGeo, templePlinthMat, shikharaGeo, shikharaMat);
 
   // 6. SARAIGHAT BRIDGE (Iconic Double-Deck Steel Truss Bridge across Brahmaputra)
   const bridgeGroup = new THREE.Group();
@@ -1225,6 +1234,44 @@ export function buildGuwahatiCity(
       group.add(badgeSprite);
 
       disposables.push(badgeTex, badgeMat);
+    } else if (isEmptyPlot) {
+      // Floating Free Commercial Plot Badge (India Again Style)
+      const canvas = document.createElement("canvas");
+      canvas.width = 320;
+      canvas.height = 100;
+      const ctx = canvas.getContext("2d")!;
+      ctx.clearRect(0, 0, 320, 100);
+
+      ctx.beginPath();
+      ctx.roundRect(6, 6, 308, 88, 20);
+      ctx.fillStyle = "rgba(10, 15, 29, 0.94)";
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = "#38bdf8";
+      ctx.stroke();
+
+      ctx.font = "bold 22px -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.fillStyle = "#38bdf8";
+      ctx.textAlign = "center";
+      ctx.fillText("Free Plot · Claim ₹0", 160, 42);
+
+      ctx.font = "600 16px -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.fillStyle = "#94a3b8";
+      ctx.fillText("Ready for Business", 160, 72);
+
+      const badgeTex = new THREE.CanvasTexture(canvas);
+      badgeTex.colorSpace = THREE.SRGBColorSpace;
+      const badgeMat = new THREE.SpriteMaterial({
+        map: badgeTex,
+        transparent: true,
+        depthWrite: false,
+      });
+      const badgeSprite = new THREE.Sprite(badgeMat);
+      badgeSprite.position.set(p.x, 7.5, p.z);
+      badgeSprite.scale.set(9.6, 3.0, 1);
+      group.add(badgeSprite);
+
+      disposables.push(badgeTex, badgeMat);
     }
   });
 
@@ -1250,7 +1297,7 @@ export function buildGuwahatiCity(
     for (const p of plotPlacements) {
       if (Math.hypot(tx - p.x, tz - p.z) < 18) return false;
     }
-    if (Math.hypot(tx - -85, tz - 85) < 32) return false; // Keep cricket outfield clear
+    if (Math.hypot(tx - 45, tz - -72) < 25) return false; // Keep Umananda Island river approach clear
     for (const rd of roads) {
       const dx = rd.x2 - rd.x1;
       const dz = rd.z2 - rd.z1;

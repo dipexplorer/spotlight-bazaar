@@ -15,7 +15,8 @@ export async function GET() {
       const { data, error } = await supabase
         .from("businesses")
         .select(`
-          id, slug, name, category_id, city_name, state_name, lat, lon, whatsapp_phone,
+          id, slug, name, tagline, description, category_id, city_name, state_name, pincode,
+          lat, lon, whatsapp_phone, instagram_handle, website_url,
           starting_price, logo_url, is_verified, is_featured, total_views, total_leads, created_at,
           portfolio:portfolio_items(id, business_id, image_url, sort_order)
         `)
@@ -33,7 +34,19 @@ export async function GET() {
             b.slug !== "bandra-brew-lab-mumbai"
         );
         const hasNerqiva = filtered.some((b) => b.slug === "nerqiva-studio");
-        storefrontsList = hasNerqiva ? filtered : [...getStorefronts(), ...filtered];
+        storefrontsList = hasNerqiva
+          ? filtered.map((b) =>
+              b.slug === "nerqiva-studio"
+                ? {
+                    ...b,
+                    lat: 26.20624167049662,
+                    lon: 91.72925728895483,
+                    pincode: "781030",
+                    website_url: "https://www.nerqivastudio.in/",
+                  }
+                : b
+            )
+          : [...getStorefronts(), ...filtered];
       }
     } catch {
       // Fallback to seed data seamlessly if DB is unreachable

@@ -1,7 +1,7 @@
 import { City } from "@/types";
 
 export const INITIAL_CITIES: City[] = [
-  { id: 1, name: "Guwahati", state: "Assam", lat: 26.1445, lon: 91.7362, slug: "guwahati" },
+  { id: 1, name: "Guwahati", state: "Assam", lat: 26.20624167049662, lon: 91.72925728895483, slug: "guwahati" },
   { id: 2, name: "Bangalore", state: "Karnataka", lat: 12.9716, lon: 77.5946, slug: "bangalore" },
   { id: 3, name: "Mumbai", state: "Maharashtra", lat: 19.0760, lon: 72.8777, slug: "mumbai" },
   { id: 4, name: "Delhi NCR", state: "Delhi", lat: 28.6139, lon: 77.2090, slug: "delhi-ncr" },

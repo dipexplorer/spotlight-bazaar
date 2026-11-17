@@ -52,8 +52,8 @@ export const CITY_GEO_REGISTRY: Record<string, CityGeoConfig> = {
       { type: "lake", name: "Silsako Beel", x: 185, z: 110, width: 60, length: 28, color: 0x0284c7 },
     ],
     droneCamera: {
-      pos: [50, 240, 290],
-      target: [15, 0, 35],
+      pos: [92, 14, 114],
+      target: [105, 2.5, 88],
     },
     roadsGeoJsonPath: "/data/geo/guwahati.roads.json",
   },

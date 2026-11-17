@@ -47,6 +47,7 @@ interface ThreeMapCanvasProps {
   activeStorefront?: BusinessStorefront | null;
   onCitySelect: (city: City | null) => void;
   onStorefrontSelect?: (storefront: BusinessStorefront) => void;
+  onToggleOsmMap?: () => void;
 }
 
 export function ThreeMapCanvas({
@@ -56,6 +57,7 @@ export function ThreeMapCanvas({
   activeStorefront,
   onCitySelect,
   onStorefrontSelect,
+  onToggleOsmMap,
 }: ThreeMapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -147,9 +149,21 @@ export function ThreeMapCanvas({
         targetLookAtRef.current = new THREE.Vector3(0, 1.8, 5);
       }
     } else {
-      // Dynamic Cinematic Drone Overview for any location in India
-      targetCamPosRef.current = new THREE.Vector3(...geoConfig.droneCamera.pos);
-      targetLookAtRef.current = new THREE.Vector3(...geoConfig.droneCamera.target);
+      // Dynamic High-Street View: Frame the business plot and Free Plot at street level (India Again style)
+      if (plotsRef.current.length > 0) {
+        const mainPlot = plotsRef.current[0];
+        const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(mainPlot.mesh.quaternion);
+        targetCamPosRef.current = mainPlot.mesh.position
+          .clone()
+          .add(forward.clone().multiplyScalar(22))
+          .add(new THREE.Vector3(-14, 13.5, 0));
+        targetLookAtRef.current = mainPlot.mesh.position
+          .clone()
+          .add(new THREE.Vector3(0, 2.2, 0));
+      } else {
+        targetCamPosRef.current = new THREE.Vector3(...geoConfig.droneCamera.pos);
+        targetLookAtRef.current = new THREE.Vector3(...geoConfig.droneCamera.target);
+      }
     }
   }, []);
 
@@ -324,26 +338,42 @@ export function ThreeMapCanvas({
           hitBoxesRef.current = hitBoxes;
           plotsRef.current = plots;
 
-          // Instantiate controllable 3D Player Avatar
-          const isGuwahati = selectedCity.slug === "guwahati" || selectedCity.name.toLowerCase() === "guwahati";
+          // Instantiate controllable 3D Player Avatar right in front of primary business on asphalt road
+          let avatarSpawnX = 0;
+          let avatarSpawnZ = 0;
+          if (plots.length > 0 && plots[0]) {
+            const mainPlot = plots[0];
+            const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(mainPlot.mesh.quaternion);
+            avatarSpawnX = mainPlot.mesh.position.x + forward.x * 7.5;
+            avatarSpawnZ = mainPlot.mesh.position.z + forward.z * 7.5;
+          } else {
+            const isGuwahati = selectedCity.slug === "guwahati" || selectedCity.name.toLowerCase() === "guwahati";
+            avatarSpawnX = isGuwahati ? 100 : -8.2;
+            avatarSpawnZ = isGuwahati ? 84 : 16;
+          }
+
           const playerAvatar = createPlayerAvatarSystem(
-            isGuwahati ? 64 : -8.2,
+            avatarSpawnX,
             0.44,
-            isGuwahati ? 2 : 16,
+            avatarSpawnZ,
             "@spotlight.bazaar"
           );
           scene.add(playerAvatar.group);
           playerAvatarRef.current = playerAvatar;
 
-          // OPTIMAL ORBIT & DRONE VIEWPORT CONTROLS:
-          // Clamped bounds to guarantee the city map stays in full, crisp view without sky blow-out
+          // OPTIMAL ORBIT & STREET VIEWPORT CONTROLS:
+          // Clamped bounds to guarantee the street stays in full, crisp view
           if (controlsRef.current) {
-            controlsRef.current.minDistance = 15;
+            controlsRef.current.minDistance = 6;
             controlsRef.current.maxDistance = 580;
-            controlsRef.current.minPolarAngle = Math.PI / 8;
-            controlsRef.current.maxPolarAngle = Math.PI / 2.18;
-            const targetCoords = cityGeo.droneCamera.target;
-            controlsRef.current.target.set(targetCoords[0], targetCoords[1], targetCoords[2]);
+            controlsRef.current.minPolarAngle = Math.PI / 12;
+            controlsRef.current.maxPolarAngle = Math.PI / 2.12;
+            if (plots.length > 0 && plots[0]) {
+              controlsRef.current.target.set(plots[0].mesh.position.x, 2.2, plots[0].mesh.position.z);
+            } else {
+              const targetCoords = cityGeo.droneCamera.target;
+              controlsRef.current.target.set(targetCoords[0], targetCoords[1], targetCoords[2]);
+            }
             controlsRef.current.screenSpacePanning = false;
           }
 
@@ -909,6 +939,21 @@ export function ThreeMapCanvas({
               </button>
             )
           ) : null}
+
+          {/* Toggle Live OpenStreetMap (City GIS) */}
+          {onToggleOsmMap && (
+            <button
+              type="button"
+              onClick={onToggleOsmMap}
+              aria-label="Switch to Live OpenStreetMap View"
+              title="Switch to Live OpenStreetMap View"
+              className="px-2.5 sm:px-3 py-1.5 rounded-2xl bg-neutral-950/90 hover:bg-neutral-900 border border-emerald-500/60 text-emerald-400 text-xs font-bold flex items-center gap-1.5 shadow-2xl backdrop-blur-xl transition-all group shrink-0"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              <span className="hidden sm:inline">🗺️ Live OSM Map</span>
+              <span className="sm:hidden">🗺️ OSM</span>
+            </button>
+          )}
         </div>
 
         {/* Center: Omnibox Search Bar */}
@@ -1341,6 +1386,41 @@ export function ThreeMapCanvas({
               joystickVecRef.current = vec;
             }}
           />
+        </div>
+      )}
+
+      {/* REAL-TIME OPENSTREETMAP MINI-RADAR PIP (Picture-in-Picture) */}
+      {selectedCity && onToggleOsmMap && !isWalkMode && (
+        <div className="hidden lg:block absolute bottom-8 right-6 z-20 pointer-events-auto">
+          <button
+            type="button"
+            onClick={onToggleOsmMap}
+            className="group p-2 rounded-2xl bg-neutral-950/90 hover:bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 shadow-2xl backdrop-blur-xl transition-all flex flex-col items-start text-left cursor-pointer"
+            title="Click to view full Live OpenStreetMap"
+          >
+            <div className="flex items-center justify-between w-full gap-2 mb-1 px-1">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[10px] font-bold text-white uppercase tracking-wider">
+                  Live OSM GPS
+                </span>
+              </div>
+              <span className="text-[9px] text-emerald-400 font-mono group-hover:underline">
+                Expand ↗
+              </span>
+            </div>
+            <div className="relative w-44 h-24 rounded-xl overflow-hidden border border-neutral-800 bg-[#071322]">
+              <iframe
+                src="https://www.openstreetmap.org/export/embed.html?bbox=91.75%2C26.14%2C91.79%2C26.17&layer=mapnik&marker=26.1550%2C91.7750"
+                className="w-full h-full border-0 pointer-events-none opacity-85 group-hover:opacity-100 transition-opacity"
+                title="OpenStreetMap Mini-Radar"
+              />
+              <div className="absolute inset-0 bg-transparent group-hover:bg-emerald-500/5 transition-colors" />
+            </div>
+            <p className="text-[9px] text-neutral-400 mt-1 px-1 font-mono">
+              GS Road, Christian Basti
+            </p>
+          </button>
         </div>
       )}
 

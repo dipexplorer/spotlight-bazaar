@@ -14,7 +14,7 @@ async function getInitialStorefronts(): Promise<BusinessStorefront[]> {
         .from("businesses")
         .select(`
           id, slug, name, tagline, description, category_id, city_name, state_name,
-          pincode, lat, lon, whatsapp_phone, starting_price, logo_url, is_verified, is_featured,
+          pincode, lat, lon, whatsapp_phone, instagram_handle, website_url, starting_price, logo_url, is_verified, is_featured,
           total_views, total_leads, created_at
         `)
         .eq("status", "active")
@@ -30,7 +30,19 @@ async function getInitialStorefronts(): Promise<BusinessStorefront[]> {
             b.slug !== "bandra-brew-lab-mumbai"
         );
         const hasNerqiva = filtered.some((b) => b.slug === "nerqiva-studio");
-        return hasNerqiva ? filtered : [...getStorefronts(), ...filtered];
+        return hasNerqiva
+          ? filtered.map((b) =>
+              b.slug === "nerqiva-studio"
+                ? {
+                    ...b,
+                    lat: 26.20624167049662,
+                    lon: 91.72925728895483,
+                    pincode: "781030",
+                    website_url: "https://www.nerqivastudio.in/",
+                  }
+                : b
+            )
+          : [...getStorefronts(), ...filtered];
       }
     } catch {
       // Fallback to seeds

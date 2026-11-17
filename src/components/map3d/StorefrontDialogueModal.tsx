@@ -72,7 +72,7 @@ export function StorefrontDialogueModal({
             <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
               <MapPin className="w-3.5 h-3.5 text-amber-500" />
               <span>
-                {storefront.city_name || "Guwahati"}, {storefront.state_name || "Assam"} • High Street Plot #{storefront.id.slice(0, 4)}
+                {storefront.city_name || "Guwahati"}, {storefront.state_name || "Assam"} • {storefront.pincode ? `PIN ${storefront.pincode}` : "North Guwahati"}
               </span>
             </div>
           </div>
@@ -154,6 +154,19 @@ export function StorefrontDialogueModal({
             >
               <MessageCircle className="w-4 h-4" />
               Chat on WhatsApp ({storefront.whatsapp_phone})
+            </a>
+          )}
+
+          {/* Official Website Link */}
+          {storefront.website_url && (
+            <a
+              href={storefront.website_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 font-bold text-xs text-slate-950 flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-950/40"
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span>Visit Official Website ({storefront.website_url.replace(/^https?:\/\//, "").replace(/\/$/, "")})</span>
             </a>
           )}
 

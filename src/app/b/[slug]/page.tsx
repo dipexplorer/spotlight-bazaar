@@ -26,7 +26,17 @@ async function getStorefront(slug: string): Promise<BusinessStorefront | null> {
         .single();
 
       if (!error && data) {
-        return (data as unknown) as BusinessStorefront;
+        const item = (data as unknown) as BusinessStorefront;
+        if (item.slug === "nerqiva-studio") {
+          return {
+            ...item,
+            lat: 26.20624167049662,
+            lon: 91.72925728895483,
+            pincode: "781030",
+            website_url: "https://www.nerqivastudio.in/",
+          };
+        }
+        return item;
       }
     } catch {
       // Fallback to seeds

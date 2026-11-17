@@ -27,24 +27,39 @@
 
 ---
 
-## 🛠️ High-Level Tech Stack
+## 🛠️ Tech Stack
 
-* **Frontend:** Next.js (App Router), React, Tailwind CSS, Lucide Icons.
-* **Visual Map Layer:** High-performance, touch-optimized visual map (Leaflet / Mapbox / Canvas-based isometric 2.5D street view) with Three.js acceleration where beneficial. Prioritizes sub-second load times on budget mobile devices over heavy 3D downloads.
-* **Database & Auth:** Supabase (PostgreSQL with PostGIS for spatial queries).
-* **Edge & Hosting:** Vercel + Cloudflare Edge CDN (leveraging 120-second snapshot caching for viral traffic spikes).
-* **Communication & Leads:** Direct WhatsApp Click-to-Chat API links (`https://wa.me/...`).
-* **Payments & Billing:** Razorpay / Cashfree (Subscription plans: ₹499–₹999/month for Pro/Verified tiers).
+* **Framework:** Next.js 16 (App Router, Turbopack), React 19, TypeScript, Tailwind CSS, Lucide Icons.
+* **Live 3D Map Engine:** MapLibre GL JS (OpenStreetMap / CARTO Voyager & Dark Matter basemaps) paired with a custom WebGL Three.js 3D architectural layer (`LiveOsmMap` + `osm3dBuildings`).
+* **3D Experience:** Seamless zoom-adaptive OSM road blending, custom 3D architectural studio plots (flagship launch: **Nerqiva Studio**, North Guwahati), day/night theme lighting, and a 60fps 3rd-person over-the-shoulder street-walking camera (`WASD` / Arrow keys / `Q` & `E` orbit / `Shift` sprint).
+* **Database & Auth:** Supabase (PostgreSQL with PostGIS spatial queries) with graceful seed fallback.
+* **Communication & Leads:** Direct WhatsApp Click-to-Chat (`https://wa.me/...`) and storefront dialogue drawer.
+
+---
+
+## ⚡ Quick Start
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Configure environment variables
+cp .env.example .env.local
+# Fill in your Supabase credentials in .env.local (optional — falls back to flagship seed data)
+
+# 3. Start development server
+npm run dev
+```
+
+Open [http://localhost:3000/?city=guwahati](http://localhost:3000/?city=guwahati) to explore the live 3D map and click **Walk (WASD)** to enter 3rd-person street view.
 
 ---
 
 ## 📂 Project Architecture & Documentation Index
 
-Every AI agent and developer working on this project must consult the following authoritative documents in this directory:
-
-1. **[`PRD_PRODUCT_REQUIREMENTS.md`](file:///mnt/data2/SIDE_HUSSLE/projects/spotlight-bazaar/PRD_PRODUCT_REQUIREMENTS.md):** Detailed product specifications, user personas, open-elective category mechanics, and feature backlog.
-2. **[`TECH_ARCHITECTURE.md`](file:///mnt/data2/SIDE_HUSSLE/projects/spotlight-bazaar/TECH_ARCHITECTURE.md):** Complete frontend, backend, map rendering, edge caching, and WhatsApp dispatch architecture.
-3. **[`DATA_MODEL.md`](file:///mnt/data2/SIDE_HUSSLE/projects/spotlight-bazaar/DATA_MODEL.md):** PostgreSQL schema, table definitions, PostGIS location queries, and index strategies.
-4. **[`ROADMAP_30_DAYS.md`](file:///mnt/data2/SIDE_HUSSLE/projects/spotlight-bazaar/ROADMAP_30_DAYS.md):** 4-week sprint execution plan from MVP build to initial 100 businesses onboarded.
-5. **[`AGENT_GUIDELINES.md`](file:///mnt/data2/SIDE_HUSSLE/projects/spotlight-bazaar/AGENT_GUIDELINES.md):** Coding rules, design language standards (Nerqiva dark aesthetic & speed), and system prompts for AI code generation.
+1. **[`PRD_PRODUCT_REQUIREMENTS.md`](./PRD_PRODUCT_REQUIREMENTS.md):** Product specifications, user personas, open-elective category mechanics, and feature backlog.
+2. **[`TECH_ARCHITECTURE.md`](./TECH_ARCHITECTURE.md):** Frontend, backend, map rendering, edge caching, and WhatsApp dispatch architecture.
+3. **[`DATA_MODEL.md`](./DATA_MODEL.md):** PostgreSQL schema, table definitions, PostGIS location queries, and index strategies.
+4. **[`ROADMAP_30_DAYS.md`](./ROADMAP_30_DAYS.md):** 4-week sprint execution plan from MVP build to initial 100 businesses onboarded.
+5. **[`AGENT_GUIDELINES.md`](./AGENT_GUIDELINES.md):** Coding rules, design language standards, and implementation guidelines.
 
