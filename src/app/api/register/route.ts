@@ -118,8 +118,8 @@ export async function POST(req: NextRequest) {
       instagram_handle: instagram_handle ? instagram_handle.replace(/^@/, "").trim() : "",
       starting_price: starting_price || "",
       logo_url: Array.isArray(portfolio_images) && portfolio_images[0] ? portfolio_images[0] : "",
-      is_verified: true,
-      is_featured: true,
+      is_verified: false,
+      is_featured: false,
       total_views: 1,
       total_leads: 0,
       portfolio: Array.isArray(portfolio_images)

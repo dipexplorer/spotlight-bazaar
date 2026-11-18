@@ -1,195 +1,662 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import { MapPin, Navigation, Check, Sparkles } from "lucide-react";
-import { getCityGeoConfig } from "@/lib/geo/cityGeoRegistry";
-import { unproject3DToGps } from "@/lib/geo/geoProjection";
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import * as maplibregl from "maplibre-gl";
+import { config, Map as MapLibreMap, Marker } from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+import {
+  Crosshair,
+  Loader2,
+  MapPin,
+  Minus,
+  Plus,
+  Search,
+  X,
+} from "lucide-react";
+import { searchLocalIndiaPlaces } from "@/lib/geo/indiaPlaces";
 
-interface LocationMapPickerProps {
-  city: string;
-  initialLat?: number;
-  initialLon?: number;
-  initialPincode?: string;
-  onLocationChange: (loc: { lat: number; lon: number; pincode: string; addressName: string }) => void;
+if (typeof window !== "undefined") {
+  config.WORKER_URL = "/maplibre-gl-worker.mjs";
 }
 
-interface LandmarkPreset {
+const CARTO_VOYAGER_STYLE =
+  "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
+
+const OSM_RASTER_FALLBACK = {
+  version: 8 as const,
+  sources: {
+    "osm-tiles": {
+      type: "raster" as const,
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      attribution: "© OpenStreetMap contributors",
+    },
+  },
+  layers: [
+    {
+      id: "osm-tiles-layer",
+      type: "raster" as const,
+      source: "osm-tiles",
+      minzoom: 0,
+      maxzoom: 19,
+    },
+  ],
+};
+
+const INDIA_CENTER: [number, number] = [80.8, 22.0];
+const INDIA_MAX_BOUNDS: [[number, number], [number, number]] = [
+  [58.0, 0.5],
+  [108.0, 42.5],
+];
+
+interface GeoSuggestion {
+  id: string;
   name: string;
-  pincode: string;
+  subtitle: string;
+  kind: "pincode" | "state" | "city" | "area";
   lat: number;
   lon: number;
-  area: string;
+  zoom: number;
+  pincode?: string;
+}
+
+export interface PickedLocation {
+  lat: number;
+  lon: number;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  label?: string;
+}
+
+interface LocationMapPickerProps {
+  lat: number | null;
+  lon: number | null;
+  selectedLabel?: string;
+  externalFlyTarget?: { lat: number; lon: number; zoom?: number; key: number } | null;
+  onChange: (location: PickedLocation) => void;
+}
+
+function createPinElement(): HTMLDivElement {
+  const el = document.createElement("div");
+  el.className = "flex flex-col items-center cursor-grab active:cursor-grabbing select-none";
+  el.innerHTML = `
+    <div style="
+      width: 34px;
+      height: 34px;
+      border-radius: 9999px;
+      background: #f59e0b;
+      border: 3px solid #09090b;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    ">
+      <div style="width: 9px; height: 9px; border-radius: 9999px; background: #09090b;"></div>
+    </div>
+    <div style="
+      width: 2px;
+      height: 10px;
+      background: #09090b;
+      border-radius: 2px;
+      margin-top: -1px;
+    "></div>
+    <div style="
+      width: 10px;
+      height: 4px;
+      border-radius: 9999px;
+      background: rgba(9, 9, 11, 0.45);
+      margin-top: -1px;
+    "></div>
+  `;
+  return el;
+}
+
+function parseCityStateFromSuggestion(s: GeoSuggestion): {
+  city?: string;
+  state?: string;
+  pincode?: string;
+} {
+  const pinMatch =
+    s.pincode ||
+    s.name.match(/\b([1-9]\d{5})\b/)?.[1] ||
+    s.subtitle.match(/\b([1-9]\d{5})\b/)?.[1];
+
+  const parts = s.subtitle
+    .split(/[·,]/)
+    .map((p) => p.trim())
+    .filter((p) => p && p.toLowerCase() !== "india" && !/^\d{6}$/.test(p));
+
+  if (s.kind === "city") {
+    return {
+      city: s.name,
+      state: parts[0] || undefined,
+      pincode: pinMatch,
+    };
+  }
+  if (s.kind === "pincode") {
+    const cleanName = s.name.replace(/^PIN\s*\d{6}\s*[·-]?\s*/i, "").trim();
+    const cityPart = parts.length >= 2 ? parts[parts.length - 2] : parts[0] || cleanName;
+    const statePart = parts.length >= 2 ? parts[parts.length - 1] : undefined;
+    return {
+      city: cityPart || undefined,
+      state: statePart,
+      pincode: pinMatch,
+    };
+  }
+  if (s.kind === "area") {
+    const cityPart = parts.length >= 2 ? parts[parts.length - 2] : parts[0] || s.name;
+    const statePart = parts.length >= 2 ? parts[parts.length - 1] : undefined;
+    return {
+      city: cityPart,
+      state: statePart,
+      pincode: pinMatch,
+    };
+  }
+  return {
+    state: s.name,
+    pincode: pinMatch,
+  };
 }
 
 export function LocationMapPicker({
-  city,
-  initialLat,
-  initialLon,
-  initialPincode,
-  onLocationChange,
+  lat,
+  lon,
+  selectedLabel,
+  externalFlyTarget,
+  onChange,
 }: LocationMapPickerProps) {
-  const geoConfig = useMemo(() => getCityGeoConfig(city), [city]);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<MapLibreMap | null>(null);
+  const markerRef = useRef<Marker | null>(null);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
-  const presets: LandmarkPreset[] = useMemo(() => {
-    return geoConfig.colonies.map((c) => {
-      const rawGps = unproject3DToGps({ x: c.x, z: c.z }, geoConfig.anchor);
-      return {
-        name: c.name,
-        pincode: c.pincode,
-        lat: rawGps.lat,
-        lon: rawGps.lon,
-        area: c.description || c.zone,
-      };
-    });
-  }, [geoConfig]);
+  const [mapReady, setMapReady] = useState(false);
+  const [locatingGps, setLocatingGps] = useState(false);
+  const [reverseLoading, setReverseLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  const defaultPreset = presets[0] || {
-    name: "City Central Avenue",
-    pincode: "781001",
-    lat: geoConfig.anchor.centerLat,
-    lon: geoConfig.anchor.centerLon,
-    area: "Central Commercial District",
-  };
+  // Search box state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [remoteResults, setRemoteResults] = useState<GeoSuggestion[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(-1);
+  const searchWrapRef = useRef<HTMLDivElement>(null);
 
-  const [lat, setLat] = useState<number>(initialLat || defaultPreset.lat);
-  const [lon, setLon] = useState<number>(initialLon || defaultPreset.lon);
-  const [pincode, setPincode] = useState<string>(initialPincode || defaultPreset.pincode);
-  const [selectedPreset, setSelectedPreset] = useState<string>(defaultPreset.name);
-  const [gpsActive, setGpsActive] = useState<boolean>(false);
+  // Place or move marker cleanly on the mini-map
+  const placeMarker = useCallback((nextLon: number, nextLat: number) => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!markerRef.current) {
+      const marker = new maplibregl.Marker({
+        element: createPinElement(),
+        anchor: "bottom",
+        draggable: true,
+      })
+        .setLngLat([nextLon, nextLat])
+        .addTo(map);
 
-  // Update selection when city changes
-  useEffect(() => {
-    if (presets.length > 0) {
-      const first = presets[0];
-      setLat(first.lat);
-      setLon(first.lon);
-      setPincode(first.pincode);
-      setSelectedPreset(first.name);
-      onLocationChange({
-        lat: first.lat,
-        lon: first.lon,
-        pincode: first.pincode,
-        addressName: first.area,
+      marker.on("dragend", () => {
+        const pos = marker.getLngLat();
+        onChangeRef.current({
+          lat: Number(pos.lat.toFixed(6)),
+          lon: Number(pos.lng.toFixed(6)),
+        });
+        reverseGeocode(pos.lat, pos.lng);
       });
+
+      markerRef.current = marker;
+    } else {
+      markerRef.current.setLngLat([nextLon, nextLat]);
     }
-  }, [city, presets, onLocationChange]);
+  }, []);
 
-  const handlePresetSelect = (preset: LandmarkPreset) => {
-    setLat(preset.lat);
-    setLon(preset.lon);
-    setPincode(preset.pincode);
-    setSelectedPreset(preset.name);
-    setGpsActive(false);
+  // Gentle reverse geocoder (fills city/state/pincode when user clicks/drags pin or uses GPS)
+  const reverseGeocode = useCallback(async (targetLat: number, targetLon: number) => {
+    setReverseLoading(true);
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${targetLat}&lon=${targetLon}&zoom=16&addressdetails=1&accept-language=en`;
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      if (!res.ok) return;
+      const data = await res.json();
+      const addr = data?.address || {};
+      if (addr.country_code && addr.country_code.toLowerCase() !== "in") {
+        setStatusMessage("Please place your pin inside India.");
+        return;
+      }
+      const detectedCity =
+        addr.city ||
+        addr.town ||
+        addr.village ||
+        addr.suburb ||
+        addr.county ||
+        addr.state_district ||
+        "";
+      const detectedState = addr.state || "";
+      const rawPin = typeof addr.postcode === "string" ? addr.postcode.replace(/\D/g, "") : "";
+      const detectedPin = /^[1-9]\d{5}$/.test(rawPin) ? rawPin : undefined;
+      const areaBit = addr.road || addr.neighbourhood || addr.suburb || "";
+      const label = [areaBit, detectedCity, detectedState].filter(Boolean).join(", ");
 
-    onLocationChange({
-      lat: preset.lat,
-      lon: preset.lon,
-      pincode: preset.pincode,
-      addressName: preset.area,
+      setStatusMessage(null);
+      onChangeRef.current({
+        lat: Number(targetLat.toFixed(6)),
+        lon: Number(targetLon.toFixed(6)),
+        city: detectedCity || undefined,
+        state: detectedState || undefined,
+        pincode: detectedPin,
+        label: label || undefined,
+      });
+    } catch {
+      // Exact coordinates are already saved; fail silently if reverse-geocode is offline
+    } finally {
+      setReverseLoading(false);
+    }
+  }, []);
+
+  // Initialize MapLibre mini-map once
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return;
+
+    const hasInitial = typeof lat === "number" && typeof lon === "number";
+    const map = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: CARTO_VOYAGER_STYLE,
+      center: hasInitial ? [lon, lat] : INDIA_CENTER,
+      zoom: hasInitial ? 15.5 : 3.05,
+      minZoom: 2.7,
+      maxZoom: 19.5,
+      maxBounds: INDIA_MAX_BOUNDS,
+      attributionControl: false,
+      dragRotate: false,
+      pitchWithRotate: false,
+    });
+
+    const ro = new ResizeObserver(() => {
+      map.resize();
+    });
+    ro.observe(mapContainerRef.current);
+
+    map.on("error", (e: { error?: { message?: string } }) => {
+      if (e?.error?.message?.toLowerCase().includes("style")) {
+        map.setStyle(OSM_RASTER_FALLBACK);
+      }
+    });
+
+    map.on("load", () => {
+      setMapReady(true);
+      if (hasInitial) {
+        placeMarker(lon, lat);
+      }
+    });
+
+    map.on("click", (e) => {
+      const clickLat = Number(e.lngLat.lat.toFixed(6));
+      const clickLon = Number(e.lngLat.lng.toFixed(6));
+      placeMarker(clickLon, clickLat);
+      setStatusMessage(null);
+      onChangeRef.current({ lat: clickLat, lon: clickLon });
+      if (map.getZoom() < 13) {
+        map.easeTo({ center: [clickLon, clickLat], zoom: 14.5, duration: 550 });
+      }
+      reverseGeocode(clickLat, clickLon);
+    });
+
+    mapRef.current = map;
+
+    return () => {
+      ro.disconnect();
+      markerRef.current?.remove();
+      markerRef.current = null;
+      map.remove();
+      mapRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // React to external coordinate fly triggers (e.g. user typed a 6-digit Indian PIN code above)
+  useEffect(() => {
+    if (!externalFlyTarget || !mapRef.current || !mapReady) return;
+    const { lat: fLat, lon: fLon, zoom = 15 } = externalFlyTarget;
+    placeMarker(fLon, fLat);
+    mapRef.current.flyTo({
+      center: [fLon, fLat],
+      zoom,
+      duration: 950,
+      essential: true,
+    });
+  }, [externalFlyTarget, mapReady, placeMarker]);
+
+  // Close search dropdown on outside click
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) {
+        setSearchOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  // Debounced India geo search (PIN codes, areas, towns, streets)
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setRemoteResults([]);
+      setSearching(false);
+      return;
+    }
+
+    let cancelled = false;
+    setSearching(true);
+    const timer = setTimeout(() => {
+      fetch(`/api/geo/search?q=${encodeURIComponent(q)}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (!cancelled && Array.isArray(d?.results)) {
+            setRemoteResults(d.results);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setRemoteResults([]);
+        })
+        .finally(() => {
+          if (!cancelled) setSearching(false);
+        });
+    }, 240);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchQuery]);
+
+  // Merge instant local India places + live geocoder results
+  const combinedSuggestions: GeoSuggestion[] = React.useMemo(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2) return [];
+    const local: GeoSuggestion[] = searchLocalIndiaPlaces(q).map((p) => ({
+      id: p.id,
+      name: p.name,
+      subtitle: p.subtitle,
+      kind: p.kind,
+      lat: p.lat,
+      lon: p.lon,
+      zoom: p.zoom,
+    }));
+    const seen = new Set(local.map((p) => p.name.toLowerCase()));
+    const merged = [...local];
+    for (const r of remoteResults) {
+      if (!seen.has(r.name.toLowerCase())) {
+        seen.add(r.name.toLowerCase());
+        merged.push(r);
+      }
+    }
+    return merged.slice(0, 6);
+  }, [searchQuery, remoteResults]);
+
+  const handleSelectSuggestion = (s: GeoSuggestion) => {
+    setSearchOpen(false);
+    setSearchQuery(s.name);
+    setActiveIdx(-1);
+    setStatusMessage(null);
+
+    const parsed = parseCityStateFromSuggestion(s);
+    const nextZoom = Math.max(s.zoom || 14, s.kind === "state" ? 8.5 : 15.5);
+
+    placeMarker(s.lon, s.lat);
+    mapRef.current?.flyTo({
+      center: [s.lon, s.lat],
+      zoom: nextZoom,
+      duration: 950,
+      essential: true,
+    });
+
+    onChange({
+      lat: Number(s.lat.toFixed(6)),
+      lon: Number(s.lon.toFixed(6)),
+      city: parsed.city,
+      state: parsed.state,
+      pincode: parsed.pincode,
+      label: s.subtitle ? `${s.name}, ${s.subtitle}` : s.name,
     });
   };
 
-  const handleGetCurrentLocation = () => {
-    if (typeof window !== "undefined" && navigator.geolocation) {
-      setGpsActive(true);
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const userLat = Number(pos.coords.latitude.toFixed(6));
-          const userLon = Number(pos.coords.longitude.toFixed(6));
-          setLat(userLat);
-          setLon(userLon);
-          setSelectedPreset("Current Live GPS Location");
-
-          onLocationChange({
-            lat: userLat,
-            lon: userLon,
-            pincode,
-            addressName: `Physical GPS Location (${userLat.toFixed(4)}, ${userLon.toFixed(4)})`,
-          });
-        },
-        () => {
-          setGpsActive(false);
-        },
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
+  const handleUseGPS = () => {
+    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
+      setStatusMessage("GPS is unavailable in this browser. Search or click the map instead.");
+      return;
     }
+
+    setLocatingGps(true);
+    setStatusMessage(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const gpsLat = Number(pos.coords.latitude.toFixed(6));
+        const gpsLon = Number(pos.coords.longitude.toFixed(6));
+        placeMarker(gpsLon, gpsLat);
+        mapRef.current?.flyTo({
+          center: [gpsLon, gpsLat],
+          zoom: 17,
+          duration: 1000,
+          essential: true,
+        });
+        onChange({ lat: gpsLat, lon: gpsLon });
+        reverseGeocode(gpsLat, gpsLon);
+        setLocatingGps(false);
+      },
+      () => {
+        setStatusMessage("Location permission denied. Search your area or tap directly on the map.");
+        setLocatingGps(false);
+      },
+      { enableHighAccuracy: true, timeout: 9000 }
+    );
   };
+
+  const handleZoom = (delta: number) => {
+    const map = mapRef.current;
+    if (!map) return;
+    map.easeTo({ zoom: Math.min(19.5, Math.max(3.4, map.getZoom() + delta)), duration: 240 });
+  };
+
+  const hasPinned = typeof lat === "number" && typeof lon === "number";
 
   return (
-    <div className="space-y-3 p-4 rounded-2xl bg-neutral-900/90 border border-neutral-800 text-neutral-200">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-amber-400" />
-          <span className="text-xs font-bold text-white tracking-wide uppercase">
-            3D High Street Anchor & Real GPS Coordinates
-          </span>
+    <div className="space-y-3">
+      {/* Header row + Use My GPS */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <label
+            htmlFor="mini-map-search"
+            className="block text-sm font-medium text-neutral-100"
+          >
+            Pin Exact Plot Location on India Map <span className="text-amber-400">*</span>
+          </label>
+          <p className="text-xs text-neutral-400 mt-0.5">
+            Search any area or PIN, use GPS, or tap &amp; drag the pin to your exact shopfront.
+          </p>
         </div>
 
         <button
           type="button"
-          onClick={handleGetCurrentLocation}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold transition-colors active:scale-95"
+          onClick={handleUseGPS}
+          disabled={locatingGps}
+          className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-xl bg-amber-500/12 hover:bg-amber-500/20 border border-amber-500/35 text-xs font-semibold text-amber-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 disabled:opacity-60"
         >
-          <Navigation className={`w-3.5 h-3.5 ${gpsActive ? "animate-spin text-amber-400" : ""}`} />
-          <span>Use My GPS</span>
+          {locatingGps ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Crosshair className="w-3.5 h-3.5" />
+          )}
+          <span>{locatingGps ? "Locating…" : "Use My GPS"}</span>
         </button>
       </div>
 
-      <p className="text-[11px] text-neutral-400">
-        Your 3D storefront will spawn dynamically on the real 3D street matching your physical shop or studio address.
-      </p>
-
-      {/* Preset Landmark / Postal Hub Grid */}
-      <div className="space-y-1.5">
-        <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-wider block">
-          Select Landmark & Postal PIN Zone in {city}:
-        </span>
-        <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto no-scrollbar pr-1">
-          {presets.map((landmark) => {
-            const isSelected = selectedPreset === landmark.name;
-            return (
+      {/* All-India Search Bar for jumping the mini-map */}
+      <div ref={searchWrapRef} className="relative">
+        <div className="relative flex items-center">
+          <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 pointer-events-none" />
+          <input
+            id="mini-map-search"
+            type="text"
+            value={searchQuery}
+            onFocus={() => setSearchOpen(true)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setSearchOpen(true);
+              setActiveIdx(-1);
+            }}
+            onKeyDown={(e) => {
+              if (!searchOpen || combinedSuggestions.length === 0) return;
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setActiveIdx((prev) => (prev + 1) % combinedSuggestions.length);
+              } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setActiveIdx((prev) =>
+                  prev <= 0 ? combinedSuggestions.length - 1 : prev - 1
+                );
+              } else if (e.key === "Enter" && activeIdx >= 0) {
+                e.preventDefault();
+                handleSelectSuggestion(combinedSuggestions[activeIdx]);
+              } else if (e.key === "Escape") {
+                setSearchOpen(false);
+              }
+            }}
+            placeholder="Search any Indian city, area, or 6-digit PIN…"
+            autoComplete="off"
+            className="w-full min-h-[44px] pl-10 pr-10 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-neutral-100 placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/70 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+          />
+          {searching ? (
+            <Loader2 className="w-4 h-4 text-amber-400 animate-spin absolute right-3.5" />
+          ) : (
+            searchQuery && (
               <button
                 type="button"
-                key={landmark.name}
-                onClick={() => handlePresetSelect(landmark)}
-                className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between ${
-                  isSelected
-                    ? "bg-amber-500/15 border-amber-500 text-amber-300 shadow-md shadow-amber-950/20"
-                    : "bg-neutral-950/60 border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-neutral-200"
-                }`}
+                onClick={() => {
+                  setSearchQuery("");
+                  setRemoteResults([]);
+                }}
+                aria-label="Clear map search"
+                className="absolute right-2 p-2 text-neutral-400 hover:text-neutral-100 transition-colors"
               >
-                <div className="flex items-center justify-between gap-1 mb-1">
-                  <span className="text-xs font-semibold text-white truncate">
-                    {landmark.name}
-                  </span>
-                  {isSelected && <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-neutral-400 font-mono">
-                  <span>PIN {landmark.pincode}</span>
-                  <span className="text-[9px] text-amber-400/80">
-                    {landmark.lat.toFixed(2)}, {landmark.lon.toFixed(2)}
-                  </span>
-                </div>
+                <X className="w-4 h-4" />
               </button>
-            );
-          })}
+            )
+          )}
+        </div>
+
+        {/* Autosuggestions Popover */}
+        {searchOpen && combinedSuggestions.length > 0 && (
+          <ul
+            role="listbox"
+            aria-label="Location suggestions"
+            className="absolute z-30 left-0 right-0 mt-1.5 rounded-xl bg-[#121215] border border-neutral-700/90 shadow-2xl overflow-hidden divide-y divide-neutral-800/80"
+          >
+            {combinedSuggestions.map((item, idx) => (
+              <li key={item.id} role="option" aria-selected={idx === activeIdx}>
+                <button
+                  type="button"
+                  onClick={() => handleSelectSuggestion(item)}
+                  className={`w-full text-left px-3.5 py-2.5 flex items-center justify-between gap-3 transition-colors ${
+                    idx === activeIdx
+                      ? "bg-amber-500/15 text-white"
+                      : "hover:bg-neutral-800/70 text-neutral-100"
+                  }`}
+                >
+                  <div className="min-w-0 flex items-center gap-2.5">
+                    <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold truncate">{item.name}</div>
+                      {item.subtitle && (
+                        <div className="text-[11px] text-neutral-400 truncate">
+                          {item.subtitle}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <span className="shrink-0 px-2 py-0.5 rounded-md bg-neutral-900 border border-neutral-800 text-[10px] font-medium uppercase tracking-wide text-neutral-400">
+                    {item.kind}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Interactive MapLibre Mini-Map Viewport */}
+      <div className="relative rounded-2xl overflow-hidden border border-neutral-800 bg-[#0d1117]">
+        <div
+          ref={mapContainerRef}
+          style={{ height: 256 }}
+          className="w-full h-64"
+          aria-label="Interactive India map for selecting business coordinates"
+        />
+
+        {/* Zoom Controls */}
+        <div className="absolute top-3 right-3 z-10 flex flex-col rounded-xl overflow-hidden border border-neutral-800/90 bg-[#09090b]/90 backdrop-blur-md shadow-lg">
+          <button
+            type="button"
+            onClick={() => handleZoom(1.4)}
+            aria-label="Zoom in map"
+            className="w-9 h-9 flex items-center justify-center text-neutral-200 hover:bg-neutral-800 hover:text-white transition-colors border-b border-neutral-800/90"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleZoom(-1.4)}
+            aria-label="Zoom out map"
+            className="w-9 h-9 flex items-center justify-center text-neutral-200 hover:bg-neutral-800 hover:text-white transition-colors"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Helper Pill inside map */}
+        <div className="absolute top-3 left-3 z-10 pointer-events-none px-2.5 py-1 rounded-lg bg-[#09090b]/85 border border-neutral-800/90 backdrop-blur-md text-[11px] font-medium text-neutral-200">
+          {hasPinned ? "Drag pin or click to refine" : "Click anywhere in India to drop pin"}
+        </div>
+
+        {/* Bottom Coordinate Bar */}
+        <div className="px-3.5 py-2.5 bg-[#0e0e11] border-t border-neutral-800/90 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <span
+              className={`w-2 h-2 rounded-full shrink-0 ${
+                hasPinned ? "bg-emerald-400" : "bg-neutral-600"
+              }`}
+            />
+            {hasPinned ? (
+              <span className="font-mono text-[11px] text-neutral-200 tabular-nums">
+                {lat.toFixed(5)}° N, {lon.toFixed(5)}° E
+              </span>
+            ) : (
+              <span className="text-neutral-400">No plot coordinates pinned yet</span>
+            )}
+          </div>
+
+          <div className="text-[11px] text-neutral-400 truncate max-w-[230px] sm:max-w-[260px]">
+            {reverseLoading ? (
+              <span className="inline-flex items-center gap-1 text-amber-400">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Resolving address…
+              </span>
+            ) : (
+              selectedLabel || (hasPinned ? "Exact 3D building spot locked" : "All India supported")
+            )}
+          </div>
         </div>
       </div>
 
-      {/* GPS Live Readout Pill */}
-      <div className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-950/80 border border-neutral-800 text-xs font-mono text-neutral-300">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-neutral-400 text-[11px]">Real 3D Anchor:</span>
-          <span className="text-white font-semibold">
-            {lat.toFixed(4)}° N, {lon.toFixed(4)}° E
-          </span>
-        </div>
-        <span className="text-[10px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-md">
-          PIN {pincode}
-        </span>
-      </div>
+      {statusMessage && (
+        <p role="status" className="text-xs text-amber-300">
+          {statusMessage}
+        </p>
+      )}
     </div>
   );
 }
-

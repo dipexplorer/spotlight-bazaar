@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { CategoryId } from "@/types";
 
 /**
  * Contact shadow plane helper to give tangible grounding to 3D objects
@@ -1794,4 +1795,792 @@ export function createPlayerCharacter3D(): {
   };
 
   return { group, leftLeg, rightLeg, leftArm, rightArm, updateWalk };
+}
+
+/**
+ * Shared architectural plot plinth & streetfront apron (22m x 18m)
+ * Guarantees every category base plot sits cleanly grounded at y = 0 with zero floating or z-fighting.
+ */
+function createCategoryBasePlinth(
+  group: THREE.Group,
+  plinthColor: number,
+  apronColor: number,
+  accentColor: number
+) {
+  group.add(createGroundShadow(24.5, 20.5));
+
+  const plinthMat = new THREE.MeshStandardMaterial({ color: plinthColor, roughness: 0.85 });
+  const apronMat = new THREE.MeshStandardMaterial({ color: apronColor, roughness: 0.78 });
+  const accentMat = new THREE.MeshStandardMaterial({
+    color: accentColor,
+    emissive: new THREE.Color(accentColor),
+    emissiveIntensity: 1.5,
+  });
+
+  // Main architectural base slab (y: 0 -> 0.36)
+  const base = new THREE.Mesh(new THREE.BoxGeometry(22.0, 0.36, 18.0), plinthMat);
+  base.position.set(0, 0.18, 0);
+  group.add(base);
+
+  // Front paved pedestrian apron (+Z entrance forecourt, y: 0.36 -> 0.42)
+  const apron = new THREE.Mesh(new THREE.BoxGeometry(20.6, 0.06, 6.2), apronMat);
+  apron.position.set(0, 0.39, 5.6);
+  group.add(apron);
+
+  // Subtle recessed architectural LED trim along front entrance edge
+  const edgeStrip = new THREE.Mesh(new THREE.BoxGeometry(10.0, 0.05, 0.16), accentMat);
+  edgeStrip.position.set(0, 0.43, 8.7);
+  group.add(edgeStrip);
+}
+
+/**
+ * Helper to add a crisp planter box with sculpted greenery safely positioned away from walls
+ */
+function addArchitecturalPlanter(
+  group: THREE.Group,
+  x: number,
+  z: number,
+  potColor = 0x1e293b,
+  foliageColor = 0x15803d
+) {
+  const potMat = new THREE.MeshStandardMaterial({ color: potColor, roughness: 0.75 });
+  const leafMat = new THREE.MeshStandardMaterial({ color: foliageColor, roughness: 0.82 });
+
+  const pot = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.75, 1.4), potMat);
+  pot.position.set(x, 0.74, z);
+  group.add(pot);
+
+  const bush = new THREE.Mesh(new THREE.SphereGeometry(0.68, 12, 10), leafMat);
+  bush.scale.set(1.0, 1.15, 1.0);
+  bush.position.set(x, 1.52, z);
+  group.add(bush);
+}
+
+/**
+ * 1. Creative & Weddings — Glass Atelier & Studio
+ * Pitched north-light cyclorama skylight, frameless exhibition glazing, gallery frames & champagne gold fascia.
+ */
+function buildCreativeAtelierPlot(): THREE.Group {
+  const g = new THREE.Group();
+  g.name = "category_plot_creative_weddings";
+  createCategoryBasePlinth(g, 0x0f172a, 0x334155, 0xeab308);
+
+  const obsidianMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.55, metalness: 0.35 });
+  const limestoneMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.38 });
+  const champagneMat = new THREE.MeshStandardMaterial({
+    color: 0xeab308,
+    roughness: 0.25,
+    metalness: 0.75,
+  });
+  const warmGlowMat = new THREE.MeshStandardMaterial({
+    color: 0xfef3c7,
+    emissive: new THREE.Color(0xf59e0b),
+    emissiveIntensity: 1.85,
+  });
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0xe0f2fe,
+    roughness: 0.06,
+    metalness: 0.25,
+    transparent: true,
+    opacity: 0.78,
+  });
+
+  // Main Atelier Volume (centered at z = -1.8, depth = 10.4 -> front wall at z = +3.4)
+  const mainBody = new THREE.Mesh(new THREE.BoxGeometry(16.0, 6.2, 10.4), obsidianMat);
+  mainBody.position.set(0, 3.46, -1.8);
+  g.add(mainBody);
+
+  // White Architectural Frame Portal around front facade
+  const leftPier = new THREE.Mesh(new THREE.BoxGeometry(1.4, 6.5, 1.6), limestoneMat);
+  leftPier.position.set(-7.6, 3.61, 3.2);
+  g.add(leftPier);
+
+  const rightPier = new THREE.Mesh(new THREE.BoxGeometry(1.4, 6.5, 1.6), limestoneMat);
+  rightPier.position.set(7.6, 3.61, 3.2);
+  g.add(rightPier);
+
+  const topBeam = new THREE.Mesh(new THREE.BoxGeometry(16.6, 1.1, 2.2), limestoneMat);
+  topBeam.position.set(0, 6.65, 3.3);
+  g.add(topBeam);
+
+  // Luminous Champagne Gold Atelier Fascia Signboard
+  const signBack = new THREE.Mesh(new THREE.BoxGeometry(9.2, 0.76, 0.22), obsidianMat);
+  signBack.position.set(0, 6.65, 4.42);
+  g.add(signBack);
+
+  const signGlow = new THREE.Mesh(new THREE.BoxGeometry(8.4, 0.32, 0.12), warmGlowMat);
+  signGlow.position.set(0, 6.65, 4.54);
+  g.add(signGlow);
+
+  // Double-Height Exhibition Glass Curtain Wall & Warm Studio Interior Backing
+  const interiorBack = new THREE.Mesh(new THREE.BoxGeometry(13.2, 5.2, 0.25), warmGlowMat);
+  interiorBack.position.set(0, 3.1, 2.55);
+  g.add(interiorBack);
+
+  // Gallery Exhibition Frames visible behind glass
+  for (const fx of [-4.2, 0, 4.2]) {
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(2.3, 3.0, 0.14), champagneMat);
+    frame.position.set(fx, 3.2, 2.78);
+    g.add(frame);
+    const canvas = new THREE.Mesh(new THREE.BoxGeometry(1.9, 2.5, 0.16), limestoneMat);
+    canvas.position.set(fx, 3.2, 2.81);
+    g.add(canvas);
+  }
+
+  const frontGlass = new THREE.Mesh(new THREE.BoxGeometry(13.6, 5.4, 0.14), glassMat);
+  frontGlass.position.set(0, 3.16, 3.45);
+  g.add(frontGlass);
+
+  // Slim Champagne Mullions
+  for (const mx of [-4.5, 0, 4.5]) {
+    const mullion = new THREE.Mesh(new THREE.BoxGeometry(0.14, 5.4, 0.22), champagneMat);
+    mullion.position.set(mx, 3.16, 3.48);
+    g.add(mullion);
+  }
+
+  // Sawtooth North-Light Cyclorama Skylight Roof (Signature Studio Silhouette)
+  for (let i = 0; i < 3; i++) {
+    const skylightBase = new THREE.Mesh(new THREE.BoxGeometry(14.8, 1.35, 2.6), limestoneMat);
+    skylightBase.position.set(0, 7.25, -5.2 + i * 3.1);
+    skylightBase.rotation.x = 0.22;
+    g.add(skylightBase);
+
+    const skylightGlass = new THREE.Mesh(new THREE.BoxGeometry(14.2, 0.95, 0.16), glassMat);
+    skylightGlass.position.set(0, 7.38, -3.9 + i * 3.1);
+    g.add(skylightGlass);
+  }
+
+  // Front Sandstone Steps & Sculpted Planters
+  const step = new THREE.Mesh(new THREE.BoxGeometry(8.6, 0.24, 1.8), limestoneMat);
+  step.position.set(0, 0.52, 4.4);
+  g.add(step);
+
+  addArchitecturalPlanter(g, -6.4, 5.4, 0x1e293b, 0x166534);
+  addArchitecturalPlanter(g, 6.4, 5.4, 0x1e293b, 0x166534);
+
+  return g;
+}
+
+/**
+ * 2. Beauty & Wellness — Botanical Spa Pavilion
+ * Travertine cream stone overhang, arched frosted glass bays, zen reflecting water basin & bamboo planters.
+ */
+function buildBeautySpaPlot(): THREE.Group {
+  const g = new THREE.Group();
+  g.name = "category_plot_beauty_wellness";
+  createCategoryBasePlinth(g, 0x292524, 0xe7e5e4, 0xfb7185);
+
+  const travertineMat = new THREE.MeshStandardMaterial({ color: 0xf5f0e6, roughness: 0.45 });
+  const warmSandMat = new THREE.MeshStandardMaterial({ color: 0xd6c5b3, roughness: 0.6 });
+  const roseGoldMat = new THREE.MeshStandardMaterial({ color: 0xf43f5e, roughness: 0.28, metalness: 0.65 });
+  const sanctuaryGlowMat = new THREE.MeshStandardMaterial({
+    color: 0xffe4e6,
+    emissive: new THREE.Color(0xfb7185),
+    emissiveIntensity: 1.45,
+  });
+  const frostedGlassMat = new THREE.MeshStandardMaterial({
+    color: 0xfff1f2,
+    roughness: 0.15,
+    transparent: true,
+    opacity: 0.72,
+  });
+  const waterMat = new THREE.MeshStandardMaterial({
+    color: 0x38bdf8,
+    roughness: 0.08,
+    metalness: 0.2,
+    transparent: true,
+    opacity: 0.85,
+  });
+  const teakMat = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.65 });
+
+  // Ground Pavilion Body
+  const pavilion = new THREE.Mesh(new THREE.BoxGeometry(16.4, 4.6, 10.0), travertineMat);
+  pavilion.position.set(0, 2.66, -1.8);
+  g.add(pavilion);
+
+  // Deep Cantilevered Floating Roof Slab
+  const roofSlab = new THREE.Mesh(new THREE.BoxGeometry(19.0, 0.65, 13.0), travertineMat);
+  roofSlab.position.set(0, 5.28, -0.8);
+  g.add(roofSlab);
+
+  const roseTrim = new THREE.Mesh(new THREE.BoxGeometry(19.1, 0.14, 13.1), roseGoldMat);
+  roseTrim.position.set(0, 5.02, -0.8);
+  g.add(roseTrim);
+
+  // Rooftop Zen Timber Pergola
+  for (let i = -3; i <= 3; i++) {
+    const slat = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.28, 7.6), teakMat);
+    slat.position.set(i * 1.9, 6.25, -1.8);
+    g.add(slat);
+  }
+  for (const px of [-6.0, 6.0]) {
+    for (const pz of [-5.2, 1.6]) {
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.32, 1.0, 0.32), teakMat);
+      post.position.set(px, 5.85, pz);
+      g.add(post);
+    }
+  }
+
+  // Three Illuminated Frosted-Glass Spa Bays with Warm Arch Header
+  for (const bx of [-4.6, 0, 4.6]) {
+    const glow = new THREE.Mesh(new THREE.BoxGeometry(3.2, 3.6, 0.2), sanctuaryGlowMat);
+    glow.position.set(bx, 2.35, 3.12);
+    g.add(glow);
+
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(3.4, 3.8, 0.14), frostedGlassMat);
+    glass.position.set(bx, 2.35, 3.28);
+    g.add(glass);
+
+    const archTop = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.7, 0.35, 20, 1, false, 0, Math.PI), warmSandMat);
+    archTop.rotation.z = Math.PI / 2;
+    archTop.rotation.y = Math.PI / 2;
+    archTop.position.set(bx, 4.05, 3.26);
+    g.add(archTop);
+  }
+
+  // Glowing Rose-Gold Fascia Sign
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.42, 0.18), sanctuaryGlowMat);
+  sign.position.set(0, 5.28, 5.75);
+  g.add(sign);
+
+  // Tranquil Front Reflecting Water Basin + Stepping Stone Walkway
+  const basinFrame = new THREE.Mesh(new THREE.BoxGeometry(14.2, 0.32, 3.0), warmSandMat);
+  basinFrame.position.set(0, 0.56, 5.7);
+  g.add(basinFrame);
+
+  const pool = new THREE.Mesh(new THREE.BoxGeometry(13.4, 0.26, 2.3), waterMat);
+  pool.position.set(0, 0.62, 5.7);
+  g.add(pool);
+
+  for (const sz of [4.8, 5.7, 6.6]) {
+    const stone = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.34, 0.68), travertineMat);
+    stone.position.set(0, 0.61, sz);
+    g.add(stone);
+  }
+
+  addArchitecturalPlanter(g, -8.2, 5.2, 0xd6c5b3, 0x22c55e);
+  addArchitecturalPlanter(g, 8.2, 5.2, 0xd6c5b3, 0x22c55e);
+
+  return g;
+}
+
+/**
+ * 3. Food & Cafes — Artisanal Café & Roastery
+ * Terracotta brick facade, striped canopy awning, timber bistro deck with umbrella tables & copper roaster vent.
+ */
+function buildFoodCafePlot(): THREE.Group {
+  const g = new THREE.Group();
+  g.name = "category_plot_food_hospitality";
+  createCategoryBasePlinth(g, 0x1c1917, 0x78350f, 0xf59e0b);
+
+  const brickMat = new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.78 });
+  const creamMat = new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.45 });
+  const espressoMat = new THREE.MeshStandardMaterial({ color: 0x292524, roughness: 0.6 });
+  const copperMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.3, metalness: 0.75 });
+  const warmEdisonMat = new THREE.MeshStandardMaterial({
+    color: 0xfde68a,
+    emissive: new THREE.Color(0xf59e0b),
+    emissiveIntensity: 2.1,
+  });
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0xfef9c3,
+    roughness: 0.08,
+    transparent: true,
+    opacity: 0.68,
+  });
+
+  // Main Brick Roastery Volume
+  const body = new THREE.Mesh(new THREE.BoxGeometry(15.6, 5.2, 9.2), brickMat);
+  body.position.set(0, 2.96, -2.6);
+  g.add(body);
+
+  // Dark Espresso Roof Parapet + Copper Roaster Chimney Stack
+  const parapet = new THREE.Mesh(new THREE.BoxGeometry(16.2, 0.75, 9.8), espressoMat);
+  parapet.position.set(0, 5.88, -2.6);
+  g.add(parapet);
+
+  const chimney = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.72, 2.6, 16), copperMat);
+  chimney.position.set(5.4, 7.2, -4.4);
+  g.add(chimney);
+
+  const chimneyCap = new THREE.Mesh(new THREE.ConeGeometry(0.92, 0.55, 16), espressoMat);
+  chimneyCap.position.set(5.4, 8.65, -4.4);
+  g.add(chimneyCap);
+
+  // Glowing Café Storefront Window & Espresso Counter
+  const interior = new THREE.Mesh(new THREE.BoxGeometry(12.8, 3.4, 0.2), warmEdisonMat);
+  interior.position.set(0, 2.25, 1.88);
+  g.add(interior);
+
+  const windowGlass = new THREE.Mesh(new THREE.BoxGeometry(13.2, 3.6, 0.14), glassMat);
+  windowGlass.position.set(0, 2.25, 2.08);
+  g.add(windowGlass);
+
+  // Striped Café Awning Canopy (9 alternating terracotta & cream ribs)
+  for (let i = -4; i <= 4; i++) {
+    const stripe = new THREE.Mesh(
+      new THREE.BoxGeometry(1.48, 0.16, 2.6),
+      i % 2 === 0 ? brickMat : creamMat
+    );
+    stripe.position.set(i * 1.48, 4.35, 3.15);
+    stripe.rotation.x = 0.28;
+    g.add(stripe);
+  }
+
+  // Warm Glowing Roastery Fascia Board
+  const signBoard = new THREE.Mesh(new THREE.BoxGeometry(8.8, 0.72, 0.22), espressoMat);
+  signBoard.position.set(0, 5.85, 2.38);
+  g.add(signBoard);
+
+  const signTextBar = new THREE.Mesh(new THREE.BoxGeometry(7.8, 0.26, 0.1), warmEdisonMat);
+  signTextBar.position.set(0, 5.85, 2.52);
+  g.add(signTextBar);
+
+  // Outdoor Timber Bistro Patio with 3 Umbrella Tables (positioned at z = 5.8, well clear of awning & walls)
+  for (const tx of [-5.2, 0, 5.2]) {
+    const tablePost = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 1.0, 10), espressoMat);
+    tablePost.position.set(tx, 0.92, 5.8);
+    g.add(tablePost);
+
+    const tableTop = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 0.82, 0.1, 16), creamMat);
+    tableTop.position.set(tx, 1.42, 5.8);
+    g.add(tableTop);
+
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.3, 8), copperMat);
+    pole.position.set(tx, 2.35, 5.8);
+    g.add(pole);
+
+    const umbrella = new THREE.Mesh(new THREE.ConeGeometry(1.55, 0.62, 12), tx === 0 ? brickMat : creamMat);
+    umbrella.position.set(tx, 3.55, 5.8);
+    g.add(umbrella);
+  }
+
+  addArchitecturalPlanter(g, -8.4, 4.6, 0x292524, 0x15803d);
+  addArchitecturalPlanter(g, 8.4, 4.6, 0x292524, 0x15803d);
+
+  return g;
+}
+
+/**
+ * 4. Tech & Freelancers — Modern Tech & Dev Studio
+ * Cantilevered graphite volume, cyan ribbon glazing, glowing dual-monitor studio & rooftop solar panels.
+ */
+function buildTechStudioPlot(): THREE.Group {
+  const g = new THREE.Group();
+  g.name = "category_plot_tech_freelance";
+  createCategoryBasePlinth(g, 0x090d16, 0x1e293b, 0x38bdf8);
+
+  const graphiteMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.45, metalness: 0.45 });
+  const titaniumMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.3, metalness: 0.25 });
+  const cyanGlowMat = new THREE.MeshStandardMaterial({
+    color: 0x38bdf8,
+    emissive: new THREE.Color(0x0284c7),
+    emissiveIntensity: 2.2,
+  });
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0x0ea5e9,
+    roughness: 0.06,
+    metalness: 0.35,
+    transparent: true,
+    opacity: 0.75,
+  });
+  const solarMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.22, metalness: 0.65 });
+
+  // Ground Floor Core
+  const groundFloor = new THREE.Mesh(new THREE.BoxGeometry(14.8, 3.4, 9.6), graphiteMat);
+  groundFloor.position.set(-0.6, 2.06, -1.8);
+  g.add(groundFloor);
+
+  // Upper Cantilevered Titanium & Graphite Volume (shifted +X and +Z for bold architectural overhang)
+  const upperVolume = new THREE.Mesh(new THREE.BoxGeometry(16.8, 3.4, 10.6), titaniumMat);
+  upperVolume.position.set(0.6, 5.5, -1.0);
+  g.add(upperVolume);
+
+  // Recessed Dark Band + Cyan Ribbon Window on Upper Floor
+  const upperGlow = new THREE.Mesh(new THREE.BoxGeometry(14.8, 1.8, 0.2), cyanGlowMat);
+  upperGlow.position.set(0.6, 5.5, 4.18);
+  g.add(upperGlow);
+
+  const upperGlass = new THREE.Mesh(new THREE.BoxGeometry(15.2, 2.0, 0.14), glassMat);
+  upperGlass.position.set(0.6, 5.5, 4.35);
+  g.add(upperGlass);
+
+  // Vertical Architectural Fin Louvers on Left Wing
+  for (let i = 0; i < 4; i++) {
+    const fin = new THREE.Mesh(new THREE.BoxGeometry(0.18, 3.2, 0.65), graphiteMat);
+    fin.position.set(-6.4 + i * 1.1, 5.5, 4.45);
+    g.add(fin);
+  }
+
+  // Ground Floor Showroom Glass + Glowing Monitor Screens
+  const groundGlass = new THREE.Mesh(new THREE.BoxGeometry(12.4, 2.7, 0.14), glassMat);
+  groundGlass.position.set(-0.6, 1.85, 3.05);
+  g.add(groundGlass);
+
+  for (const sx of [-3.6, -0.6, 2.4]) {
+    const screen = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.0, 0.12), cyanGlowMat);
+    screen.position.set(sx, 1.9, 2.4);
+    g.add(screen);
+  }
+
+  // Cantilever Support Column on Right Side
+  const col = new THREE.Mesh(new THREE.BoxGeometry(0.65, 3.4, 0.65), graphiteMat);
+  col.position.set(7.8, 2.06, 3.2);
+  g.add(col);
+
+  // Rooftop Angled Solar Array
+  for (const sx of [-4.2, 0.6, 5.4]) {
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.12, 2.8), solarMat);
+    panel.position.set(sx, 7.75, -1.6);
+    panel.rotation.x = 0.24;
+    g.add(panel);
+  }
+
+  // Cyan Architectural Edge Beacon Bar
+  const neonBar = new THREE.Mesh(new THREE.BoxGeometry(10.0, 0.24, 0.18), cyanGlowMat);
+  neonBar.position.set(0.6, 7.05, 4.36);
+  g.add(neonBar);
+
+  addArchitecturalPlanter(g, -7.8, 5.2, 0x0f172a, 0x16a34a);
+  addArchitecturalPlanter(g, 7.8, 5.6, 0x0f172a, 0x16a34a);
+
+  return g;
+}
+
+/**
+ * 5. Home & Local Services — Service & Trade Hub
+ * Architectural concrete workshop, glazed customer reception, high-clearance ribbed service bay & parked utility van.
+ */
+function buildHomeServicesPlot(): THREE.Group {
+  const g = new THREE.Group();
+  g.name = "category_plot_home_services";
+  createCategoryBasePlinth(g, 0x1e293b, 0x475569, 0xf59e0b);
+
+  const concreteMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.65 });
+  const steelMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5, metalness: 0.45 });
+  const amberMat = new THREE.MeshStandardMaterial({
+    color: 0xf59e0b,
+    emissive: new THREE.Color(0xd97706),
+    emissiveIntensity: 1.4,
+  });
+  const warmGlowMat = new THREE.MeshStandardMaterial({
+    color: 0xfef3c7,
+    emissive: new THREE.Color(0xf59e0b),
+    emissiveIntensity: 1.6,
+  });
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0xbae6fd,
+    roughness: 0.1,
+    transparent: true,
+    opacity: 0.72,
+  });
+
+  // Main Service Center Volume
+  const mainHub = new THREE.Mesh(new THREE.BoxGeometry(16.8, 5.2, 9.6), concreteMat);
+  mainHub.position.set(0, 2.96, -2.4);
+  g.add(mainHub);
+
+  // High-Visibility Amber Fascia Band wrapping roofline
+  const fascia = new THREE.Mesh(new THREE.BoxGeometry(17.4, 0.95, 10.2), steelMat);
+  fascia.position.set(0, 5.85, -2.4);
+  g.add(fascia);
+
+  const amberStrip = new THREE.Mesh(new THREE.BoxGeometry(17.5, 0.28, 0.22), amberMat);
+  amberStrip.position.set(0, 5.85, 2.72);
+  g.add(amberStrip);
+
+  // Left Side: Glazed Customer Reception Desk
+  const receptionGlow = new THREE.Mesh(new THREE.BoxGeometry(6.2, 3.2, 0.2), warmGlowMat);
+  receptionGlow.position.set(-4.2, 2.1, 2.28);
+  g.add(receptionGlow);
+
+  const receptionGlass = new THREE.Mesh(new THREE.BoxGeometry(6.6, 3.4, 0.14), glassMat);
+  receptionGlass.position.set(-4.2, 2.1, 2.46);
+  g.add(receptionGlass);
+
+  const canopy = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.24, 2.0), steelMat);
+  canopy.position.set(-4.2, 4.0, 3.3);
+  g.add(canopy);
+
+  // Right Side: Ribbed Service Bay Shutter Door
+  const bayDoor = new THREE.Mesh(new THREE.BoxGeometry(6.4, 3.8, 0.22), steelMat);
+  bayDoor.position.set(4.1, 2.26, 2.44);
+  g.add(bayDoor);
+
+  for (let r = 0; r < 5; r++) {
+    const rib = new THREE.Mesh(new THREE.BoxGeometry(6.0, 0.1, 0.28), concreteMat);
+    rib.position.set(4.1, 0.9 + r * 0.68, 2.48);
+    g.add(rib);
+  }
+
+  // Compact White Service Utility Van parked cleanly in front of service bay (z = 5.8, ZERO building overlap!)
+  const vanBody = new THREE.Mesh(new THREE.BoxGeometry(2.1, 1.45, 4.0), concreteMat);
+  vanBody.position.set(4.1, 1.32, 5.7);
+  g.add(vanBody);
+
+  const vanStripe = new THREE.Mesh(new THREE.BoxGeometry(2.16, 0.26, 3.6), amberMat);
+  vanStripe.position.set(4.1, 1.25, 5.7);
+  g.add(vanStripe);
+
+  const vanWindshield = new THREE.Mesh(new THREE.BoxGeometry(1.86, 0.65, 0.14), steelMat);
+  vanWindshield.position.set(4.1, 1.62, 7.68);
+  g.add(vanWindshield);
+
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 });
+  for (const wx of [3.05, 5.15]) {
+    for (const wz of [4.4, 6.9]) {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.26, 12), wheelMat);
+      wheel.rotation.z = Math.PI / 2;
+      wheel.position.set(wx, 0.74, wz);
+      g.add(wheel);
+    }
+  }
+
+  addArchitecturalPlanter(g, -8.2, 5.2, 0x334155, 0x15803d);
+
+  return g;
+}
+
+/**
+ * 6. Coaching & Education — Contemporary Academy Hall
+ * Warm academic brick, wide classroom ribbon windows, pillared entrance porch & rooftop crest parapet.
+ */
+function buildAcademyPlot(): THREE.Group {
+  const g = new THREE.Group();
+  g.name = "category_plot_coaching_education";
+  createCategoryBasePlinth(g, 0x1e293b, 0xcbd5e1, 0x3b82f6);
+
+  const brickMat = new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.75 });
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.42 });
+  const slateMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
+  const studyGlowMat = new THREE.MeshStandardMaterial({
+    color: 0xe0f2fe,
+    emissive: new THREE.Color(0x60a5fa),
+    emissiveIntensity: 1.65,
+  });
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0xbfdbfe,
+    roughness: 0.08,
+    transparent: true,
+    opacity: 0.72,
+  });
+
+  // 2-Story Academic Hall Block
+  const hall = new THREE.Mesh(new THREE.BoxGeometry(16.6, 6.8, 9.8), brickMat);
+  hall.position.set(0, 3.76, -2.0);
+  g.add(hall);
+
+  // Crisp White Horizontal Cornices (Mid + Roofline)
+  const midBand = new THREE.Mesh(new THREE.BoxGeometry(17.1, 0.36, 10.2), trimMat);
+  midBand.position.set(0, 3.76, -2.0);
+  g.add(midBand);
+
+  const roofCornice = new THREE.Mesh(new THREE.BoxGeometry(17.4, 0.55, 10.4), trimMat);
+  roofCornice.position.set(0, 7.25, -2.0);
+  g.add(roofCornice);
+
+  // Illuminated Classroom Ribbon Windows (Ground & Upper Floors)
+  for (const wy of [2.15, 5.45]) {
+    const glow = new THREE.Mesh(new THREE.BoxGeometry(14.4, 1.75, 0.2), studyGlowMat);
+    glow.position.set(0, wy, 2.8);
+    g.add(glow);
+
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(14.6, 1.85, 0.14), glassMat);
+    glass.position.set(0, wy, 2.94);
+    g.add(glass);
+  }
+
+  // Welcoming Pillared Academic Entrance Porch
+  const porchRoof = new THREE.Mesh(new THREE.BoxGeometry(6.8, 0.45, 2.8), trimMat);
+  porchRoof.position.set(0, 3.92, 4.1);
+  g.add(porchRoof);
+
+  for (const px of [-2.8, 2.8]) {
+    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 3.3, 14), trimMat);
+    pillar.position.set(px, 2.02, 5.1);
+    g.add(pillar);
+  }
+
+  // Architectural Rooftop Crest / Clock Parapet
+  const crest = new THREE.Mesh(new THREE.BoxGeometry(5.6, 1.35, 0.7), slateMat);
+  crest.position.set(0, 8.15, 2.7);
+  g.add(crest);
+
+  const clockDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.16, 20), studyGlowMat);
+  clockDisc.rotation.x = Math.PI / 2;
+  clockDisc.position.set(0, 8.15, 3.08);
+  g.add(clockDisc);
+
+  // Courtyard Reading Benches & Shade Planters
+  for (const bx of [-5.8, 5.8]) {
+    const bench = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.45, 0.72), trimMat);
+    bench.position.set(bx, 0.65, 5.8);
+    g.add(bench);
+  }
+
+  addArchitecturalPlanter(g, -8.4, 4.6, 0x1e293b, 0x166534);
+  addArchitecturalPlanter(g, 8.4, 4.6, 0x1e293b, 0x166534);
+
+  return g;
+}
+
+/**
+ * 7. Artisans & Boutiques — Flagship Boutique & Craft House
+ * Sandstone ochre facade, teak timber louvers, deep spotlighted display windows & rooftop terrace.
+ */
+function buildArtisanBoutiquePlot(): THREE.Group {
+  const g = new THREE.Group();
+  g.name = "category_plot_artisan_retail";
+  createCategoryBasePlinth(g, 0x292524, 0xd6d3d1, 0xd97706);
+
+  const sandstoneMat = new THREE.MeshStandardMaterial({ color: 0xfde68a, roughness: 0.62 });
+  const teakMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.58 });
+  const brassMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.25, metalness: 0.75 });
+  const boutiqueGlowMat = new THREE.MeshStandardMaterial({
+    color: 0xffedd5,
+    emissive: new THREE.Color(0xf59e0b),
+    emissiveIntensity: 1.9,
+  });
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0xfef3c7,
+    roughness: 0.06,
+    transparent: true,
+    opacity: 0.65,
+  });
+
+  // Main Sandstone Flagship Shell
+  const shell = new THREE.Mesh(new THREE.BoxGeometry(16.0, 6.2, 10.0), sandstoneMat);
+  shell.position.set(0, 3.46, -1.8);
+  g.add(shell);
+
+  // Upper Teak Timber Louver Screen (Editorial Craft Signature)
+  for (let i = -7; i <= 7; i++) {
+    const louver = new THREE.Mesh(new THREE.BoxGeometry(0.24, 2.4, 0.52), teakMat);
+    louver.position.set(i * 0.96, 5.15, 3.35);
+    g.add(louver);
+  }
+
+  // Two Deep Ground-Floor Showcase Display Windows flanking Central Alcove Entrance
+  for (const wx of [-4.6, 4.6]) {
+    const backWall = new THREE.Mesh(new THREE.BoxGeometry(4.6, 3.2, 0.2), boutiqueGlowMat);
+    backWall.position.set(wx, 2.05, 2.5);
+    g.add(backWall);
+
+    // Illuminated Craft Pedestal + Sculptural Vase inside display window
+    const pedestal = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.1, 1.2), sandstoneMat);
+    pedestal.position.set(wx, 0.95, 2.85);
+    g.add(pedestal);
+
+    const vase = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.42, 0.95, 14), brassMat);
+    vase.position.set(wx, 1.95, 2.85);
+    g.add(vase);
+
+    const windowGlass = new THREE.Mesh(new THREE.BoxGeometry(4.8, 3.3, 0.14), glassMat);
+    windowGlass.position.set(wx, 2.05, 3.28);
+    g.add(windowGlass);
+  }
+
+  // Central Teak Portal Doorway
+  const portal = new THREE.Mesh(new THREE.BoxGeometry(2.8, 3.3, 0.3), teakMat);
+  portal.position.set(0, 2.05, 3.18);
+  g.add(portal);
+
+  // Brass Boutique Signboard
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(7.6, 0.55, 0.22), brassMat);
+  sign.position.set(0, 6.72, 3.32);
+  g.add(sign);
+
+  // Rooftop Terrace Parapet Railings
+  const terraceRail = new THREE.Mesh(new THREE.BoxGeometry(15.6, 0.7, 0.24), teakMat);
+  terraceRail.position.set(0, 6.9, 3.0);
+  g.add(terraceRail);
+
+  addArchitecturalPlanter(g, -7.2, 5.2, 0x78350f, 0x15803d);
+  addArchitecturalPlanter(g, 7.2, 5.2, 0x78350f, 0x15803d);
+
+  return g;
+}
+
+/**
+ * 8. Other Businesses — Urban Commercial Flagship
+ * Dark basalt plinth, crisp white upper volume, wrap-around glass storefront & glowing amber brand fascia.
+ */
+function buildCommercialFlagshipPlot(): THREE.Group {
+  const g = new THREE.Group();
+  g.name = "category_plot_other_business";
+  createCategoryBasePlinth(g, 0x18181b, 0x3f3f46, 0xf59e0b);
+
+  const basaltMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.65 });
+  const whiteStuccoMat = new THREE.MeshStandardMaterial({ color: 0xf4f4f5, roughness: 0.42 });
+  const amberGlowMat = new THREE.MeshStandardMaterial({
+    color: 0xfbbf24,
+    emissive: new THREE.Color(0xf59e0b),
+    emissiveIntensity: 2.0,
+  });
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0xe0f2fe,
+    roughness: 0.08,
+    metalness: 0.25,
+    transparent: true,
+    opacity: 0.72,
+  });
+
+  // Ground Commercial Retail Base
+  const lower = new THREE.Mesh(new THREE.BoxGeometry(15.2, 3.6, 9.4), basaltMat);
+  lower.position.set(0, 2.16, -2.0);
+  g.add(lower);
+
+  // Crisp White Upper Architectural Volume
+  const upper = new THREE.Mesh(new THREE.BoxGeometry(16.2, 2.9, 10.2), whiteStuccoMat);
+  upper.position.set(0, 5.4, -1.8);
+  g.add(upper);
+
+  // Wrap-Around Glowing Storefront
+  const glow = new THREE.Mesh(new THREE.BoxGeometry(12.8, 2.8, 0.2), amberGlowMat);
+  glow.position.set(0, 1.95, 2.55);
+  g.add(glow);
+
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(13.2, 3.0, 0.14), glassMat);
+  glass.position.set(0, 1.95, 2.78);
+  g.add(glass);
+
+  // Cantilevered Entrance Canopy
+  const canopy = new THREE.Mesh(new THREE.BoxGeometry(14.0, 0.28, 2.2), basaltMat);
+  canopy.position.set(0, 3.85, 3.6);
+  g.add(canopy);
+
+  // Illuminated Brand Fascia Bar on Upper Volume
+  const fascia = new THREE.Mesh(new THREE.BoxGeometry(9.6, 0.5, 0.2), amberGlowMat);
+  fascia.position.set(0, 5.55, 3.38);
+  g.add(fascia);
+
+  addArchitecturalPlanter(g, -7.2, 5.2, 0x18181b, 0x16a34a);
+  addArchitecturalPlanter(g, 7.2, 5.2, 0x18181b, 0x16a34a);
+
+  return g;
+}
+
+/**
+ * Factory returning a distinct, premium architectural base 3D plot for every registered business category.
+ */
+export function createCategoryPlotMesh(categoryId: CategoryId): THREE.Group {
+  switch (categoryId) {
+    case "creative-weddings":
+      return buildCreativeAtelierPlot();
+    case "beauty-wellness":
+      return buildBeautySpaPlot();
+    case "food-hospitality":
+      return buildFoodCafePlot();
+    case "tech-freelance":
+      return buildTechStudioPlot();
+    case "home-services":
+      return buildHomeServicesPlot();
+    case "coaching-education":
+      return buildAcademyPlot();
+    case "artisan-retail":
+      return buildArtisanBoutiquePlot();
+    case "other-business":
+    default:
+      return buildCommercialFlagshipPlot();
+  }
 }

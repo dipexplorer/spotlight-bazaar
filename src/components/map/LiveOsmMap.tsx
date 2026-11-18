@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import * as maplibregl from "maplibre-gl";
 import { config, Map as MapLibreMap, Marker } from "maplibre-gl";
@@ -13,7 +13,6 @@ if (typeof window !== "undefined") {
 import { City, BusinessStorefront } from "@/types";
 import {
   Compass,
-  Layers,
   MapPin,
   Search,
   Sparkles,
@@ -25,15 +24,19 @@ import {
   Footprints,
   MessageSquare,
   Share2,
-  ShieldCheck,
   RotateCcw,
+  Globe2,
+  X,
 } from "lucide-react";
+import { searchLocalIndiaPlaces, IndiaPlaceEntry } from "@/lib/geo/indiaPlaces";
+import { getLocalStorefronts } from "@/lib/utils/localStorefront";
 import { QuickTalkModal } from "@/components/map3d/QuickTalkModal";
 import { StorefrontDialogueModal } from "@/components/map3d/StorefrontDialogueModal";
 import { bazaarAudio } from "@/lib/audio/bazaarAudio";
 import * as THREE from "three";
 import {
   createNerqivaVillaMesh,
+  createCategoryPlotMesh,
   createAccessRoadConnectorMesh,
   createTreeMesh,
   createStreetLightMesh,
@@ -284,6 +287,52 @@ export function LiveOsmMap({
   const [mapLoaded, setMapLoaded] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Dynamic View Context (3-State Bottom Dock + 4-Tier LOD Markers + Hybrid Search)
+  const [mapZoom, setMapZoom] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get("city") || p.get("shop")) return 18.2;
+    }
+    return 4.3;
+  });
+  const [mapCenter, setMapCenter] = useState<[number, number]>(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search);
+      const shopSlug = p.get("shop")?.toLowerCase();
+      if (shopSlug) {
+        const localMatch = getLocalStorefronts().find(
+          (s) => s.slug.toLowerCase() === shopSlug
+        );
+        if (localMatch && typeof localMatch.lon === "number" && typeof localMatch.lat === "number") {
+          return [localMatch.lon, localMatch.lat];
+        }
+        if (shopSlug === "nerqiva-studio") return NERQIVA_COORDS;
+      }
+      if (p.get("city")?.toLowerCase() === "guwahati") return NERQIVA_COORDS;
+    }
+    return INDIA_CENTER;
+  });
+  const [focusedRegion, setFocusedRegion] = useState<{
+    name: string;
+    subtitle: string;
+    kind: "pincode" | "state" | "city" | "area";
+    lat: number;
+    lon: number;
+  } | null>(null);
+  const focusedRegionRef = useRef(focusedRegion);
+  useEffect(() => {
+    focusedRegionRef.current = focusedRegion;
+  }, [focusedRegion]);
+  const [focusedStorefront, setFocusedStorefront] = useState<BusinessStorefront | null>(null);
+  const [remoteGeoResults, setRemoteGeoResults] = useState<
+    { id: string; name: string; subtitle: string; kind: "pincode" | "state" | "city" | "area"; lat: number; lon: number; zoom: number }[]
+  >([]);
+  const [isSearchingGeo, setIsSearchingGeo] = useState(false);
+  const [activeSuggestionIdx, setActiveSuggestionIdx] = useState<number>(-1);
+  const hoverPopupRef = useRef<maplibregl.Popup | null>(null);
+  const searchPinMarkerRef = useRef<Marker | null>(null);
+  const searchBoxRef = useRef<HTMLDivElement>(null);
+
   // Proximity Talk Modals
   const [showQuickTalkModal, setShowQuickTalkModal] = useState(false);
   const [dialogueStorefront, setDialogueStorefront] = useState<BusinessStorefront | null>(null);
@@ -504,42 +553,216 @@ export function LiveOsmMap({
     cities.find((c) => c.slug === "guwahati" || c.name.toLowerCase() === "guwahati") ||
     cities[0];
 
-  // Sole verified real listing: Nerqiva Studio
-  const nerqivaBusiness: BusinessStorefront =
-    storefronts.find((b) => b.slug === "nerqiva-studio") || {
-      id: "nerqiva-studio",
-      slug: "nerqiva-studio",
-      name: "Nerqiva Studio",
-      tagline: "Ultra-Premium Digital Products & Web Infrastructure",
-      description: "North Guwahati digital engineering studio crafting high-speed, conversion-optimized digital showrooms, web infrastructure, and mobile-first products.",
-      category_id: "tech-freelance",
-      city_name: "Guwahati",
-      state_name: "Assam",
-      pincode: "781030",
-      lat: 26.20624167049662,
-      lon: 91.72925728895483,
-      whatsapp_phone: "9864012345",
-      instagram_handle: "nerqivastudio",
-      website_url: "https://www.nerqivastudio.in/",
-      starting_price: "Builds from ₹11,000",
-      is_verified: true,
-      is_featured: true,
-      total_views: 48,
-      total_leads: 12,
-      created_at: new Date().toISOString(),
+  // Sole verified real listing fallback: Nerqiva Studio
+  const nerqivaBusiness: BusinessStorefront = useMemo(
+    () =>
+      storefronts.find((b) => b.slug === "nerqiva-studio") || {
+        id: "nerqiva-studio",
+        slug: "nerqiva-studio",
+        name: "Nerqiva Studio",
+        tagline: "Digital Products & Web Infrastructure",
+        description:
+          "North Guwahati digital engineering studio crafting high-speed, conversion-optimized digital showrooms, web infrastructure, and mobile-first products.",
+        category_id: "tech-freelance",
+        city_name: "Guwahati",
+        state_name: "Assam",
+        pincode: "781030",
+        lat: 26.20624167049662,
+        lon: 91.72925728895483,
+        whatsapp_phone: "9864012345",
+        instagram_handle: "nerqivastudio",
+        website_url: "https://www.nerqivastudio.in/",
+        starting_price: "Builds from ₹11,000",
+        is_verified: true,
+        is_featured: true,
+        total_views: 48,
+        total_leads: 12,
+        created_at: new Date().toISOString(),
+      },
+    [storefronts]
+  );
+
+  // Normalized list of all real live storefronts on the map (scales automatically as new businesses join!)
+  const allLiveStorefronts: BusinessStorefront[] = useMemo(() => {
+    const valid = storefronts.filter((b) => typeof b.lat === "number" && typeof b.lon === "number");
+    const hasNerqiva = valid.some((b) => b.slug === "nerqiva-studio");
+    return hasNerqiva ? valid : [nerqivaBusiness, ...valid];
+  }, [storefronts, nerqivaBusiness]);
+
+  const allLiveStorefrontsRef = useRef<BusinessStorefront[]>(allLiveStorefronts);
+  useEffect(() => {
+    allLiveStorefrontsRef.current = allLiveStorefronts;
+  }, [allLiveStorefronts]);
+
+  // Dynamic active cities summary for All-India National Explorer bar
+  const activeCityGroups = useMemo(() => {
+    const groups = new Map<string, { city: string; state: string; count: number; lat: number; lon: number; storefronts: BusinessStorefront[] }>();
+    for (const s of allLiveStorefronts) {
+      const cityKey = (s.city_name || "Guwahati").trim();
+      const existing = groups.get(cityKey);
+      if (existing) {
+        existing.count += 1;
+        existing.storefronts.push(s);
+      } else {
+        groups.set(cityKey, {
+          city: cityKey,
+          state: s.state_name || "India",
+          count: 1,
+          lat: s.lat,
+          lon: s.lon,
+          storefronts: [s],
+        });
+      }
+    }
+    return Array.from(groups.values()).sort((a, b) => b.count - a.count);
+  }, [allLiveStorefronts]);
+
+  // GeoJSON FeatureCollection for native MapLibre WebGL clustering & glowing national beacons
+  const storefrontsGeoJSON = useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(
+    () => ({
+      type: "FeatureCollection",
+      features: allLiveStorefronts.map((s) => ({
+        type: "Feature",
+        properties: {
+          id: s.id,
+          slug: s.slug,
+          name: s.name,
+          city: s.city_name || "",
+          state: s.state_name || "",
+          pincode: s.pincode || "",
+          tagline: s.tagline || "",
+        },
+        geometry: {
+          type: "Point",
+          coordinates: [s.lon, s.lat],
+        },
+      })),
+    }),
+    [allLiveStorefronts]
+  );
+
+  const storefrontsGeoJSONRef = useRef(storefrontsGeoJSON);
+  useEffect(() => {
+    storefrontsGeoJSONRef.current = storefrontsGeoJSON;
+    const src = mapRef.current?.getSource("storefronts-cluster-source") as maplibregl.GeoJSONSource | undefined;
+    if (src) {
+      src.setData(storefrontsGeoJSON);
+    }
+  }, [storefrontsGeoJSON]);
+
+  // Haversine distance in kilometers
+  const getDistanceKm = useCallback((lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }, []);
+
+  // Debounced live India geocoder for any 6-digit PIN code or locality
+  useEffect(() => {
+    const qTrim = searchQuery.trim();
+    if (qTrim.length < 2) {
+      setRemoteGeoResults([]);
+      setIsSearchingGeo(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsSearchingGeo(true);
+    const timer = setTimeout(() => {
+      fetch(`/api/geo/search?q=${encodeURIComponent(qTrim)}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (!cancelled && Array.isArray(d?.results)) {
+            setRemoteGeoResults(d.results);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setRemoteGeoResults([]);
+        })
+        .finally(() => {
+          if (!cancelled) setIsSearchingGeo(false);
+        });
+    }, 240);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
     };
+  }, [searchQuery]);
+
+  // Reset keyboard selection index whenever query changes
+  useEffect(() => {
+    setActiveSuggestionIdx(-1);
+  }, [searchQuery]);
+
+  // Dismiss search dropdown on outside click
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target as Node)) {
+        setSearchFocused(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
 
   // Initialize MapLibre GL Map locked strictly to India (3D India Island -> Real OSM Street View)
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
     const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-    const hasCityDeepLink = Boolean(params?.get("city") || params?.get("shop"));
+    const urlShopSlug = params?.get("shop")?.toLowerCase() || "";
+    const urlCityParam = params?.get("city")?.toLowerCase() || "";
+    const matchedDeepLinkShop = urlShopSlug
+      ? [...allLiveStorefrontsRef.current, ...getLocalStorefronts()].find(
+          (s) => s.slug.toLowerCase() === urlShopSlug
+        )
+      : undefined;
+    const hasNerqivaDeepLink =
+      urlShopSlug === "nerqiva-studio" || urlCityParam === "guwahati";
+    const urlPlace = params?.get("place") || params?.get("pin");
+    const urlLat = params?.get("lat") ? parseFloat(params.get("lat")!) : NaN;
+    const urlLon = params?.get("lon") ? parseFloat(params.get("lon")!) : NaN;
+    const urlZoom = params?.get("z") ? parseFloat(params.get("z")!) : NaN;
+    const hasPlaceDeepLink = Boolean(urlPlace && Number.isFinite(urlLat) && Number.isFinite(urlLon));
 
-    const initialCenter: [number, number] = hasCityDeepLink ? NERQIVA_COORDS : INDIA_CENTER;
-    const initialZoom = hasCityDeepLink ? 18.2 : 4.3;
-    const initialPitch = hasCityDeepLink ? 56 : 42;
-    const initialBearing = hasCityDeepLink ? 35 : -6;
+    let initialCenter: [number, number] = INDIA_CENTER;
+    let initialZoom = 4.3;
+    let initialPitch = 42;
+    let initialBearing = -6;
+
+    if (matchedDeepLinkShop) {
+      initialCenter = [matchedDeepLinkShop.lon, matchedDeepLinkShop.lat];
+      initialZoom = 18.2;
+      initialPitch = 58;
+      initialBearing = 22;
+      setFocusedStorefront(matchedDeepLinkShop);
+      setMapZoom(initialZoom);
+      setMapCenter(initialCenter);
+    } else if (hasNerqivaDeepLink) {
+      initialCenter = NERQIVA_COORDS;
+      initialZoom = 18.2;
+      initialPitch = 56;
+      initialBearing = 35;
+    } else if (hasPlaceDeepLink) {
+      initialCenter = [urlLon, urlLat];
+      initialZoom = Number.isFinite(urlZoom) ? Math.max(INDIA_MIN_ZOOM, Math.min(20, urlZoom)) : 12.5;
+      initialPitch = initialZoom >= 14 ? 52 : 44;
+      initialBearing = 0;
+      const isPinParam = Boolean(params?.get("pin"));
+      setFocusedRegion({
+        name: isPinParam ? `PIN ${urlPlace}` : urlPlace!,
+        subtitle: "India",
+        kind: isPinParam ? "pincode" : initialZoom <= 8 ? "state" : initialZoom <= 13 ? "city" : "area",
+        lat: urlLat,
+        lon: urlLon,
+      });
+      setMapZoom(initialZoom);
+      setMapCenter(initialCenter);
+    }
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
@@ -641,6 +864,16 @@ export function LiveOsmMap({
 
           (this as any).camera = camera;
           (this as any).scene = scene;
+          (this as any).categoryPlots = new Map<
+            string,
+            {
+              categoryId: string;
+              scene: THREE.Scene;
+              sun: THREE.DirectionalLight;
+              amb: THREE.AmbientLight;
+              mesh: THREE.Group;
+            }
+          >();
           (this as any).renderer = new THREE.WebGLRenderer({
             canvas: m.getCanvas(),
             context: gl,
@@ -731,13 +964,94 @@ export function LiveOsmMap({
           .multiply(rotationY);
 
         const cam = (this as any).camera;
-        cam.projectionMatrix = m4.multiply(l);
+        cam.projectionMatrix = m4.clone().multiply(l);
         cam.projectionMatrixInverse.copy(cam.projectionMatrix).invert();
 
         const ren = (this as any).renderer;
         if (ren) {
           ren.resetState();
           ren.render((this as any).scene, cam);
+
+          // Render dynamic Category-Based 3D Plots for all other registered businesses across India (within ~4km of viewport)
+          if (currentZoom >= 14.3) {
+            const plotCache = (this as any).categoryPlots as Map<
+              string,
+              {
+                categoryId: string;
+                scene: THREE.Scene;
+                sun: THREE.DirectionalLight;
+                amb: THREE.AmbientLight;
+                mesh: THREE.Group;
+              }
+            >;
+            const viewCenter = map.getCenter();
+            const zoomFactor = Math.max(0, Math.min(1, (currentZoom - 14.5) / 1.7));
+            const baseScale = 1.25 * zoomFactor;
+
+            if (plotCache && baseScale > 0.01) {
+              for (const s of allLiveStorefrontsRef.current) {
+                if (!s || s.slug === "nerqiva-studio") continue;
+                if (typeof s.lat !== "number" || typeof s.lon !== "number") continue;
+                if (
+                  Math.abs(s.lat - viewCenter.lat) > 0.045 ||
+                  Math.abs(s.lon - viewCenter.lng) > 0.045
+                ) {
+                  continue;
+                }
+
+                let entry = plotCache.get(s.slug);
+                if (!entry || entry.categoryId !== s.category_id) {
+                  const plotScene = new THREE.Scene();
+                  const pSun = new THREE.DirectionalLight(0xfff7ed, 3.0);
+                  pSun.position.set(50, 120, 50).normalize();
+                  plotScene.add(pSun);
+                  const pAmb = new THREE.AmbientLight(0xdbeafe, 1.6);
+                  plotScene.add(pAmb);
+
+                  const plotMesh = createCategoryPlotMesh(s.category_id);
+                  plotMesh.traverse((o) => {
+                    if ((o as any).isMesh) o.frustumCulled = false;
+                  });
+                  plotScene.add(plotMesh);
+                  entry = {
+                    categoryId: s.category_id,
+                    scene: plotScene,
+                    sun: pSun,
+                    amb: pAmb,
+                    mesh: plotMesh,
+                  };
+                  plotCache.set(s.slug, entry);
+                }
+
+                if (isNightModeRef.current) {
+                  entry.sun.color.setHex(0x38bdf8);
+                  entry.sun.intensity = 0.85;
+                  entry.amb.color.setHex(0x1e293b);
+                  entry.amb.intensity = 0.65;
+                } else {
+                  entry.sun.color.setHex(0xfff7ed);
+                  entry.sun.intensity = 3.0;
+                  entry.amb.color.setHex(0xdbeafe);
+                  entry.amb.intensity = 1.6;
+                }
+
+                entry.mesh.scale.set(baseScale, baseScale, baseScale);
+
+                const pCoord = maplibregl.MercatorCoordinate.fromLngLat([s.lon, s.lat], 0);
+                const pScale = pCoord.meterInMercatorCoordinateUnits();
+                const pMatrix = new THREE.Matrix4()
+                  .makeTranslation(pCoord.x, pCoord.y, pCoord.z)
+                  .scale(new THREE.Vector3(pScale, -pScale, pScale))
+                  .multiply(rotationX);
+
+                cam.projectionMatrix = m4.clone().multiply(pMatrix);
+                cam.projectionMatrixInverse.copy(cam.projectionMatrix).invert();
+                gl.clear(gl.DEPTH_BUFFER_BIT);
+                ren.resetState();
+                ren.render(entry.scene, cam);
+              }
+            }
+          }
         }
         map.triggerRepaint();
       },
@@ -1164,8 +1478,8 @@ export function LiveOsmMap({
                   "fill-color": liveOcean,
                   "fill-opacity": [
                     "interpolate", ["linear"], ["zoom"],
-                    10.5, 1.0,
-                    13.0, 0.0,
+                    8.2, 1.0,
+                    9.6, 0.0,
                   ],
                 },
               },
@@ -1263,6 +1577,122 @@ export function LiveOsmMap({
           } else {
             map.setPaintProperty("india-3d-continent-extrusion", "fill-extrusion-color", liveContinent);
           }
+
+          // Layer E (Tier 1 LOD — National View zoom < 9.8): Native WebGL Clustered Beacons (Scales to 100k+ Businesses!)
+          if (!map.getSource("storefronts-cluster-source")) {
+            map.addSource("storefronts-cluster-source", {
+              type: "geojson",
+              data: storefrontsGeoJSONRef.current,
+              cluster: true,
+              clusterMaxZoom: 9,
+              clusterRadius: 42,
+            });
+          }
+
+          if (!map.getLayer("storefront-cluster-halo")) {
+            map.addLayer(
+              {
+                id: "storefront-cluster-halo",
+                type: "circle",
+                source: "storefronts-cluster-source",
+                maxzoom: 9.8,
+                filter: ["has", "point_count"],
+                paint: {
+                  "circle-color": "#f59e0b",
+                  "circle-radius": ["step", ["get", "point_count"], 20, 10, 25, 50, 31],
+                  "circle-opacity": 0.25,
+                  "circle-blur": 0.5,
+                },
+              },
+              beforeCustom3D
+            );
+          }
+
+          if (!map.getLayer("storefront-cluster-circle")) {
+            map.addLayer(
+              {
+                id: "storefront-cluster-circle",
+                type: "circle",
+                source: "storefronts-cluster-source",
+                maxzoom: 9.8,
+                filter: ["has", "point_count"],
+                paint: {
+                  "circle-color": "#f59e0b",
+                  "circle-radius": ["step", ["get", "point_count"], 12, 10, 15, 50, 19],
+                  "circle-stroke-width": 2.5,
+                  "circle-stroke-color": "#080B12",
+                },
+              },
+              beforeCustom3D
+            );
+          }
+
+          if (!map.getLayer("storefront-cluster-count")) {
+            map.addLayer(
+              {
+                id: "storefront-cluster-count",
+                type: "symbol",
+                source: "storefronts-cluster-source",
+                maxzoom: 9.8,
+                filter: ["has", "point_count"],
+                layout: {
+                  "text-field": "{point_count_abbreviated}",
+                  "text-size": 11,
+                  "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+                },
+                paint: {
+                  "text-color": "#080B12",
+                },
+              },
+              beforeCustom3D
+            );
+          }
+
+          if (!map.getLayer("storefront-beacon-halo")) {
+            map.addLayer(
+              {
+                id: "storefront-beacon-halo",
+                type: "circle",
+                source: "storefronts-cluster-source",
+                maxzoom: 9.8,
+                filter: ["!", ["has", "point_count"]],
+                paint: {
+                  "circle-color": "#fbbf24",
+                  "circle-radius": [
+                    "interpolate", ["linear"], ["zoom"],
+                    4.0, 16,
+                    9.0, 22,
+                  ],
+                  "circle-opacity": 0.34,
+                  "circle-blur": 0.65,
+                },
+              },
+              beforeCustom3D
+            );
+          }
+
+          if (!map.getLayer("storefront-beacon-dot")) {
+            map.addLayer(
+              {
+                id: "storefront-beacon-dot",
+                type: "circle",
+                source: "storefronts-cluster-source",
+                maxzoom: 9.8,
+                filter: ["!", ["has", "point_count"]],
+                paint: {
+                  "circle-color": "#f59e0b",
+                  "circle-radius": [
+                    "interpolate", ["linear"], ["zoom"],
+                    4.0, 6.5,
+                    9.0, 8.5,
+                  ],
+                  "circle-stroke-width": 2.4,
+                  "circle-stroke-color": "#ffffff",
+                },
+              },
+              beforeCustom3D
+            );
+          }
         });
       } catch (indiaErr) {
         console.warn("[LiveOsmMap] India 3D island mask setup warning:", indiaErr);
@@ -1289,19 +1719,128 @@ export function LiveOsmMap({
         "bottom-left"
       );
 
-      // Smooth dynamic 3D Street Perspective <-> Regional OSM <-> 3D India Island + close-up card fade
-      map.on("zoom", () => {
-        const z = map.getZoom();
-        // Smoothly hide HTML floating card in 3rd-person walk mode AND adapt vertical anchor offset between national map & 3D villa roof
+      // Interactive hover & click handlers for National 3D India Clustered Beacons (Tier 1 LOD)
+      map.on("mouseenter", "storefront-beacon-dot", (e) => {
+        map.getCanvas().style.cursor = "pointer";
+        const feat = e.features?.[0];
+        if (!feat || feat.geometry.type !== "Point") return;
+        const coords = feat.geometry.coordinates as [number, number];
+        const props = feat.properties || {};
+        if (hoverPopupRef.current) hoverPopupRef.current.remove();
+        hoverPopupRef.current = new maplibregl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+          offset: 14,
+          className: "spotlight-beacon-popup",
+        })
+          .setLngLat(coords)
+          .setHTML(
+            `<div style="background:#080B12;color:#fff;padding:6px 10px;border-radius:10px;border:1px solid rgba(245,158,11,0.55);font-size:11px;font-weight:700;box-shadow:0 10px 25px rgba(0,0,0,0.65);white-space:nowrap;">
+              <span style="color:#fbbf24;">●</span> ${props.name || "Live Business"} <span style="color:#94a3b8;font-weight:500;">· ${props.city || "India"}</span>
+            </div>`
+          )
+          .addTo(map);
+      });
+
+      map.on("mouseleave", "storefront-beacon-dot", () => {
+        map.getCanvas().style.cursor = "";
+        if (hoverPopupRef.current) {
+          hoverPopupRef.current.remove();
+          hoverPopupRef.current = null;
+        }
+      });
+
+      map.on("click", "storefront-beacon-dot", (e) => {
+        const feat = e.features?.[0];
+        if (!feat || feat.geometry.type !== "Point") return;
+        const coords = feat.geometry.coordinates as [number, number];
+        const slug = feat.properties?.slug;
+        const matched = allLiveStorefrontsRef.current.find((s) => s.slug === slug);
+        if (hoverPopupRef.current) {
+          hoverPopupRef.current.remove();
+          hoverPopupRef.current = null;
+        }
+        setFocusedRegion(null);
+        if (matched) setFocusedStorefront(matched);
+        isFlightActiveRef.current = true;
+        setIs3DMode(true);
+        map.flyTo({
+          center: coords,
+          zoom: 18.2,
+          pitch: 58,
+          bearing: 25,
+          duration: 1600,
+        });
+        map.once("moveend", () => {
+          isFlightActiveRef.current = false;
+        });
+        bazaarAudio.playStorefrontChime();
+      });
+
+      map.on("mouseenter", "storefront-cluster-circle", () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", "storefront-cluster-circle", () => {
+        map.getCanvas().style.cursor = "";
+      });
+      map.on("click", "storefront-cluster-circle", (e) => {
+        const feat = e.features?.[0];
+        if (!feat || feat.geometry.type !== "Point") return;
+        const clusterId = feat.properties?.cluster_id;
+        const src = map.getSource("storefronts-cluster-source") as maplibregl.GeoJSONSource | undefined;
+        if (!src || clusterId == null) return;
+        src.getClusterExpansionZoom(clusterId).then((targetZoom) => {
+          map.easeTo({
+            center: feat.geometry.type === "Point" ? (feat.geometry.coordinates as [number, number]) : INDIA_CENTER,
+            zoom: Math.min(targetZoom + 1.5, 14),
+            pitch: 45,
+            duration: 900,
+          });
+        }).catch(() => {});
+      });
+
+      // Helper to apply 4-Tier LOD marker visibility & compact vs flagship styling cleanly on every zoom
+      const syncMarkerLOD = (z: number) => {
         markersRef.current.forEach((m) => {
-          m.setOffset([0, z < 14 ? -16 : -125]);
           const el = m.getElement();
-          if (el) {
-            const hide = isWalkModeRef.current || z >= 19.9;
-            el.style.visibility = hide ? "hidden" : "visible";
-            el.style.pointerEvents = hide ? "none" : "auto";
+          if (!el) return;
+          const compactEl = el.querySelector<HTMLElement>("[data-lod='compact']");
+          const fullEl = el.querySelector<HTMLElement>("[data-lod='full']");
+
+          // Tier 1 (< 9.5): WebGL beacons only — hide HTML card completely!
+          // Tier 4 (>= 19.9 or Walk Mode): Hide HTML card so 3D architectural facade signage shines unobstructed!
+          if (z < 9.5 || z >= 19.9 || isWalkModeRef.current) {
+            el.style.visibility = "hidden";
+            el.style.pointerEvents = "none";
+          } else if (z < 14.8) {
+            // Tier 2 (9.5 – 14.8): Compact sleek mini-pill
+            el.style.visibility = "visible";
+            el.style.pointerEvents = "auto";
+            m.setOffset([0, -14]);
+            if (compactEl) compactEl.style.display = "flex";
+            if (fullEl) fullEl.style.display = "none";
+          } else {
+            // Tier 3 (14.8 – 19.8): Full flagship glassmorphic studio card above 3D building roof
+            el.style.visibility = "visible";
+            el.style.pointerEvents = "auto";
+            m.setOffset([0, -125]);
+            if (compactEl) compactEl.style.display = "none";
+            if (fullEl) fullEl.style.display = "flex";
           }
         });
+      };
+
+      // Smooth dynamic 3D Street Perspective <-> Regional OSM <-> 3D India Island + 4-Tier LOD Sync
+      let lastReportedZoomBucket = Math.round(map.getZoom() * 2) / 2;
+      map.on("zoom", () => {
+        const z = map.getZoom();
+        syncMarkerLOD(z);
+
+        const bucket = Math.round(z * 2) / 2;
+        if (bucket !== lastReportedZoomBucket) {
+          lastReportedZoomBucket = bucket;
+          setMapZoom(z);
+        }
 
         if (isFlightActiveRef.current) return;
         if (z < 9.5) {
@@ -1312,6 +1851,23 @@ export function LiveOsmMap({
           if (!is3DMode) {
             setIs3DMode(true);
             map.easeTo({ pitch: 58, bearing: 25, duration: 400 });
+          }
+        }
+      });
+
+      map.on("moveend", () => {
+        const z = map.getZoom();
+        const c = map.getCenter();
+        setMapZoom(z);
+        setMapCenter([c.lng, c.lat]);
+        syncMarkerLOD(z);
+        const fr = focusedRegionRef.current;
+        if (z < 7.5) {
+          setFocusedRegion(null);
+        } else if (fr) {
+          const maxDriftKm = fr.kind === "state" ? 380 : 80;
+          if (getDistanceKm(c.lat, c.lng, fr.lat, fr.lon) > maxDriftKm) {
+            setFocusedRegion(null);
           }
         }
       });
@@ -1353,6 +1909,19 @@ export function LiveOsmMap({
           return;
         }
 
+        // Check proximity click on any other registered 3D business plot across India
+        for (const s of allLiveStorefrontsRef.current) {
+          if (!s || s.slug === "nerqiva-studio") continue;
+          if (typeof s.lat !== "number" || typeof s.lon !== "number") continue;
+          if (getDistMeters(clickLng, clickLat, s.lon, s.lat) <= 24) {
+            setFocusedStorefront(s);
+            if (onStorefrontSelect) onStorefrontSelect(s);
+            bazaarAudio.playStorefrontChime();
+            showToast(`📍 ${s.name} · ${s.city_name || "India"}`);
+            return;
+          }
+        }
+
         // Click-to-walk within 80m of Nerqiva Studio
         if (distToNerqiva <= 80) {
           playerPosRef.current = [clickLng, clickLat];
@@ -1381,6 +1950,29 @@ export function LiveOsmMap({
       mapRef.current = null;
     };
   }, []);
+
+  // Sync Camera when deep-linked directly to a specific storefront (e.g. ?shop=<slug>&new=1 after registration)
+  const lastFlownShopRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!mapRef.current || !mapLoaded || !activeStorefront) return;
+    if (lastFlownShopRef.current === activeStorefront.slug) return;
+    lastFlownShopRef.current = activeStorefront.slug;
+    setFocusedRegion(null);
+    setFocusedStorefront(activeStorefront);
+    isFlightActiveRef.current = true;
+    setIs3DMode(true);
+    mapRef.current.flyTo({
+      center: [activeStorefront.lon, activeStorefront.lat],
+      zoom: 18.2,
+      pitch: 58,
+      bearing: 22,
+      duration: 1500,
+      essential: true,
+    });
+    mapRef.current.once("moveend", () => {
+      isFlightActiveRef.current = false;
+    });
+  }, [activeStorefront, mapLoaded]);
 
   // Sync Camera ONLY when a specific city is explicitly selected (never hijack root "/" 3D India Island view!)
   useEffect(() => {
@@ -1552,11 +2144,103 @@ export function LiveOsmMap({
     };
   }, [getThirdPersonCenter, handleStopMove, headingToBearing, stepThirdPersonFrame]);
 
-  // RENDER SOLE REAL BUSINESS LISTING: NERQIVA STUDIO
+  // Clear temporary searched-location pin
+  const clearSearchPin = useCallback(() => {
+    if (searchPinMarkerRef.current) {
+      searchPinMarkerRef.current.remove();
+      searchPinMarkerRef.current = null;
+    }
+  }, []);
+
+  // Drop a crisp target pin on any searched PIN code, locality, city, or state
+  const placeSearchPin = useCallback(
+    (name: string, lat: number, lon: number) => {
+      clearSearchPin();
+      if (!mapRef.current) return;
+      const pinEl = document.createElement("div");
+      pinEl.className = "pointer-events-none select-none flex flex-col items-center";
+      pinEl.innerHTML = `
+        <div class="px-2.5 py-1 rounded-full bg-[#080B12]/95 border border-sky-400/80 shadow-[0_8px_24px_rgba(0,0,0,0.7)] flex items-center gap-1.5 backdrop-blur-md">
+          <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+          <span class="text-[11px] font-bold text-white tracking-tight whitespace-nowrap">${name}</span>
+        </div>
+        <div class="w-1.5 h-1.5 -mt-0.5 bg-[#080B12] rotate-45 border-r border-b border-sky-400/80"></div>
+        <div class="w-3 h-3 mt-0.5 rounded-full bg-sky-400 border-2 border-white shadow-[0_0_12px_rgba(56,189,248,0.9)]"></div>
+      `;
+      searchPinMarkerRef.current = new maplibregl.Marker({
+        element: pinEl,
+        anchor: "bottom",
+        offset: [0, 6],
+      })
+        .setLngLat([lon, lat])
+        .addTo(mapRef.current);
+    },
+    [clearSearchPin]
+  );
+
+  // Fly cleanly to any specific business plot (switches bottom dock to State C: Street Business View)
+  const flyToStorefront = useCallback(
+    (b: BusinessStorefront) => {
+      if (!mapRef.current) return;
+      clearSearchPin();
+      handleStopMove();
+      setIsWalkMode(false);
+      isWalkModeRef.current = false;
+      setFocusedRegion(null);
+      setFocusedStorefront(b);
+      isFlightActiveRef.current = true;
+      setIs3DMode(true);
+      mapRef.current.flyTo({
+        center: [b.lon, b.lat],
+        zoom: 18.2,
+        pitch: 58,
+        bearing: 25,
+        duration: 1400,
+      });
+      mapRef.current.once("moveend", () => {
+        isFlightActiveRef.current = false;
+      });
+      bazaarAudio.playStorefrontChime();
+    },
+    [clearSearchPin, handleStopMove]
+  );
+
+  // Fly cleanly to any Indian State, City, Area, or 6-digit PIN code (switches bottom dock to State B: Region View)
+  const flyToPlace = useCallback(
+    (place: { name: string; subtitle: string; kind: "pincode" | "state" | "city" | "area"; lat: number; lon: number; zoom: number }) => {
+      if (!mapRef.current) return;
+      handleStopMove();
+      setIsWalkMode(false);
+      isWalkModeRef.current = false;
+      setFocusedStorefront(null);
+      setFocusedRegion({
+        name: place.name,
+        subtitle: place.subtitle,
+        kind: place.kind,
+        lat: place.lat,
+        lon: place.lon,
+      });
+      placeSearchPin(place.name, place.lat, place.lon);
+      isFlightActiveRef.current = true;
+      mapRef.current.flyTo({
+        center: [place.lon, place.lat],
+        zoom: place.zoom,
+        pitch: place.zoom >= 14 ? 54 : 44,
+        bearing: place.zoom >= 14 ? 20 : -4,
+        duration: 1350,
+      });
+      mapRef.current.once("moveend", () => {
+        isFlightActiveRef.current = false;
+      });
+      showToast(`📍 ${place.name}`);
+    },
+    [handleStopMove, placeSearchPin, showToast]
+  );
+
+  // RENDER 4-TIER LOD HTML MARKERS FOR ALL LIVE STOREFRONTS (Hidden at zoom < 9.5 where WebGL clustered beacons handle National View!)
   useEffect(() => {
     if (!mapRef.current || !mapLoaded) return;
 
-    // Clear previous markers
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
     if (playerMarkerRef.current) {
@@ -1564,68 +2248,238 @@ export function LiveOsmMap({
       playerMarkerRef.current = null;
     }
 
-    // 1. Nerqiva Studio Flagship Business Plot: Clean Glassmorphic Studio Card (no unverified badges or locations)
-    const cardEl = document.createElement("div");
-    cardEl.className = "cursor-pointer select-none relative group pointer-events-auto flex flex-col items-center";
-    cardEl.innerHTML = `
-      <div class="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-[#080B12]/95 border border-amber-500/75 shadow-[0_16px_40px_rgba(0,0,0,0.85)] backdrop-blur-2xl hover:scale-105 hover:border-amber-400 transition-all">
-        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500/25 to-amber-600/10 border border-amber-500/50 flex items-center justify-center text-amber-400 shrink-0 shadow-inner">
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-          </svg>
-        </div>
-        <div class="flex flex-col text-left">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-black text-white tracking-tight">Nerqiva Studio</span>
-            <span class="text-[10px] font-medium text-amber-400/90">nerqivastudio.in</span>
+    const currZoom = mapRef.current.getZoom();
+
+    allLiveStorefronts.forEach((b) => {
+      const domain = b.website_url ? b.website_url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "") : "";
+      const areaLabel = b.slug === "nerqiva-studio" ? "North Guwahati" : b.city_name || "India";
+      const taglineShort = b.tagline || "Local Business";
+
+      const cardEl = document.createElement("div");
+      cardEl.className = "cursor-pointer select-none relative group pointer-events-auto flex flex-col items-center";
+      cardEl.innerHTML = `
+        <!-- Tier 2 (zoom 9.5 – 14.8): Compact Mini-Pill -->
+        <div data-lod="compact" class="flex-col items-center" style="display:none;">
+          <div class="px-2.5 py-1 rounded-full bg-[#080B12]/95 border border-amber-500/75 shadow-xl flex items-center gap-1.5 backdrop-blur-md hover:scale-105 transition-all">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            <span class="text-[11px] font-bold text-white tracking-tight whitespace-nowrap">${b.name}</span>
           </div>
-          <div class="flex items-center gap-1.5 mt-0.5">
-            <span class="text-[10px] text-neutral-300 font-medium">Digital Products &amp; Web Infrastructure</span>
-            <span class="text-neutral-500 text-[10px]">·</span>
-            <span class="text-[10px] text-neutral-400">North Guwahati</span>
-          </div>
+          <div class="w-1.5 h-1.5 -mt-0.5 bg-[#080B12] rotate-45 border-r border-b border-amber-500/75"></div>
         </div>
-      </div>
-      <div class="w-2.5 h-2.5 -mt-1 bg-[#080B12] rotate-45 border-r border-b border-amber-500/75"></div>
-    `;
-    cardEl.addEventListener("click", () => {
-      if (mapRef.current && mapRef.current.getZoom() < 11) {
-        handleResetCamera();
-        bazaarAudio.playStorefrontChime();
-        return;
+
+        <!-- Tier 3 (zoom 14.8 – 19.8): Flagship Glassmorphic Card -->
+        <div data-lod="full" class="flex-col items-center" style="display:none;">
+          <div class="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-[#080B12]/95 border border-amber-500/75 shadow-[0_16px_40px_rgba(0,0,0,0.85)] backdrop-blur-2xl hover:scale-105 hover:border-amber-400 transition-all">
+            <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500/25 to-amber-600/10 border border-amber-500/50 flex items-center justify-center text-amber-400 shrink-0 shadow-inner">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+            </div>
+            <div class="flex flex-col text-left">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-black text-white tracking-tight">${b.name}</span>
+                ${domain ? `<span class="text-[10px] font-medium text-amber-400/90">${domain}</span>` : ""}
+              </div>
+              <div class="flex items-center gap-1.5 mt-0.5">
+                <span class="text-[10px] text-neutral-300 font-medium">${taglineShort}</span>
+                <span class="text-neutral-500 text-[10px]">·</span>
+                <span class="text-[10px] text-neutral-400">${areaLabel}</span>
+              </div>
+            </div>
+          </div>
+          <div class="w-2.5 h-2.5 -mt-1 bg-[#080B12] rotate-45 border-r border-b border-amber-500/75"></div>
+        </div>
+      `;
+
+      // Apply exact initial LOD state before attaching to map
+      const compactEl = cardEl.querySelector<HTMLElement>("[data-lod='compact']");
+      const fullEl = cardEl.querySelector<HTMLElement>("[data-lod='full']");
+      let initOffsetY = -125;
+      if (currZoom < 9.5 || currZoom >= 19.9 || isWalkModeRef.current) {
+        cardEl.style.visibility = "hidden";
+        cardEl.style.pointerEvents = "none";
+      } else if (currZoom < 14.8) {
+        initOffsetY = -14;
+        if (compactEl) compactEl.style.display = "flex";
+      } else {
+        initOffsetY = -125;
+        if (fullEl) fullEl.style.display = "flex";
       }
-      if (onStorefrontSelect) onStorefrontSelect(nerqivaBusiness);
-      bazaarAudio.playStorefrontChime();
-    });
-    const initOffsetY = (mapRef.current?.getZoom() ?? 18) < 14 ? -16 : -125;
-    const studioMarker = new maplibregl.Marker({
-      element: cardEl,
-      anchor: "bottom",
-      offset: [0, initOffsetY],
-    })
-      .setLngLat(NERQIVA_COORDS)
-      .addTo(mapRef.current!);
-    markersRef.current.push(studioMarker);
 
-  }, [mapLoaded, currentCity, nerqivaBusiness, onStorefrontSelect, showToast, handleResetCamera]);
+      cardEl.addEventListener("click", () => {
+        if (mapRef.current && mapRef.current.getZoom() < 15.2) {
+          flyToStorefront(b);
+          return;
+        }
+        setFocusedStorefront(b);
+        if (onStorefrontSelect) onStorefrontSelect(b);
+        bazaarAudio.playStorefrontChime();
+      });
 
-  // Autocomplete search filtering
-  const q = (searchQuery || "").trim().toLowerCase();
-  const searchResults = q
-    ? storefronts.filter((s) => {
-        const nameMatch = Boolean(s?.name) && s.name.toLowerCase().includes(q);
-        const taglineMatch = Boolean(s?.tagline) && s.tagline!.toLowerCase().includes(q);
-        const cityMatch = Boolean(s?.city_name) && s.city_name!.toLowerCase().includes(q);
-        return nameMatch || taglineMatch || cityMatch;
+      const marker = new maplibregl.Marker({
+        element: cardEl,
+        anchor: "bottom",
+        offset: [0, initOffsetY],
       })
-    : [];
+        .setLngLat([b.lon, b.lat])
+        .addTo(mapRef.current!);
+      markersRef.current.push(marker);
+    });
+  }, [mapLoaded, allLiveStorefronts, onStorefrontSelect, flyToStorefront]);
+
+  // Hybrid Omnibox Search: Instant Businesses + Instant Indian States/Cities + Debounced Live PIN/Area Geocoder
+  const q = (searchQuery || "").trim().toLowerCase();
+  const businessSearchResults = useMemo(() => {
+    if (!q) return [];
+    return allLiveStorefronts.filter((s) => {
+      return (
+        (Boolean(s?.name) && s.name.toLowerCase().includes(q)) ||
+        (Boolean(s?.tagline) && s.tagline!.toLowerCase().includes(q)) ||
+        (Boolean(s?.city_name) && s.city_name!.toLowerCase().includes(q)) ||
+        (Boolean(s?.state_name) && s.state_name!.toLowerCase().includes(q)) ||
+        (Boolean(s?.pincode) && s.pincode!.toLowerCase().includes(q)) ||
+        (Boolean(s?.instagram_handle) && s.instagram_handle!.toLowerCase().includes(q))
+      );
+    });
+  }, [q, allLiveStorefronts]);
+
+  const placeSearchResults = useMemo(() => {
+    if (!q) return [];
+    const localPlaces: { id: string; name: string; subtitle: string; kind: "pincode" | "state" | "city" | "area"; lat: number; lon: number; zoom: number }[] =
+      searchLocalIndiaPlaces(q).map((p: IndiaPlaceEntry) => ({
+        id: p.id,
+        name: p.name,
+        subtitle: p.subtitle,
+        kind: p.kind,
+        lat: p.lat,
+        lon: p.lon,
+        zoom: p.zoom,
+      }));
+    const seen = new Set(localPlaces.map((p) => p.name.toLowerCase()));
+    const merged = [...localPlaces];
+    for (const r of remoteGeoResults) {
+      if (!seen.has(r.name.toLowerCase())) {
+        seen.add(r.name.toLowerCase());
+        merged.push(r);
+      }
+    }
+    return merged.slice(0, 6);
+  }, [q, remoteGeoResults]);
+
+  // Compute nearest business to current map center & dynamic 3-state view level ("india" | "region" | "street")
+  const nearestToCenter = useMemo(() => {
+    let best: { storefront: BusinessStorefront; distKm: number } | null = null;
+    for (const s of allLiveStorefronts) {
+      const d = getDistanceKm(mapCenter[1], mapCenter[0], s.lat, s.lon);
+      if (!best || d < best.distKm) {
+        best = { storefront: s, distKm: d };
+      }
+    }
+    return best;
+  }, [allLiveStorefronts, mapCenter, getDistanceKm]);
+
+  const nearbyCount = useMemo(() => {
+    const refLat = focusedRegion ? focusedRegion.lat : mapCenter[1];
+    const refLon = focusedRegion ? focusedRegion.lon : mapCenter[0];
+    const radiusKm = focusedRegion?.kind === "state" ? 280 : focusedRegion?.kind === "city" ? 35 : 15;
+    return allLiveStorefronts.filter((s) => getDistanceKm(refLat, refLon, s.lat, s.lon) <= radiusKm).length;
+  }, [allLiveStorefronts, focusedRegion, mapCenter, getDistanceKm]);
+
+  const activeStreetBusiness: BusinessStorefront | null = useMemo(() => {
+    if (mapZoom < 15.2) return null;
+    if (focusedStorefront && getDistanceKm(mapCenter[1], mapCenter[0], focusedStorefront.lat, focusedStorefront.lon) <= 3.0) {
+      return focusedStorefront;
+    }
+    if (nearestToCenter && nearestToCenter.distKm <= 2.5) {
+      return nearestToCenter.storefront;
+    }
+    return null;
+  }, [mapZoom, focusedStorefront, nearestToCenter, mapCenter, getDistanceKm]);
+
+  const viewLevel: "india" | "region" | "street" =
+    mapZoom >= 15.2 ? "street" : mapZoom >= 9.2 || Boolean(focusedRegion) ? "region" : "india";
+
+  // Automatically clear search target pin when returning to All-India or clearing region
+  useEffect(() => {
+    if (!focusedRegion) {
+      clearSearchPin();
+    }
+  }, [focusedRegion, clearSearchPin]);
+
+  // Dynamic Browser URL Address Bar & Document Title Bar synced to live map context
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    let nextTitle = "Spotlight Bazaar — 3D Business Map of India";
+    let nextUrl = "/";
+
+    if (viewLevel === "street" && activeStreetBusiness) {
+      const citySlug = (activeStreetBusiness.city_name || "guwahati").toLowerCase().replace(/\s+/g, "-");
+      const modeParam = isWalkMode ? "&mode=walk" : "";
+      nextUrl = `/?city=${encodeURIComponent(citySlug)}&shop=${encodeURIComponent(activeStreetBusiness.slug)}${modeParam}`;
+      nextTitle = `${activeStreetBusiness.name} · ${activeStreetBusiness.city_name || "India"} | Spotlight Bazaar`;
+    } else if (focusedRegion) {
+      const latStr = focusedRegion.lat.toFixed(4);
+      const lonStr = focusedRegion.lon.toFixed(4);
+      const zStr = mapZoom.toFixed(1);
+      if (focusedRegion.kind === "pincode") {
+        const pinCode = focusedRegion.name.replace(/^PIN\s*/i, "").split(/\s+/)[0];
+        nextUrl = `/?pin=${encodeURIComponent(pinCode)}&lat=${latStr}&lon=${lonStr}&z=${zStr}`;
+        nextTitle = `${focusedRegion.name} · Spotlight Bazaar`;
+      } else {
+        const slug = focusedRegion.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        nextUrl = `/?place=${encodeURIComponent(slug || focusedRegion.name)}&lat=${latStr}&lon=${lonStr}&z=${zStr}`;
+        nextTitle = `${focusedRegion.name} · Spotlight Bazaar`;
+      }
+    } else if (viewLevel === "region") {
+      const nearCity = nearestToCenter && nearestToCenter.distKm < 45 ? nearestToCenter.storefront.city_name : null;
+      if (nearCity) {
+        nextUrl = `/?city=${encodeURIComponent(nearCity.toLowerCase().replace(/\s+/g, "-"))}`;
+        nextTitle = `${nearCity} · Spotlight Bazaar`;
+      } else {
+        nextUrl = `/?lat=${mapCenter[1].toFixed(4)}&lon=${mapCenter[0].toFixed(4)}&z=${mapZoom.toFixed(1)}`;
+        nextTitle = `Exploring India · Spotlight Bazaar`;
+      }
+    }
+
+    if (document.title !== nextTitle) {
+      document.title = nextTitle;
+    }
+    const currentFull = `${window.location.pathname}${window.location.search}`;
+    if (currentFull !== nextUrl) {
+      window.history.replaceState(null, "", nextUrl);
+    }
+  }, [viewLevel, activeStreetBusiness, focusedRegion, isWalkMode, mapZoom, mapCenter, nearestToCenter]);
+
+  // Flat list of all visible Omnibox suggestions for ArrowUp/ArrowDown/Enter keyboard selection
+  const flatSuggestions = useMemo(
+    () => [
+      ...businessSearchResults.map((b) => ({ type: "business" as const, data: b })),
+      ...placeSearchResults.map((p) => ({ type: "place" as const, data: p })),
+    ],
+    [businessSearchResults, placeSearchResults]
+  );
+
+  const selectSuggestion = useCallback(
+    (item: (typeof flatSuggestions)[number]) => {
+      setSearchFocused(false);
+      setSearchQuery("");
+      setActiveSuggestionIdx(-1);
+      if (item.type === "business") {
+        flyToStorefront(item.data);
+      } else {
+        flyToPlace(item.data);
+      }
+    },
+    [flyToPlace, flyToStorefront]
+  );
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-[#0a1120]">
       {/* 1. MAPLIBRE GL CONTAINER — REAL OPENSTREETMAP BASE (IMAGE 1 BASED) */}
       <div ref={mapContainerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
-      {/* 2. TOP UNIFIED BAR (INDIA AGAIN STYLE) */}
+      {/* 2. TOP UNIFIED BAR */}
       <div className="absolute top-4 inset-x-4 z-20 flex items-center justify-between gap-3 pointer-events-none">
         {/* Left: Brand + See All of India Button */}
         <div className="flex items-center gap-2 pointer-events-auto shrink-0">
@@ -1641,84 +2495,181 @@ export function LiveOsmMap({
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (mapRef.current) {
-                handleStopMove();
-                setIsWalkMode(false);
-                isWalkModeRef.current = false;
-                isFlightActiveRef.current = true;
-                setIs3DMode(true);
-                markersRef.current.forEach((m) => {
-                  const el = m.getElement();
-                  if (el) {
-                    el.style.visibility = "visible";
-                    el.style.pointerEvents = "auto";
-                  }
-                });
-                mapRef.current.flyTo({
-                  center: INDIA_CENTER,
-                  zoom: 4.3,
-                  pitch: 42,
-                  bearing: -6,
-                  duration: 1400,
-                });
-                mapRef.current.once("moveend", () => {
-                  isFlightActiveRef.current = false;
-                });
-                onCitySelect(null);
-                showToast("🇮🇳 Viewing 3D India Map");
-              }
-            }}
-            className="px-3 py-1.5 rounded-2xl bg-neutral-950/90 hover:bg-neutral-900 border border-amber-500/60 text-amber-400 text-xs font-bold flex items-center gap-1.5 shadow-2xl backdrop-blur-xl transition-all"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">See all of India</span>
-            <span className="sm:hidden">India</span>
-          </button>
+          {viewLevel !== "india" && (
+            <button
+              type="button"
+              onClick={() => {
+                if (mapRef.current) {
+                  clearSearchPin();
+                  handleStopMove();
+                  setIsWalkMode(false);
+                  isWalkModeRef.current = false;
+                  setFocusedRegion(null);
+                  setFocusedStorefront(null);
+                  isFlightActiveRef.current = true;
+                  setIs3DMode(true);
+                  mapRef.current.flyTo({
+                    center: INDIA_CENTER,
+                    zoom: 4.3,
+                    pitch: 42,
+                    bearing: -6,
+                    duration: 1400,
+                  });
+                  mapRef.current.once("moveend", () => {
+                    isFlightActiveRef.current = false;
+                  });
+                  onCitySelect(null);
+                  showToast("🇮🇳 Viewing 3D India Map");
+                }
+              }}
+              className="px-3 py-1.5 rounded-2xl bg-neutral-950/90 hover:bg-neutral-900 border border-amber-500/60 text-amber-400 text-xs font-bold flex items-center gap-1.5 shadow-2xl backdrop-blur-xl transition-all"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">See all of India</span>
+              <span className="sm:hidden">India</span>
+            </button>
+          )}
         </div>
 
-        {/* Center: Omnibox Search Bar */}
-        <div className="relative flex-1 max-w-md pointer-events-auto">
+        {/* Center: Dynamic Hybrid Omnibox Search (Businesses + States + Cities + Areas + 6-Digit PIN Codes) */}
+        <div ref={searchBoxRef} className="relative flex-1 max-w-md pointer-events-auto">
           <div className="relative flex items-center">
             <Search className="absolute left-3.5 w-4 h-4 text-neutral-300 pointer-events-none" />
             <input
               type="text"
-              placeholder={`Search ${nerqivaBusiness.name}, Guwahati, or services...`}
+              placeholder="Search business, city, state, area, or PIN code..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 setSearchFocused(true);
               }}
               onFocus={() => setSearchFocused(true)}
-              className="w-full pl-10 pr-4 py-2 rounded-2xl bg-neutral-950/95 backdrop-blur-xl border border-neutral-700/80 text-white text-xs font-medium placeholder:text-neutral-400 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50 shadow-2xl transition-all"
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setSearchFocused(false);
+                  return;
+                }
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setActiveSuggestionIdx((prev) =>
+                    flatSuggestions.length === 0 ? -1 : (prev + 1) % flatSuggestions.length
+                  );
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setActiveSuggestionIdx((prev) =>
+                    flatSuggestions.length === 0 ? -1 : prev <= 0 ? flatSuggestions.length - 1 : prev - 1
+                  );
+                } else if (e.key === "Enter" && flatSuggestions.length > 0) {
+                  e.preventDefault();
+                  const chosen = flatSuggestions[activeSuggestionIdx >= 0 ? activeSuggestionIdx : 0];
+                  if (chosen) selectSuggestion(chosen);
+                }
+              }}
+              className="w-full pl-10 pr-9 py-2 rounded-2xl bg-neutral-950/95 backdrop-blur-xl border border-neutral-700/80 text-white text-xs font-medium placeholder:text-neutral-400 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50 shadow-2xl transition-all"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setRemoteGeoResults([]);
+                  setActiveSuggestionIdx(-1);
+                }}
+                className="absolute right-2.5 p-1 rounded-full text-neutral-400 hover:text-white"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
-          {/* Autocomplete Results */}
-          {searchFocused && searchResults.length > 0 && (
-            <div className="absolute top-full mt-2 inset-x-0 rounded-2xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800 shadow-2xl p-2 max-h-60 overflow-y-auto z-30">
-              {searchResults.map((b) => (
-                <button
-                  key={b.id}
-                  onClick={() => {
-                    setSearchFocused(false);
-                    setSearchQuery("");
-                    if (onStorefrontSelect) onStorefrontSelect(b);
-                    if (b.lat && b.lon && mapRef.current) {
-                      mapRef.current.flyTo({ center: [b.lon, b.lat], zoom: 16.6, pitch: 58 });
-                    }
-                  }}
-                  className="w-full text-left px-3 py-2 rounded-xl hover:bg-neutral-900 flex items-center justify-between text-xs text-white transition-colors"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-bold">{b.name}</span>
-                    <span className="text-[10px] text-neutral-400">{b.tagline || b.city_name}</span>
+          {/* Grouped Autocomplete Results + Live Status / Empty Feedback */}
+          {searchFocused && q.length >= 2 && (
+            <div className="absolute top-full mt-2 inset-x-0 rounded-2xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800 shadow-2xl p-2 max-h-72 overflow-y-auto z-30 flex flex-col gap-1.5">
+              {businessSearchResults.length > 0 && (
+                <div>
+                  <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-400/80">
+                    Live Businesses
                   </div>
-                  <span className="text-[11px] text-amber-400 font-mono">{b.starting_price || "Studio"}</span>
-                </button>
-              ))}
+                  {businessSearchResults.map((b, idx) => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => selectSuggestion({ type: "business", data: b })}
+                      className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between gap-2 text-xs text-white transition-colors ${
+                        activeSuggestionIdx === idx ? "bg-neutral-800/90" : "hover:bg-neutral-900"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/35 flex items-center justify-center text-amber-400 shrink-0">
+                          <Store className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-bold truncate">{b.name}</span>
+                          <span className="text-[10px] text-neutral-400 truncate">
+                            {b.city_name}{b.pincode ? ` · PIN ${b.pincode}` : ""} · {b.tagline || "Live Plot"}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold shrink-0">
+                        3D Plot
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {placeSearchResults.length > 0 && (
+                <div>
+                  <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-400/80">
+                    Places, States &amp; PIN Codes
+                  </div>
+                  {placeSearchResults.map((p, idx) => {
+                    const flatIdx = businessSearchResults.length + idx;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => selectSuggestion({ type: "place", data: p })}
+                        className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between gap-2 text-xs text-white transition-colors ${
+                          activeSuggestionIdx === flatIdx ? "bg-neutral-800/90" : "hover:bg-neutral-900"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+                            <MapPin className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-semibold truncate">{p.name}</span>
+                            <span className="text-[10px] text-neutral-400 truncate">{p.subtitle}</span>
+                          </div>
+                        </div>
+                        <span className="text-[10px] uppercase tracking-wide text-neutral-400 font-mono shrink-0">
+                          {p.kind}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {isSearchingGeo && (
+                <div className="px-3 py-2 text-[11px] text-neutral-400 flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+                  <span>Searching India places &amp; PIN codes...</span>
+                </div>
+              )}
+
+              {!isSearchingGeo && businessSearchResults.length === 0 && placeSearchResults.length === 0 && (
+                <div className="px-3 py-2.5 text-xs text-neutral-400">
+                  No exact match found in India for <span className="text-white font-semibold">&ldquo;{searchQuery.trim()}&rdquo;</span>.
+                  {/^\d{6}$/.test(searchQuery.trim()) && (
+                    <span className="block text-[10px] text-neutral-500 mt-0.5">
+                      Verify the 6-digit Indian PIN code or try searching the town/district name.
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1757,10 +2708,10 @@ export function LiveOsmMap({
               {isNightMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-cyan-400" />}
             </button>
 
-            {/* Recenter on Nerqiva Studio */}
+            {/* Recenter on Flagship Plot */}
             <button
-              onClick={handleResetCamera}
-              title="Recenter on Nerqiva Studio · North Guwahati"
+              onClick={() => flyToStorefront(nerqivaBusiness)}
+              title="Focus on Nearest Live Plot"
               className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors"
             >
               <RotateCcw className="w-4 h-4 text-neutral-300" />
@@ -1772,7 +2723,7 @@ export function LiveOsmMap({
             className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs shadow-2xl transition-all"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>+ Open a Shop</span>
+            <span>Open a Shop</span>
           </Link>
         </div>
       </div>
@@ -1786,107 +2737,256 @@ export function LiveOsmMap({
         </div>
       )}
 
-
-
-      {/* 3. BOTTOM FLOATING CONTROLS CARD */}
-      <div className="absolute bottom-6 inset-x-4 z-20 flex flex-col items-center gap-2 pointer-events-none">
-        <div className="w-full max-w-lg p-3 sm:p-4 rounded-3xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800/90 shadow-2xl flex flex-col gap-3 pointer-events-auto">
-          {/* Status Row */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
-                <Store className="w-4 h-4" />
+      {/* 3. DYNAMIC 3-STATE CONTEXT-AWARE BOTTOM NAVIGATION BAR */}
+      <div className="absolute bottom-5 inset-x-4 z-20 flex flex-col items-center gap-2 pointer-events-none">
+        {/* STATE A: ALL-INDIA NATIONAL VIEW — Sleek compact 1-row bar (zero Nerqiva hardcoding, zero southern India overlap!) */}
+        {viewLevel === "india" && (
+          <div className="px-3.5 py-2 rounded-full bg-neutral-950/92 backdrop-blur-2xl border border-neutral-800/90 shadow-2xl flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 pointer-events-auto">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                <Globe2 className="w-3.5 h-3.5" />
               </div>
-              <div className="flex flex-col text-left">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-white tracking-tight">
-                    Nerqiva Studio
-                  </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Studio Active
-                  </span>
-                </div>
-                <span className="text-[11px] text-neutral-400">
-                  North Guwahati, Assam · PIN 781030 · Clear {isNightMode ? "night" : "day"}
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="font-bold text-white">India Map</span>
+                <span className="text-neutral-600">·</span>
+                <span className="text-emerald-400 font-semibold">
+                  {allLiveStorefronts.length} Live {allLiveStorefronts.length === 1 ? "Business" : "Businesses"}
+                </span>
+                <span className="hidden sm:inline text-neutral-600">·</span>
+                <span className="hidden sm:inline text-neutral-400">
+                  {activeCityGroups.length} {activeCityGroups.length === 1 ? "City" : "Cities"}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-[11px] font-medium text-amber-300">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              <span>nerqivastudio.in</span>
+            <div className="h-4 w-px bg-neutral-800 hidden sm:block" />
+
+            {/* Dynamic Active City Quick-Jump Chips */}
+            <div className="flex items-center gap-1.5">
+              {activeCityGroups.slice(0, 3).map((grp) => (
+                <button
+                  key={grp.city}
+                  type="button"
+                  onClick={() => {
+                    if (grp.count === 1) {
+                      flyToStorefront(grp.storefronts[0]);
+                    } else {
+                      flyToPlace({
+                        name: grp.city,
+                        subtitle: grp.state,
+                        kind: "city",
+                        lat: grp.lat,
+                        lon: grp.lon,
+                        zoom: 12.6,
+                      });
+                    }
+                  }}
+                  className="px-2.5 py-1 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-amber-500/40 text-[11px] font-semibold text-amber-300 flex items-center gap-1.5 transition-all"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  <span>{grp.city}</span>
+                  <span className="text-[10px] text-neutral-400 font-mono">({grp.count})</span>
+                </button>
+              ))}
+            </div>
+
+            <Link
+              href="/register"
+              className="px-3 py-1 rounded-full bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-[11px] flex items-center gap-1 transition-all"
+            >
+              <Plus className="w-3 h-3" />
+              <span>Claim Plot</span>
+            </Link>
+          </div>
+        )}
+
+        {/* STATE B: REGION / STATE / CITY / PIN CODE CONTEXT VIEW */}
+        {viewLevel === "region" && (
+          <div className="w-full max-w-lg px-4 py-3 rounded-3xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800/90 shadow-2xl flex items-center justify-between gap-3 pointer-events-auto">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-2xl bg-sky-500/15 border border-sky-500/35 flex items-center justify-center text-sky-400 shrink-0">
+                <MapPin className="w-4 h-4" />
+              </div>
+              <div className="flex flex-col text-left min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-white tracking-tight truncate">
+                    {focusedRegion ? focusedRegion.name : nearestToCenter && nearestToCenter.distKm < 40 ? nearestToCenter.storefront.city_name || "Guwahati" : "Exploring India"}
+                  </span>
+                  <span
+                    className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border shrink-0 ${
+                      nearbyCount > 0
+                        ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                        : "bg-neutral-800 text-neutral-300 border-neutral-700"
+                    }`}
+                  >
+                    {nearbyCount > 0 ? `${nearbyCount} Live Here` : "Open Area"}
+                  </span>
+                </div>
+                <span className="text-[11px] text-neutral-400 truncate">
+                  {focusedRegion
+                    ? focusedRegion.subtitle
+                    : nearbyCount > 0
+                    ? "Zoom in or tap a plot to explore in 3D street view"
+                    : "No plots claimed here yet · Be the first business in this area"}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {nearbyCount > 0 && nearestToCenter ? (
+                <button
+                  type="button"
+                  onClick={() => flyToStorefront(nearestToCenter.storefront)}
+                  className="px-3.5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 transition-all"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Visit {nearestToCenter.storefront.name}</span>
+                </button>
+              ) : (
+                <Link
+                  href="/register"
+                  className="px-3.5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 transition-all"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Claim First Plot</span>
+                </Link>
+              )}
             </div>
           </div>
+        )}
 
-          {/* Action Row */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                if (onStorefrontSelect) onStorefrontSelect(nerqivaBusiness);
-                bazaarAudio.playStorefrontChime();
-              }}
-              className="flex-1 py-2.5 px-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-950/30"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>✨ View Nerqiva Studio</span>
-            </button>
+        {/* STATE C: STREET / SINGLE BUSINESS PLOT VIEW (Dynamic for whichever business is focused — never falsely shows Nerqiva in another city!) */}
+        {viewLevel === "street" && activeStreetBusiness && (
+          <>
+            <div className="w-full max-w-lg p-3 sm:p-4 rounded-3xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800/90 shadow-2xl flex flex-col gap-3 pointer-events-auto">
+              {/* Status Row */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                    <Store className="w-4 h-4" />
+                  </div>
+                  <div className="flex flex-col text-left min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-white tracking-tight truncate">
+                        {activeStreetBusiness.name}
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold flex items-center gap-1 shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        Live Plot
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-neutral-400 truncate">
+                      {activeStreetBusiness.slug === "nerqiva-studio" ? "North Guwahati" : activeStreetBusiness.city_name}
+                      {activeStreetBusiness.state_name ? `, ${activeStreetBusiness.state_name}` : ""}
+                      {activeStreetBusiness.pincode ? ` · PIN ${activeStreetBusiness.pincode}` : ""} · Clear {isNightMode ? "night" : "day"}
+                    </span>
+                  </div>
+                </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                const nextWalk = !isWalkMode;
-                if (nextWalk) {
-                  enterThirdPersonWalkMode(true);
-                  showToast("🚶 3rd-Person POV · W/S move · A/D turn · Shift sprint");
-                } else {
-                  handleStopMove();
-                  handleResetCamera();
-                }
-              }}
-              className={`py-2.5 px-3.5 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
-                isWalkMode
-                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/60 shadow-lg shadow-amber-500/20"
-                  : "bg-neutral-900 hover:bg-neutral-800 text-white border border-neutral-800"
-              }`}
-            >
-              <Footprints className="w-4 h-4 text-amber-400" />
-              <span>Walk (WASD)</span>
-            </button>
+                {activeStreetBusiness.website_url && (
+                  <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-[11px] font-medium text-amber-300 shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    <span>{activeStreetBusiness.website_url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}</span>
+                  </div>
+                )}
+              </div>
 
-            <button
-              type="button"
-              onClick={() => setDialogueStorefront(nerqivaBusiness)}
-              className="py-2.5 px-3.5 rounded-2xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-800"
-              title="Talk to Nerqiva Studio"
-            >
-              <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
-              <span>Talk</span>
-            </button>
+              {/* Action Row */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onStorefrontSelect) onStorefrontSelect(activeStreetBusiness);
+                    bazaarAudio.playStorefrontChime();
+                  }}
+                  className="flex-1 py-2.5 px-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-950/30"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>View {activeStreetBusiness.name}</span>
+                </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                if (typeof navigator !== "undefined" && navigator.clipboard) {
-                  navigator.clipboard.writeText(window.location.href);
-                  showToast("🔗 Nerqiva Studio map link copied!");
-                }
-              }}
-              className="p-2.5 rounded-2xl text-xs font-medium flex items-center justify-center transition-all bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-800"
-              title="Share Link"
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextWalk = !isWalkMode;
+                    if (nextWalk) {
+                      enterThirdPersonWalkMode(true);
+                      showToast("🚶 3rd-Person POV · W/S move · A/D turn · Shift sprint");
+                    } else {
+                      handleStopMove();
+                      handleResetCamera();
+                    }
+                  }}
+                  className={`py-2.5 px-3.5 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                    isWalkMode
+                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/60 shadow-lg shadow-amber-500/20"
+                      : "bg-neutral-900 hover:bg-neutral-800 text-white border border-neutral-800"
+                  }`}
+                >
+                  <Footprints className="w-4 h-4 text-amber-400" />
+                  <span>Walk (WASD)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDialogueStorefront(activeStreetBusiness)}
+                  className="py-2.5 px-3.5 rounded-2xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-800"
+                  title={`Talk to ${activeStreetBusiness.name}`}
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Talk</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof navigator !== "undefined" && navigator.clipboard) {
+                      navigator.clipboard.writeText(window.location.href);
+                      showToast(`🔗 ${activeStreetBusiness.name} map link copied!`);
+                    }
+                  }}
+                  className="p-2.5 rounded-2xl text-xs font-medium flex items-center justify-center transition-all bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-800"
+                  title="Share Link"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Keyboard Controls Hint Pill — ONLY shown at street level */}
+            <div className="hidden md:flex items-center gap-2 pointer-events-auto">
+              <div className="px-3.5 py-1.5 rounded-xl bg-neutral-950/80 backdrop-blur-md border border-neutral-800/70 text-[10px] text-neutral-300 font-mono flex items-center gap-2 shadow-lg">
+                <span>W A S D walk · Drag look 360° · Scroll zoom · Q / E turn · Shift faster</span>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* STATE C2: STREET LEVEL ON AN UNCLAIMED AREA (e.g. searched PIN 400001 / Mumbai street) */}
+        {viewLevel === "street" && !activeStreetBusiness && (
+          <div className="w-full max-w-lg px-4 py-3 rounded-3xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800/90 shadow-2xl flex items-center justify-between gap-3 pointer-events-auto">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                <MapPin className="w-4 h-4" />
+              </div>
+              <div className="flex flex-col text-left min-w-0">
+                <span className="text-sm font-bold text-white truncate">
+                  {focusedRegion ? focusedRegion.name : "Open Street Plot"}
+                </span>
+                <span className="text-[11px] text-neutral-400 truncate">
+                  No 3D business claimed on this street yet
+                </span>
+              </div>
+            </div>
+            <Link
+              href="/register"
+              className="px-3.5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 shrink-0 transition-all"
             >
-              <Share2 className="w-3.5 h-3.5" />
-            </button>
+              <Plus className="w-3.5 h-3.5" />
+              <span>Claim First Plot</span>
+            </Link>
           </div>
-        </div>
-
-        {/* Keyboard Controls Hint Pill (India Again Style) */}
-        <div className="hidden md:flex items-center gap-2 pointer-events-auto">
-          <div className="px-3.5 py-1.5 rounded-xl bg-neutral-950/80 backdrop-blur-md border border-neutral-800/70 text-[10px] text-neutral-300 font-mono flex items-center gap-2 shadow-lg">
-            <span>W A S D walk · Drag look 360° · Scroll zoom · Q / E turn · Shift faster</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* QUICK TALK & DIALOGUE MODALS */}

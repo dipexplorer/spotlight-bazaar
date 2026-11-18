@@ -120,10 +120,11 @@ export function ShareCardModal({ storefront, isOpen, onClose }: ShareCardModalPr
         <div className="w-full flex flex-col gap-2 mt-5">
           {/* Fly to 3D Bazaar Street */}
           <Link
-            href={`/?city=${storefront.city_name ? storefront.city_name.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "all"}&shop=${storefront.slug}&new=1`}
-            className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-950/40"
+            href={`/?shop=${storefront.slug}&new=1`}
+            className="w-full min-h-[44px] py-3 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-950/40"
           >
-            <span>🚀 Fly to My Shop on 3D High Street</span>
+            <MapPin className="w-4 h-4" />
+            <span>Fly to My 3D Plot on India Map</span>
           </Link>
 
           <Link

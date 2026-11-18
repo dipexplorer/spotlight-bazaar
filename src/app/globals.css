@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../";
 @import "leaflet/dist/leaflet.css";
 
 @theme {
@@ -135,4 +136,19 @@ body {
 
 .leaflet-control-attribution a:hover {
   text-decoration: underline;
+}
+
+/* Transparent glassmorphic MapLibre hover popups (eliminates default white box) */
+.spotlight-beacon-popup .maplibregl-popup-content {
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.spotlight-beacon-popup .maplibregl-popup-tip {
+  border-top-color: #080B12 !important;
+  border-bottom-color: #080B12 !important;
+  border-left-color: transparent !important;
+  border-right-color: transparent !important;
 }

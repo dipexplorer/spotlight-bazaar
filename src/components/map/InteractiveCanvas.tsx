@@ -3,8 +3,22 @@
 import React, { useState, useEffect } from "react";
 import { BusinessStorefront, City } from "@/types";
 import { INITIAL_CITIES } from "@/lib/constants/initialCities";
+import { getLocalStorefronts } from "@/lib/utils/localStorefront";
 import { StorefrontDrawer } from "@/components/map/StorefrontDrawer";
 import { LiveOsmMap } from "@/components/map/LiveOsmMap";
+
+function mergeStorefronts(base: BusinessStorefront[], extras: BusinessStorefront[]): BusinessStorefront[] {
+  const bySlug = new Map<string, BusinessStorefront>();
+  for (const s of base) {
+    bySlug.set(s.slug, s);
+  }
+  for (const s of extras) {
+    if (!bySlug.has(s.slug)) {
+      bySlug.set(s.slug, s);
+    }
+  }
+  return Array.from(bySlug.values());
+}
 
 interface InteractiveCanvasProps {
   initialStorefronts: BusinessStorefront[];
@@ -16,26 +30,37 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
   const [activeStorefront, setActiveStorefront] = useState<BusinessStorefront | null>(null);
   const [viewMode, setViewMode] = useState<"3d" | "osm">("3d");
 
-  // Fetch updated edge snapshot from /api/boot on mount
+  // Merge any locally registered storefronts immediately on mount and refresh from /api/boot
   useEffect(() => {
+    const localList = getLocalStorefronts();
+    if (localList.length > 0) {
+      setStorefronts((prev) => mergeStorefronts(prev, localList));
+    }
+
     fetch("/api/boot")
       .then((res) => res.json())
       .then((data) => {
         if (data.storefronts && Array.isArray(data.storefronts) && data.storefronts.length > 0) {
           if (typeof data.storefronts[0] === "object" && !Array.isArray(data.storefronts[0])) {
-            setStorefronts(data.storefronts);
+            setStorefronts(mergeStorefronts(data.storefronts, getLocalStorefronts()));
           }
         }
       })
       .catch(() => {});
   }, []);
 
-  // Handle URL deep-linking: ?city=guwahati&shop=nerqiva-studio&view=osm
+  // Capture initial deep-link ?shop= once before map URL sync runs
+  const initialShopSlugRef = React.useRef<string | null>(null);
+  const hasCelebratedNewRef = React.useRef<boolean>(false);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
+    if (!initialShopSlugRef.current && params.get("shop")) {
+      initialShopSlugRef.current = params.get("shop");
+    }
     const cityParam = params.get("city");
-    const shopSlug = params.get("shop");
+    const shopSlug = initialShopSlugRef.current || params.get("shop");
     const isNew = params.get("new");
     const viewParam = params.get("view");
 
@@ -45,7 +70,7 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
       setViewMode("3d");
     }
 
-    if (cityParam) {
+    if (cityParam && !shopSlug) {
       const matched = INITIAL_CITIES.find(
         (c) =>
           c.slug.toLowerCase() === cityParam.toLowerCase() ||
@@ -65,7 +90,8 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
       }
     }
 
-    if (isNew === "1") {
+    if (isNew === "1" && !hasCelebratedNewRef.current) {
+      hasCelebratedNewRef.current = true;
       import("canvas-confetti").then((m) => {
         m.default({
           particleCount: 80,

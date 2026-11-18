@@ -1,58 +1,86 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import confetti from "canvas-confetti";
 import {
+  AlertCircle,
   ArrowLeft,
   ArrowRight,
-  Sparkles,
+  Building2,
+  Check,
+  ImagePlus,
+  Loader2,
   MapPin,
+  Phone,
   Upload,
   X,
-  Check,
-  AlertCircle,
-  Loader2,
 } from "lucide-react";
 import { CATEGORIES } from "@/lib/constants/categories";
+import { CATEGORY_PLOT_SPECS } from "@/lib/constants/categoryPlots";
 import { INITIAL_CITIES } from "@/lib/constants/initialCities";
-import { CategoryId, BusinessStorefront } from "@/types";
+import { BusinessStorefront, CategoryId } from "@/types";
 import { compressImage } from "@/lib/utils/compressImage";
 import { saveLocalStorefront } from "@/lib/utils/localStorefront";
 import { ShareCardModal } from "@/components/onboarding/ShareCardModal";
-import { LocationMapPicker } from "@/components/register/LocationMapPicker";
+import { CategoryDropdown } from "@/components/register/CategoryDropdown";
+import {
+  LocationMapPicker,
+  PickedLocation,
+} from "@/components/register/LocationMapPicker";
+
+const STEPS = [
+  { id: 1, label: "Plot & Location" },
+  { id: 2, label: "Rates & Contact" },
+  { id: 3, label: "Photos" },
+  { id: 4, label: "Publish" },
+] as const;
 
 export default function RegisterPage() {
   const [step, setStep] = useState<number>(1);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Form State
+  // Step 1 — Identity, Category & Exact India Coordinates
   const [name, setName] = useState("");
   const [tagline, setTagline] = useState("");
   const [category, setCategory] = useState<CategoryId>("creative-weddings");
-  const [city, setCity] = useState("Guwahati");
-  const [pincode, setPincode] = useState("781005");
-  const [lat, setLat] = useState<number>(26.1550);
-  const [lon, setLon] = useState<number>(91.7750);
-  const [addressName, setAddressName] = useState<string>("GS Road & Christian Basti");
+  const [city, setCity] = useState("");
+  const [stateName, setStateName] = useState("");
+  const [pincode, setPincode] = useState("");
+  const [pinLookupLoading, setPinLookupLoading] = useState(false);
+  const [lat, setLat] = useState<number | null>(null);
+  const [lon, setLon] = useState<number | null>(null);
+  const [locationLabel, setLocationLabel] = useState("");
+  const [flyTarget, setFlyTarget] = useState<{
+    lat: number;
+    lon: number;
+    zoom?: number;
+    key: number;
+  } | null>(null);
+
+  // Step 2 — Pricing & Direct Contact
   const [whatsapp, setWhatsapp] = useState("");
   const [instagram, setInstagram] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
   const [startingPrice, setStartingPrice] = useState("");
+
+  // Step 3 — Portfolio Photos
   const [portfolio, setPortfolio] = useState<string[]>([]);
   const [compressing, setCompressing] = useState(false);
-  const [consent, setConsent] = useState(false);
 
-  // Success Modal State
-  const [createdStorefront, setCreatedStorefront] = useState<BusinessStorefront | null>(null);
+  // Step 4 — Consent & Confirmation
+  const [consent, setConsent] = useState(false);
+  const [createdStorefront, setCreatedStorefront] =
+    useState<BusinessStorefront | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
-  // Read pre-selected city from URL params (e.g. /register?city=guwahati&plot=2)
-  React.useEffect(() => {
+  // Optional URL deep-link pre-fill (e.g. /register?city=mumbai)
+  useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const cityParam = params.get("city");
-    if (cityParam) {
+    if (cityParam && cityParam.toLowerCase() !== "all") {
       const matched = INITIAL_CITIES.find(
         (c) =>
           c.slug.toLowerCase() === cityParam.toLowerCase() ||
@@ -60,20 +88,91 @@ export default function RegisterPage() {
       );
       if (matched) {
         setCity(matched.name);
+        setStateName(matched.state);
+        setLat(matched.lat);
+        setLon(matched.lon);
+        setLocationLabel(`${matched.name}, ${matched.state}`);
+        setFlyTarget({ lat: matched.lat, lon: matched.lon, zoom: 13.5, key: Date.now() });
       }
     }
   }, []);
 
-  // Step 1 Validation
-  const canProceedStep1 = name.trim().length >= 2 && city.trim().length > 0;
+  // When user types a valid 6-digit Indian PIN code, automatically locate it on the mini-map
+  const handlePincodeChange = (raw: string) => {
+    const digits = raw.replace(/\D/g, "").slice(0, 6);
+    setPincode(digits);
 
-  // Step 2 Validation (Indian 10-digit phone regex)
+    if (/^[1-9]\d{5}$/.test(digits)) {
+      setPinLookupLoading(true);
+      fetch(`/api/geo/search?q=${digits}`)
+        .then((r) => r.json())
+        .then((d) => {
+          const hit = Array.isArray(d?.results) ? d.results[0] : null;
+          if (hit && typeof hit.lat === "number" && typeof hit.lon === "number") {
+            setLat(Number(hit.lat.toFixed(6)));
+            setLon(Number(hit.lon.toFixed(6)));
+            setFlyTarget({
+              lat: hit.lat,
+              lon: hit.lon,
+              zoom: hit.zoom || 15,
+              key: Date.now(),
+            });
+            const parts = String(hit.subtitle || "")
+              .split(/[·,]/)
+              .map((p) => p.trim())
+              .filter((p) => p && p.toLowerCase() !== "india");
+            if (parts.length >= 2) {
+              setCity(parts[parts.length - 2]);
+              setStateName(parts[parts.length - 1]);
+            } else if (parts[0]) {
+              setCity(parts[0]);
+            }
+            setLocationLabel(hit.subtitle ? `${hit.name}, ${hit.subtitle}` : hit.name);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setPinLookupLoading(false));
+    }
+  };
+
+  // Sync location picked from the interactive mini-map (search, GPS, click, or pin drag)
+  const handleMapPick = useCallback((loc: PickedLocation) => {
+    setLat(loc.lat);
+    setLon(loc.lon);
+    if (loc.city) setCity(loc.city);
+    if (loc.state) setStateName(loc.state);
+    if (loc.pincode) setPincode(loc.pincode);
+    if (loc.label) setLocationLabel(loc.label);
+  }, []);
+
+  // Step Validations
+  const hasPinnedCoords = typeof lat === "number" && typeof lon === "number";
+  const canProceedStep1 =
+    name.trim().length >= 2 &&
+    tagline.trim().length >= 5 &&
+    city.trim().length >= 2 &&
+    hasPinnedCoords;
+
   const cleanPhone = whatsapp.replace(/[^0-9]/g, "").slice(-10);
   const isValidPhone = /^[6-9]\d{9}$/.test(cleanPhone);
   const canProceedStep2 = isValidPhone && startingPrice.trim().length > 0;
 
-  // Step 3 Validation (at least 1 image)
   const canProceedStep3 = portfolio.length >= 1;
+
+  const selectedCategoryObj =
+    CATEGORIES.find((c) => c.id === category) || CATEGORIES[0];
+  const selectedPlotSpec = CATEGORY_PLOT_SPECS[category];
+
+  // Step 1 missing-item hint so users are never left guessing why Continue is disabled
+  const step1MissingHint = !name.trim() || name.trim().length < 2
+    ? "Enter your business name to continue."
+    : tagline.trim().length < 5
+      ? "Add a short one-line description of what you offer."
+      : !hasPinnedCoords
+        ? "Drop a pin on the India mini-map (search, GPS, or tap the map) so we can place your 3D plot."
+        : city.trim().length < 2
+          ? "Enter your city or town name."
+          : null;
 
   // Image Upload Handler with client-side compression
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,7 +180,7 @@ export default function RegisterPage() {
     if (!files || files.length === 0) return;
 
     if (portfolio.length + files.length > 6) {
-      setErrorMsg("Maximum 6 portfolio photos allowed.");
+      setErrorMsg("You can upload up to 6 photos per storefront.");
       return;
     }
 
@@ -96,9 +195,10 @@ export default function RegisterPage() {
       }
       setPortfolio((prev) => [...prev, ...newImages]);
     } catch {
-      setErrorMsg("Failed to process images. Please try different photos.");
+      setErrorMsg("Could not process one of those images. Please try JPG or PNG files.");
     } finally {
       setCompressing(false);
+      e.target.value = "";
     }
   };
 
@@ -109,28 +209,37 @@ export default function RegisterPage() {
   // Submission Handler
   const handleSubmit = async () => {
     if (!consent) {
-      setErrorMsg("Please accept the directory listing consent to proceed.");
+      setErrorMsg("Please confirm directory listing consent to publish your plot.");
+      return;
+    }
+    if (!hasPinnedCoords) {
+      setErrorMsg("Please pin your plot location on the map first.");
+      setStep(1);
       return;
     }
 
     setSubmitting(true);
     setErrorMsg(null);
 
-    const selectedCity = INITIAL_CITIES.find(
-      (c) => c.name.toLowerCase() === city.toLowerCase()
-    );
+    const normalizedWebsite = websiteUrl.trim()
+      ? /^https?:\/\//i.test(websiteUrl.trim())
+        ? websiteUrl.trim()
+        : `https://${websiteUrl.trim()}`
+      : undefined;
 
     const payload = {
       name: name.trim(),
-      tagline: tagline.trim() || undefined,
+      tagline: tagline.trim(),
       category_id: category,
       city_name: city.trim(),
+      state_name: stateName.trim() || "India",
       pincode: pincode.trim() || undefined,
       whatsapp_phone: cleanPhone,
       instagram_handle: instagram.replace(/^@/, "").trim() || undefined,
+      website_url: normalizedWebsite,
       starting_price: startingPrice.trim(),
-      lat: lat || (selectedCity ? selectedCity.lat : 26.1550),
-      lon: lon || (selectedCity ? selectedCity.lon : 91.7750),
+      lat,
+      lon,
       portfolio_images: portfolio,
     };
 
@@ -142,12 +251,10 @@ export default function RegisterPage() {
       });
 
       const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.error || "Registration failed");
+        throw new Error(data.error || "Registration failed. Please try again.");
       }
 
-      // Optimistic local storefront object
       const newStorefront: BusinessStorefront = {
         id: data.id || `sb-${Date.now()}`,
         slug: data.slug,
@@ -155,12 +262,13 @@ export default function RegisterPage() {
         tagline: payload.tagline,
         category_id: payload.category_id,
         city_name: payload.city_name,
-        state_name: selectedCity?.state || "India",
+        state_name: payload.state_name,
         pincode: payload.pincode,
         lat: payload.lat,
         lon: payload.lon,
         whatsapp_phone: payload.whatsapp_phone,
         instagram_handle: payload.instagram_handle,
+        website_url: payload.website_url,
         starting_price: payload.starting_price,
         logo_url: portfolio[0] || "",
         is_verified: false,
@@ -176,461 +284,669 @@ export default function RegisterPage() {
         created_at: new Date().toISOString(),
       };
 
-      // Save to localStorage for instant local preview
       saveLocalStorefront(newStorefront);
       setCreatedStorefront(newStorefront);
+      setIsShareModalOpen(true);
 
-      // Trigger Confetti Blast
       confetti({
         particleCount: 90,
-        spread: 65,
+        spread: 68,
         origin: { y: 0.6 },
-        colors: ["#f43f5e", "#f59e0b", "#10b981", "#ffffff"],
+        colors: ["#f59e0b", "#fbbf24", "#10b981", "#ffffff"],
       });
-
-      // Open Story Share Card Modal
-      setIsShareModalOpen(true);
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
+      const msg = err instanceof Error ? err.message : "Something went wrong.";
+      setErrorMsg(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <main className="min-h-screen bg-[#09090b] text-neutral-100 flex flex-col items-center justify-between p-4 md:p-8">
-      {/* Top Header */}
-      <header className="w-full max-w-xl flex items-center justify-between py-4 border-b border-neutral-850">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-xs text-neutral-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Map</span>
-        </Link>
-        <div className="flex items-center gap-1.5 text-xs text-neutral-400 font-mono tabular-nums">
-          <span>{step} of 4</span>
+    <div className="min-h-screen bg-[#09090b] text-neutral-100 flex flex-col">
+      {/* Top Navigation & Progress Header */}
+      <header className="sticky top-0 z-30 bg-[#09090b]/92 backdrop-blur-md border-b border-neutral-800/80">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6">
+          <div className="h-14 flex items-center justify-between gap-4">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 min-h-[44px] -ml-2 px-2 rounded-lg text-sm font-medium text-neutral-300 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to India Map</span>
+            </Link>
+
+            <span className="text-xs font-medium text-neutral-400 tabular-nums">
+              Step {step} of {STEPS.length}
+            </span>
+          </div>
+
+          {/* 4-Step Segmented Progress Bar */}
+          <nav aria-label="Registration steps" className="pb-3.5">
+            <ol className="grid grid-cols-4 gap-2">
+              {STEPS.map((s) => {
+                const isCompleted = s.id < step;
+                const isCurrent = s.id === step;
+                return (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      disabled={!isCompleted}
+                      onClick={() => {
+                        if (isCompleted) {
+                          setErrorMsg(null);
+                          setStep(s.id);
+                        }
+                      }}
+                      className={`w-full text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 rounded ${
+                        isCompleted ? "cursor-pointer" : "cursor-default"
+                      }`}
+                    >
+                      <div
+                        className={`h-1 rounded-full transition-colors duration-200 ${
+                          isCurrent || isCompleted ? "bg-amber-500" : "bg-neutral-800"
+                        }`}
+                      />
+                      <span
+                        className={`mt-1.5 block text-[11px] font-medium truncate transition-colors ${
+                          isCurrent
+                            ? "text-amber-400"
+                            : isCompleted
+                              ? "text-neutral-300 group-hover:text-white"
+                              : "text-neutral-500"
+                        }`}
+                      >
+                        {s.label}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
         </div>
       </header>
 
-      {/* Progress Bar */}
-      <div className="w-full max-w-xl h-1 bg-neutral-900 overflow-hidden my-3 rounded-full">
-        <div
-          className="h-full bg-amber-500 transition-all duration-300 ease-out"
-          style={{ width: `${(step / 4) * 100}%` }}
-        />
-      </div>
+      {/* Main Form Workspace */}
+      <main className="flex-1 w-full max-w-2xl mx-auto px-4 sm:px-6 py-7 sm:py-10">
+        {errorMsg && (
+          <div
+            role="alert"
+            className="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/35 text-sm text-red-200 flex items-start gap-2.5"
+          >
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
 
-      {/* Form Container */}
-      <div className="w-full max-w-xl flex-1 flex flex-col justify-center my-4">
-        <div className="rounded-3xl bg-neutral-950 border border-neutral-800 p-6 md:p-8 shadow-2xl">
-          {errorMsg && (
-            <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3 text-amber-300 text-xs">
-              <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
-              <span>{errorMsg}</span>
+        {/* ==================== STEP 1: PLOT IDENTITY & LOCATION ==================== */}
+        {step === 1 && (
+          <section aria-labelledby="step1-heading" className="space-y-6">
+            <div className="space-y-1.5">
+              <h1
+                id="step1-heading"
+                className="text-2xl sm:text-[28px] font-bold tracking-tight text-white leading-tight"
+              >
+                Claim your 3D business plot
+              </h1>
+              <p className="text-sm text-neutral-400 leading-relaxed max-w-[60ch]">
+                Your category selects your base 3D building architecture and your map pin places it directly on India&apos;s live street map.
+              </p>
             </div>
-          )}
 
-          {/* STEP 1: IDENTITY */}
-          {step === 1 && (
-            <div className="flex flex-col gap-5 animate-fade-in">
-              {/* Mascot Brand Welcome */}
-              <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-neutral-900 border border-neutral-800 mb-1">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/brand/mascot.jpg"
-                  alt="Spotlight Bazaar Mascot"
-                  className="w-12 h-12 rounded-xl object-cover shrink-0 border border-neutral-700 shadow-md"
-                />
-                <div className="flex flex-col">
-                  <span className="text-xs font-semibold text-white">Spotlight Bazaar · High Street Plot</span>
-                  <span className="text-[11px] text-neutral-400">Claim your 3D storefront. Zero commission, direct customer contact.</span>
-                </div>
-              </div>
-
-              <div>
-                <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">
-                  What is your business called?
-                </h1>
-                <p className="text-xs text-neutral-400 mt-1">
-                  Claim your storefront name and category on India&apos;s open business map.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-neutral-300 mb-1.5">
-                  Business Name *
+            <div className="space-y-5 pt-1">
+              {/* Business Name */}
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="business-name"
+                  className="block text-sm font-medium text-neutral-100"
+                >
+                  Business Name <span className="text-amber-400">*</span>
                 </label>
                 <input
+                  id="business-name"
                   type="text"
-                  autoComplete="organization"
-                  autoCapitalize="words"
+                  required
+                  aria-required="true"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Nerqiva Studio, Cafe Guwahati, Assam Crafts"
-                  className="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 focus:border-amber-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/20 text-sm text-white placeholder:text-neutral-500 transition-colors"
+                  placeholder="e.g. Kashi Roasters, Studio Aarav"
+                  maxLength={70}
+                  className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-neutral-300 mb-1.5">
-                  One-Line Description
-                </label>
+              {/* One-Line Description */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <label
+                    htmlFor="business-tagline"
+                    className="block text-sm font-medium text-neutral-100"
+                  >
+                    One-Line Description <span className="text-amber-400">*</span>
+                  </label>
+                  <span className="text-[11px] text-neutral-400 tabular-nums">
+                    {tagline.length}/120
+                  </span>
+                </div>
                 <input
+                  id="business-tagline"
                   type="text"
+                  required
+                  aria-required="true"
                   value={tagline}
                   onChange={(e) => setTagline(e.target.value)}
-                  placeholder="e.g. Candid Wedding Photography across Assam"
-                  className="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 focus:border-amber-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/20 text-sm text-white placeholder:text-neutral-500 transition-colors"
+                  placeholder="e.g. Specialty pour-over coffee & artisanal bakes"
+                  maxLength={120}
+                  className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-neutral-300 mb-2">
-                  Category (Open Elective) *
+              {/* Category (Open Elective) Dropdown */}
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="business-category"
+                  className="block text-sm font-medium text-neutral-100"
+                >
+                  Category (Open Elective) <span className="text-amber-400">*</span>
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {CATEGORIES.map((cat) => (
-                    <button
-                      type="button"
-                      key={cat.id}
-                      onClick={() => setCategory(cat.id)}
-                      className={`p-3 rounded-xl border text-left text-xs font-medium transition-all flex items-center gap-2 ${
-                        category === cat.id
-                          ? "bg-amber-500/15 border-amber-500 text-amber-300 shadow-sm"
-                          : "bg-neutral-900 border-neutral-800 text-neutral-400 hover:border-neutral-700"
-                      }`}
-                    >
-                      <Sparkles className={`w-3.5 h-3.5 ${category === cat.id ? "text-amber-400" : "text-neutral-500"}`} />
-                      <span className="truncate">{cat.name}</span>
-                    </button>
-                  ))}
-                </div>
+                <CategoryDropdown
+                  id="business-category"
+                  value={category}
+                  onChange={setCategory}
+                />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-neutral-300 mb-1.5">
-                    City / Town *
-                  </label>
-                  <select
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="w-full px-3 py-3 rounded-xl bg-neutral-900 border border-neutral-800 focus:border-amber-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/20 text-sm text-white"
-                  >
-                    {INITIAL_CITIES.map((c) => (
-                      <option key={c.id} value={c.name}>
-                        {c.name} ({c.state})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Divider separating identity from location */}
+              <hr className="border-neutral-800/80" />
 
-                <div>
-                  <label className="block text-xs font-medium text-neutral-300 mb-1.5">
-                    Pin Code (Optional)
+              {/* Interactive All-India Mini-Map Picker */}
+              <LocationMapPicker
+                lat={lat}
+                lon={lon}
+                selectedLabel={locationLabel}
+                externalFlyTarget={flyTarget}
+                onChange={handleMapPick}
+              />
+
+              {/* City / Town & Optional Pin Code */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2 space-y-1.5">
+                  <label
+                    htmlFor="business-city"
+                    className="block text-sm font-medium text-neutral-100"
+                  >
+                    City / Town <span className="text-amber-400">*</span>
                   </label>
                   <input
+                    id="business-city"
+                    type="text"
+                    required
+                    aria-required="true"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="Auto-fills from map or type city/town"
+                    maxLength={60}
+                    className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="business-pincode"
+                      className="block text-sm font-medium text-neutral-100"
+                    >
+                      Pin Code{" "}
+                      <span className="text-xs font-normal text-neutral-400">
+                        (Optional)
+                      </span>
+                    </label>
+                    {pinLookupLoading && (
+                      <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+                    )}
+                  </div>
+                  <input
+                    id="business-pincode"
                     type="text"
                     inputMode="numeric"
-                    maxLength={6}
                     value={pincode}
-                    onChange={(e) => setPincode(e.target.value.replace(/[^0-9]/g, ""))}
-                    placeholder="e.g. 781001"
-                    className="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 focus:border-amber-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/20 text-sm text-white placeholder:text-neutral-500 tabular-nums"
+                    onChange={(e) => handlePincodeChange(e.target.value)}
+                    placeholder="e.g. 400050"
+                    maxLength={6}
+                    className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white font-mono tabular-nums placeholder:font-sans placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
                   />
                 </div>
               </div>
+            </div>
 
-              {/* Dynamic 3D Real Map & GPS Anchor Module */}
-              <LocationMapPicker
-                city={city}
-                initialLat={lat}
-                initialLon={lon}
-                initialPincode={pincode || "781005"}
-                onLocationChange={(loc) => {
-                  setLat(loc.lat);
-                  setLon(loc.lon);
-                  if (loc.pincode) setPincode(loc.pincode);
-                  if (loc.addressName) setAddressName(loc.addressName);
-                }}
-              />
-
+            {/* Primary Step Action */}
+            <div className="pt-2 space-y-2">
               <button
                 type="button"
                 disabled={!canProceedStep1}
-                onClick={() => setStep(2)}
-                className="w-full mt-2 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:opacity-40 disabled:hover:bg-amber-500 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-950/30"
+                onClick={() => {
+                  setErrorMsg(null);
+                  setStep(2);
+                }}
+                className="w-full min-h-[48px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:bg-neutral-800 disabled:text-neutral-400 disabled:cursor-not-allowed text-neutral-950 font-semibold text-sm flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
               >
-                <span>Continue to Rates & Contact</span>
+                <span>Continue to Rates &amp; Contact</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
-            </div>
-          )}
-
-          {/* STEP 2: CONTACT & RATES */}
-          {step === 2 && (
-            <div className="flex flex-col gap-5 animate-fade-in">
-              <div>
-                <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">
-                  How should clients reach you?
-                </h1>
-                <p className="text-xs text-neutral-400 mt-1">
-                  Inquiries are delivered directly to your WhatsApp. No middleman, no telemarketers.
+              {!canProceedStep1 && step1MissingHint && (
+                <p className="text-xs text-neutral-400 text-center">
+                  {step1MissingHint}
                 </p>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* ==================== STEP 2: RATES & DIRECT CONTACT ==================== */}
+        {step === 2 && (
+          <section aria-labelledby="step2-heading" className="space-y-6">
+            <div className="space-y-1.5">
+              <h1
+                id="step2-heading"
+                className="text-2xl sm:text-[28px] font-bold tracking-tight text-white leading-tight"
+              >
+                Rates &amp; direct customer contact
+              </h1>
+              <p className="text-sm text-neutral-400 leading-relaxed max-w-[60ch]">
+                Zero commission, zero middlemen. Visitors reach your business directly on WhatsApp.
+              </p>
+            </div>
+
+            <div className="space-y-5 pt-1">
+              {/* Starting Price */}
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="starting-price"
+                  className="block text-sm font-medium text-neutral-100"
+                >
+                  Starting Price / Rate <span className="text-amber-400">*</span>
+                </label>
+                <input
+                  id="starting-price"
+                  type="text"
+                  required
+                  aria-required="true"
+                  value={startingPrice}
+                  onChange={(e) => setStartingPrice(e.target.value)}
+                  placeholder="e.g. Starts ₹499, ₹15,000 / day, Consultation ₹300"
+                  maxLength={40}
+                  className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+                />
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-neutral-300 mb-1.5">
-                  WhatsApp Business Number *
+              {/* WhatsApp Number */}
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="whatsapp-phone"
+                  className="block text-sm font-medium text-neutral-100"
+                >
+                  WhatsApp Number (India) <span className="text-amber-400">*</span>
                 </label>
-                <div className="flex items-center rounded-xl bg-neutral-900 border border-neutral-800 focus-within:border-amber-500 overflow-hidden">
-                  <span className="px-3 py-3 text-xs text-neutral-400 font-mono border-r border-neutral-800 bg-neutral-950">
+                <div className="flex items-stretch">
+                  <span className="inline-flex items-center px-3.5 rounded-l-xl bg-[#18181c] border border-r-0 border-neutral-800 text-sm text-neutral-300 font-mono tabular-nums">
                     +91
                   </span>
                   <input
+                    id="whatsapp-phone"
                     type="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    maxLength={10}
+                    inputMode="numeric"
+                    required
+                    aria-required="true"
                     value={whatsapp}
-                    onChange={(e) => setWhatsapp(e.target.value.replace(/[^0-9]/g, ""))}
-                    placeholder="9864012345"
-                    className="w-full px-4 py-3 bg-transparent text-sm text-white placeholder:text-neutral-500 focus:outline-none tabular-nums"
+                    onChange={(e) =>
+                      setWhatsapp(e.target.value.replace(/\D/g, "").slice(0, 10))
+                    }
+                    placeholder="9876543210"
+                    className="flex-1 min-h-[46px] px-3.5 rounded-r-xl bg-[#121215] border border-neutral-800 text-sm text-white font-mono tabular-nums placeholder:text-neutral-500 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
                   />
                 </div>
-                <p className="text-[11px] text-neutral-400 mt-1">
-                  Never shared with cold-call centers. Used solely for 1-tap client chat.
-                </p>
+                {whatsapp.length > 0 && !isValidPhone && (
+                  <p className="text-xs text-amber-400">
+                    Enter a valid 10-digit Indian mobile number starting with 6–9.
+                  </p>
+                )}
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-neutral-300 mb-1.5">
-                  Starting Package / Rate *
-                </label>
-                <input
-                  type="text"
-                  value={startingPrice}
-                  onChange={(e) => setStartingPrice(e.target.value)}
-                  placeholder="e.g. Starts ₹25,000 / day, or Coffee from ₹150"
-                  className="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 focus:border-amber-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/20 text-sm text-white placeholder:text-neutral-500"
-                />
-                <p className="text-[11px] text-neutral-400 mt-1">
-                  Transparent starting prices filter out tire-kickers and bring qualified buyers.
-                </p>
-              </div>
+              {/* Instagram + Website */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="instagram-handle"
+                    className="block text-sm font-medium text-neutral-100"
+                  >
+                    Instagram{" "}
+                    <span className="text-xs font-normal text-neutral-400">
+                      (Optional)
+                    </span>
+                  </label>
+                  <div className="flex items-stretch">
+                    <span className="inline-flex items-center px-3 rounded-l-xl bg-[#18181c] border border-r-0 border-neutral-800 text-sm text-neutral-400">
+                      @
+                    </span>
+                    <input
+                      id="instagram-handle"
+                      type="text"
+                      value={instagram}
+                      onChange={(e) =>
+                        setInstagram(e.target.value.replace(/^@/, ""))
+                      }
+                      placeholder="yourbusiness"
+                      maxLength={35}
+                      className="flex-1 min-h-[46px] px-3 rounded-r-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+                    />
+                  </div>
+                </div>
 
-              <div>
-                <label className="block text-xs font-medium text-neutral-300 mb-1.5">
-                  Instagram Handle (Optional)
-                </label>
-                <div className="flex items-center rounded-xl bg-neutral-900 border border-neutral-800 focus-within:border-amber-500 overflow-hidden">
-                  <span className="px-3 py-3 text-xs text-neutral-400 font-mono border-r border-neutral-800 bg-neutral-950">
-                    @
-                  </span>
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="website-url"
+                    className="block text-sm font-medium text-neutral-100"
+                  >
+                    Website{" "}
+                    <span className="text-xs font-normal text-neutral-400">
+                      (Optional)
+                    </span>
+                  </label>
                   <input
-                    type="text"
-                    value={instagram}
-                    onChange={(e) => setInstagram(e.target.value)}
-                    placeholder="yourstudiocraft"
-                    className="w-full px-4 py-3 bg-transparent text-sm text-white placeholder:text-neutral-500 focus:outline-none"
+                    id="website-url"
+                    type="url"
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                    placeholder="yourbusiness.in"
+                    maxLength={120}
+                    className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
                   />
                 </div>
-              </div>
-
-              <div className="flex items-center gap-3 mt-2">
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="py-3 px-4 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white text-xs font-medium transition-colors"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  disabled={!canProceedStep2}
-                  onClick={() => setStep(3)}
-                  className="flex-1 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:opacity-40 disabled:hover:bg-amber-500 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-950/30"
-                >
-                  <span>Continue to Portfolio</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
               </div>
             </div>
-          )}
 
-          {/* STEP 3: PORTFOLIO */}
-          {step === 3 && (
-            <div className="flex flex-col gap-5 animate-fade-in">
-              <div>
-                <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">
-                  Upload your best work
-                </h1>
-                <p className="text-xs text-neutral-400 mt-1">
-                  Upload 1 to 6 photos. Compressed automatically in your browser for instant loading.
-                </p>
+            <div className="pt-2 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorMsg(null);
+                  setStep(1);
+                }}
+                className="min-h-[48px] px-5 rounded-xl bg-[#121215] hover:bg-neutral-800 border border-neutral-800 text-sm font-medium text-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                disabled={!canProceedStep2}
+                onClick={() => {
+                  setErrorMsg(null);
+                  setStep(3);
+                }}
+                className="flex-1 min-h-[48px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:bg-neutral-800 disabled:text-neutral-400 disabled:cursor-not-allowed text-neutral-950 font-semibold text-sm flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+              >
+                <span>Continue to Photos</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* ==================== STEP 3: PORTFOLIO PHOTOS ==================== */}
+        {step === 3 && (
+          <section aria-labelledby="step3-heading" className="space-y-6">
+            <div className="space-y-1.5">
+              <h1
+                id="step3-heading"
+                className="text-2xl sm:text-[28px] font-bold tracking-tight text-white leading-tight"
+              >
+                Add storefront photos
+              </h1>
+              <p className="text-sm text-neutral-400 leading-relaxed max-w-[60ch]">
+                Upload 1 to 6 photos of your shop, workspace, or work samples. The first photo becomes your storefront cover.
+              </p>
+            </div>
+
+            {/* Upload Dropzone */}
+            <label
+              htmlFor="portfolio-upload"
+              className="flex flex-col items-center justify-center w-full min-h-[168px] px-4 py-6 rounded-2xl border border-dashed border-neutral-700 hover:border-amber-500/60 bg-[#121215]/70 hover:bg-[#121215] cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-amber-400"
+            >
+              {compressing ? (
+                <div className="flex flex-col items-center gap-2 text-amber-400">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <span className="text-sm font-medium">Optimizing images…</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <div className="w-11 h-11 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-300">
+                    <ImagePlus className="w-5 h-5" />
+                  </div>
+                  <div className="text-sm font-semibold text-neutral-100">
+                    Choose photos from your device
+                  </div>
+                  <p className="text-xs text-neutral-400">
+                    JPG, PNG, or WebP · Automatically optimized ({portfolio.length}/6 uploaded)
+                  </p>
+                </div>
+              )}
+              <input
+                id="portfolio-upload"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageUpload}
+                disabled={compressing || portfolio.length >= 6}
+                className="sr-only"
+              />
+            </label>
+
+            {/* Preview Grid */}
+            {portfolio.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {portfolio.map((img, i) => (
+                  <div
+                    key={i}
+                    className="relative aspect-[4/3] rounded-xl overflow-hidden bg-neutral-900 border border-neutral-800"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={img}
+                      alt={`${name || "Business"} preview ${i + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(i)}
+                      aria-label={`Remove photo ${i + 1}`}
+                      className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/80 hover:bg-red-600 text-white flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    {i === 0 && (
+                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/80 text-[11px] font-semibold text-amber-400">
+                        Cover
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="pt-2 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorMsg(null);
+                  setStep(2);
+                }}
+                className="min-h-[48px] px-5 rounded-xl bg-[#121215] hover:bg-neutral-800 border border-neutral-800 text-sm font-medium text-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                disabled={!canProceedStep3}
+                onClick={() => {
+                  setErrorMsg(null);
+                  setStep(4);
+                }}
+                className="flex-1 min-h-[48px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:bg-neutral-800 disabled:text-neutral-400 disabled:cursor-not-allowed text-neutral-950 font-semibold text-sm flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+              >
+                <span>Review Plot</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* ==================== STEP 4: REVIEW & PUBLISH ==================== */}
+        {step === 4 && (
+          <section aria-labelledby="step4-heading" className="space-y-6">
+            <div className="space-y-1.5">
+              <h1
+                id="step4-heading"
+                className="text-2xl sm:text-[28px] font-bold tracking-tight text-white leading-tight"
+              >
+                Review &amp; spawn your 3D plot
+              </h1>
+              <p className="text-sm text-neutral-400 leading-relaxed max-w-[60ch]">
+                Double-check your storefront details before placing your base 3D building on the live India map.
+              </p>
+            </div>
+
+            {/* Clean Structured Review Sheet */}
+            <div className="rounded-2xl bg-[#121215] border border-neutral-800 divide-y divide-neutral-800/80 overflow-hidden">
+              {/* Top Identity Row */}
+              <div className="p-4 sm:p-5 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-neutral-900 border border-neutral-800 overflow-hidden shrink-0">
+                  {portfolio[0] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={portfolio[0]}
+                      alt={name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-neutral-500">
+                      <Upload className="w-5 h-5" />
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-base font-bold text-white truncate">{name}</h2>
+                  <p className="text-xs text-neutral-300 line-clamp-2 mt-0.5">
+                    {tagline}
+                  </p>
+                </div>
               </div>
 
-              {/* Upload Dropzone */}
-              {portfolio.length < 6 && (
-                <label className="border-2 border-dashed border-neutral-800 hover:border-amber-500/50 rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors bg-neutral-900/40">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    disabled={compressing}
-                    className="hidden"
-                  />
-                  {compressing ? (
-                    <div className="flex items-center gap-2 text-xs text-amber-400">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Optimizing image resolution...</span>
+              {/* 3D Plot Architecture Row */}
+              <div className="p-4 sm:px-5 flex items-start justify-between gap-4 text-sm">
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <Building2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <div className="font-medium text-neutral-100">
+                      {selectedPlotSpec.plotName}
                     </div>
-                  ) : (
-                    <>
-                      <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-400">
-                        <Upload className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-medium text-white">Tap to upload photos</span>
-                      <span className="text-[11px] text-neutral-400">JPG, PNG, WebP (Max 6 photos)</span>
-                    </>
-                  )}
-                </label>
-              )}
-
-              {/* Previews Grid */}
-              {portfolio.length > 0 && (
-                <div className="grid grid-cols-3 gap-2">
-                  {portfolio.map((img, idx) => (
-                    <div
-                      key={idx}
-                      className="relative aspect-square rounded-xl overflow-hidden border border-neutral-800 bg-neutral-900 group"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={img} alt={`Upload ${idx + 1}`} className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(idx)}
-                        className="absolute top-1 right-1 p-1 rounded-full bg-black/80 text-white hover:bg-amber-500 hover:text-slate-950 transition-colors"
-                        aria-label="Remove image"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                      {idx === 0 && (
-                        <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[9px] uppercase bg-amber-500 text-slate-950 font-bold">
-                          Cover
-                        </span>
-                      )}
+                    <div className="text-xs text-neutral-400 mt-0.5">
+                      {selectedCategoryObj.name} · {selectedPlotSpec.footprintLabel}
                     </div>
+                  </div>
+                </div>
+                <div className="flex items-center -space-x-1 shrink-0 pt-1" aria-hidden="true">
+                  {selectedPlotSpec.palette.map((hex, i) => (
+                    <span
+                      key={i}
+                      style={{ backgroundColor: hex }}
+                      className="w-3.5 h-3.5 rounded-full border border-[#121215]"
+                    />
                   ))}
                 </div>
-              )}
-
-              <div className="flex items-center gap-3 mt-2">
-                <button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  className="py-3 px-4 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white text-xs font-medium transition-colors"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  disabled={!canProceedStep3 || compressing}
-                  onClick={() => setStep(4)}
-                  className="flex-1 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:opacity-40 disabled:hover:bg-amber-500 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-950/30"
-                >
-                  <span>Review & Claim</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 4: REVIEW */}
-          {step === 4 && (
-            <div className="flex flex-col gap-5 animate-fade-in">
-              <div>
-                <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">
-                  Ready to claim your storefront?
-                </h1>
-                <p className="text-xs text-neutral-400 mt-1">
-                  Review your listing details before going live on the map.
-                </p>
               </div>
 
-              {/* Summary Card */}
-              <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col gap-2.5 text-xs">
-                <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
-                  <span className="text-neutral-400">Business:</span>
-                  <span className="font-semibold text-white">{name}</span>
-                </div>
-                <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
-                  <span className="text-neutral-400">Location:</span>
-                  <span className="text-neutral-200">{city} {pincode ? `(${pincode})` : ""}</span>
-                </div>
-                <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
-                  <span className="text-neutral-400">WhatsApp:</span>
-                  <span className="font-mono text-emerald-400 tabular-nums">+91 {cleanPhone}</span>
-                </div>
-                <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
-                  <span className="text-neutral-400">Starting Price:</span>
-                  <span className="font-semibold text-amber-400 tabular-nums">{startingPrice}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-neutral-400">Photos:</span>
-                  <span className="text-neutral-200">{portfolio.length} uploaded</span>
-                </div>
-              </div>
-
-              {/* Mandatory DPDP Consent */}
-              <label className="flex items-start gap-3 p-3.5 rounded-xl bg-neutral-900/80 border border-neutral-800 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={consent}
-                  onChange={(e) => setConsent(e.target.checked)}
-                  className="mt-0.5 rounded border-neutral-700 text-amber-500 focus:ring-0"
-                />
-                <span className="text-[11px] text-neutral-300 leading-relaxed">
-                  I consent to publicly listing my business details (Name, City, Category, Portfolio, and WhatsApp number) on Spotlight Bazaar for direct client discovery under India&apos;s DPDP Act standards.
-                </span>
-              </label>
-
-              <div className="flex items-center gap-3 mt-2">
-                <button
-                  type="button"
-                  onClick={() => setStep(3)}
-                  disabled={submitting}
-                  className="py-3 px-4 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white text-xs font-medium transition-colors"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  disabled={!consent || submitting}
-                  onClick={handleSubmit}
-                  className="flex-1 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:opacity-40 disabled:hover:bg-amber-500 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-950/30"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Erecting Your Storefront...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4" />
-                      <span>Claim My Storefront Now</span>
-                    </>
+              {/* Location & Contact Details */}
+              <dl className="p-4 sm:px-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div className="space-y-1">
+                  <dt className="text-neutral-400 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                    Pinned Location
+                  </dt>
+                  <dd className="text-neutral-100 font-medium">
+                    {[city, stateName, pincode ? `PIN ${pincode}` : ""]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </dd>
+                  {hasPinnedCoords && (
+                    <dd className="font-mono text-[11px] text-neutral-400 tabular-nums">
+                      {lat.toFixed(5)}° N, {lon.toFixed(5)}° E
+                    </dd>
                   )}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+                </div>
 
-      {/* Share Card Modal on Success */}
+                <div className="space-y-1">
+                  <dt className="text-neutral-400 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                    Direct Contact &amp; Rate
+                  </dt>
+                  <dd className="text-neutral-100 font-medium tabular-nums">
+                    +91 {cleanPhone}
+                  </dd>
+                  <dd className="text-emerald-400 font-medium">{startingPrice}</dd>
+                </div>
+              </dl>
+            </div>
+
+            {/* Directory Listing Consent */}
+            <label className="flex items-start gap-3 p-4 rounded-xl bg-[#121215]/70 border border-neutral-800 cursor-pointer hover:border-neutral-700 transition-colors">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-neutral-600 bg-neutral-900 accent-amber-500 cursor-pointer shrink-0"
+              />
+              <span className="text-xs text-neutral-300 leading-relaxed">
+                I confirm I am authorized to list this business on Spotlight Bazaar&apos;s public All-India directory and display this WhatsApp contact for direct customer inquiries.
+              </span>
+            </label>
+
+            <div className="pt-1 flex items-center gap-3">
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => {
+                  setErrorMsg(null);
+                  setStep(3);
+                }}
+                className="min-h-[48px] px-5 rounded-xl bg-[#121215] hover:bg-neutral-800 border border-neutral-800 text-sm font-medium text-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                disabled={!consent || submitting}
+                onClick={handleSubmit}
+                className="flex-1 min-h-[48px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:bg-neutral-800 disabled:text-neutral-400 disabled:cursor-not-allowed text-neutral-950 font-semibold text-sm flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Spawning 3D Plot…</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Claim &amp; Place 3D Plot</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </section>
+        )}
+      </main>
+
+      {/* Post-Registration Share & Fly-To Modal */}
       {createdStorefront && (
         <ShareCardModal
           storefront={createdStorefront}
@@ -638,6 +954,6 @@ export default function RegisterPage() {
           onClose={() => setIsShareModalOpen(false)}
         />
       )}
-    </main>
+    </div>
   );
 }
