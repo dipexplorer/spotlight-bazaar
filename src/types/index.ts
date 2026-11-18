@@ -27,6 +27,14 @@ export interface City {
 
 export type BroadcastType = "deal" | "need" | "hiring" | "event";
 
+export type FacadeTheme = "default" | "obsidian" | "limestone" | "terracotta";
+
+export interface PlotConfig {
+  accentColor?: string;
+  facadeTheme?: FacadeTheme;
+  roofSignText?: string;
+}
+
 export interface BusinessPost {
   id: string;
   business_id: string;
@@ -84,6 +92,9 @@ export interface BusinessStorefront {
   owner_id?: string | null;
   total_views: number;
   total_leads: number;
+  plot_level?: 1 | 2 | 3;
+  bazaar_coins?: number;
+  plot_config?: PlotConfig | null;
   portfolio?: PortfolioItem[];
   active_posts?: BusinessPost[];
   created_at: string;

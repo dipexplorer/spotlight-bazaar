@@ -82,6 +82,9 @@ CREATE TABLE IF NOT EXISTS businesses (
     status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'pending', 'suspended')),
     total_views INT DEFAULT 0,
     total_leads INT DEFAULT 0,
+    plot_level INT NOT NULL DEFAULT 1 CHECK (plot_level BETWEEN 1 AND 3),
+    bazaar_coins INT NOT NULL DEFAULT 50,
+    plot_config JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -134,18 +137,38 @@ CREATE TABLE IF NOT EXISTS lead_events (
 CREATE INDEX IF NOT EXISTS idx_lead_events_business ON lead_events(business_id);
 CREATE INDEX IF NOT EXISTS idx_lead_events_created ON lead_events(created_at);
 
+-- 6B. LIVE STREET BROADCASTS (Deals, Coupons, Hiring, Need Service, Events)
+CREATE TABLE IF NOT EXISTS business_posts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    owner_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    post_type VARCHAR(30) NOT NULL CHECK (post_type IN ('deal', 'need_service', 'hiring', 'event')),
+    title VARCHAR(100) NOT NULL,
+    description TEXT,
+    coupon_code VARCHAR(32),
+    cta_label VARCHAR(40),
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '7 days'),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_posts_business ON business_posts(business_id);
+CREATE INDEX IF NOT EXISTS idx_business_posts_active_expires ON business_posts(is_active, expires_at DESC);
+
 -- 7. ROW LEVEL SECURITY (RLS) POLICIES
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE portfolio_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lead_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE business_posts ENABLE ROW LEVEL SECURITY;
 
 -- Allow public read access to active businesses & reference data
 CREATE POLICY "Public can view categories" ON categories FOR SELECT USING (true);
 CREATE POLICY "Public can view cities" ON cities FOR SELECT USING (true);
 CREATE POLICY "Public can view active businesses" ON businesses FOR SELECT USING (status = 'active');
 CREATE POLICY "Public can view portfolio items" ON portfolio_items FOR SELECT USING (true);
+CREATE POLICY "Public can view active business posts" ON business_posts FOR SELECT USING (is_active = true AND expires_at > NOW());
 
 -- Allow public inserts for registration and analytics
 CREATE POLICY "Public can register a business" ON businesses FOR INSERT WITH CHECK (true);

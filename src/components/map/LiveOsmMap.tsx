@@ -726,6 +726,8 @@ export function LiveOsmMap({
           state: s.state_name || "",
           pincode: s.pincode || "",
           tagline: s.tagline || "",
+          plot_level: s.plot_level || 1,
+          accent_color: s.plot_config?.accentColor || "#f59e0b",
         },
         geometry: {
           type: "Point",
@@ -1072,7 +1074,7 @@ export function LiveOsmMap({
             const plotCache = (this as any).categoryPlots as Map<
               string,
               {
-                categoryId: string;
+                visualKey: string;
                 scene: THREE.Scene;
                 sun: THREE.DirectionalLight;
                 amb: THREE.AmbientLight;
@@ -1104,8 +1106,13 @@ export function LiveOsmMap({
                   continue;
                 }
 
+                const pLevel = (s.plot_level === 3 ? 3 : s.plot_level === 2 ? 2 : 1) as 1 | 2 | 3;
+                const pTheme = s.plot_config?.facadeTheme || "default";
+                const pAccent = s.plot_config?.accentColor || "";
+                const visualKey = `${s.category_id}|${pLevel}|${pTheme}|${pAccent}`;
+
                 let entry = plotCache.get(s.slug);
-                if (!entry || entry.categoryId !== s.category_id) {
+                if (!entry || entry.visualKey !== visualKey) {
                   const plotScene = new THREE.Scene();
                   const pSun = new THREE.DirectionalLight(0xfff7ed, 3.0);
                   pSun.position.set(50, 120, 50).normalize();
@@ -1113,13 +1120,17 @@ export function LiveOsmMap({
                   const pAmb = new THREE.AmbientLight(0xdbeafe, 1.6);
                   plotScene.add(pAmb);
 
-                  const plotMesh = createCategoryPlotMesh(s.category_id);
+                  const plotMesh = createCategoryPlotMesh(s.category_id, {
+                    plotLevel: pLevel,
+                    facadeTheme: pTheme,
+                    accentColor: pAccent || undefined,
+                  });
                   plotMesh.traverse((o) => {
                     if ((o as any).isMesh) o.frustumCulled = false;
                   });
                   plotScene.add(plotMesh);
                   entry = {
-                    categoryId: s.category_id,
+                    visualKey,
                     scene: plotScene,
                     sun: pSun,
                     amb: pAmb,
@@ -1817,13 +1828,13 @@ export function LiveOsmMap({
                 maxzoom: 9.8,
                 filter: ["!", ["has", "point_count"]],
                 paint: {
-                  "circle-color": "#fbbf24",
+                  "circle-color": ["coalesce", ["get", "accent_color"], "#fbbf24"],
                   "circle-radius": [
                     "interpolate", ["linear"], ["zoom"],
-                    4.0, 16,
-                    9.0, 22,
+                    4.0, ["match", ["get", "plot_level"], 3, 24, 2, 19, 15],
+                    9.0, ["match", ["get", "plot_level"], 3, 32, 2, 26, 21],
                   ],
-                  "circle-opacity": 0.34,
+                  "circle-opacity": ["match", ["get", "plot_level"], 3, 0.48, 2, 0.40, 0.32],
                   "circle-blur": 0.65,
                 },
               },
@@ -1840,11 +1851,11 @@ export function LiveOsmMap({
                 maxzoom: 9.8,
                 filter: ["!", ["has", "point_count"]],
                 paint: {
-                  "circle-color": "#f59e0b",
+                  "circle-color": ["coalesce", ["get", "accent_color"], "#f59e0b"],
                   "circle-radius": [
                     "interpolate", ["linear"], ["zoom"],
-                    4.0, 6.5,
-                    9.0, 8.5,
+                    4.0, ["match", ["get", "plot_level"], 3, 9.2, 2, 7.6, 6.2],
+                    9.0, ["match", ["get", "plot_level"], 3, 11.4, 2, 9.4, 8.0],
                   ],
                   "circle-stroke-width": 2.4,
                   "circle-stroke-color": "#ffffff",
@@ -2444,6 +2455,22 @@ export function LiveOsmMap({
       const safeTagline = escapeHtml(taglineShort);
       const safeArea = escapeHtml(areaLabel);
       const safeDomain = escapeHtml(domain);
+      const plotLevel = b.plot_level === 3 ? 3 : b.plot_level === 2 ? 2 : 1;
+      const rawAccent = b.plot_config?.accentColor;
+      const accentHex =
+        typeof rawAccent === "string" && /^#[0-9a-fA-F]{6}$/.test(rawAccent)
+          ? rawAccent
+          : "#f59e0b";
+      const roofTag = b.plot_config?.roofSignText
+        ? escapeHtml(b.plot_config.roofSignText.slice(0, 18))
+        : "";
+      const levelBadgeHtml =
+        plotLevel >= 2
+          ? `<span style="font-size:9px;font-weight:800;letter-spacing:0.04em;padding:1px 6px;border-radius:9999px;background:${accentHex}22;color:${accentHex};border:1px solid ${accentHex}66;flex-shrink:0;">LVL ${plotLevel}</span>`
+          : "";
+      const roofTagHtml = roofTag
+        ? `<span style="font-size:9px;font-weight:700;letter-spacing:0.03em;padding:1px 6px;border-radius:9999px;background:rgba(255,255,255,0.08);color:#e5e7eb;flex-shrink:0;">${roofTag}</span>`
+        : "";
 
       // Active Live Broadcast Sky-Badge (floating above roof when business has an active Deal/Need/Hiring/Event!)
       const activeBroadcast = (b.active_posts || []).find(
@@ -2467,25 +2494,28 @@ export function LiveOsmMap({
         <!-- Tier 2 (zoom 9.5 – 14.8) & Colony Compact Roof Pill -->
         <div data-lod="compact" class="flex-col items-center" style="display:none;">
           ${skyBadgeHtml}
-          <div class="px-2.5 py-1 rounded-full bg-[#080B12]/95 border border-amber-500/75 shadow-xl flex items-center gap-1.5 backdrop-blur-md hover:scale-105 transition-all">
-            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+          <div style="border-color:${accentHex}bf;" class="px-2.5 py-1 rounded-full bg-[#080B12]/95 border shadow-xl flex items-center gap-1.5 backdrop-blur-md hover:scale-105 transition-all">
+            <span style="background:${accentHex};" class="w-2 h-2 rounded-full"></span>
             <span class="text-[11px] font-bold text-white tracking-tight whitespace-nowrap">${safeName}</span>
+            ${levelBadgeHtml}
           </div>
-          <div class="w-1.5 h-1.5 -mt-0.5 bg-[#080B12] rotate-45 border-r border-b border-amber-500/75"></div>
+          <div style="border-color:${accentHex}bf;" class="w-1.5 h-1.5 -mt-0.5 bg-[#080B12] rotate-45 border-r border-b"></div>
         </div>
 
         <!-- Tier 3 (zoom 14.8 – 19.8): Flagship Glassmorphic Card -->
         <div data-lod="full" class="flex-col items-center" style="display:none;">
           ${skyBadgeHtml}
-          <div class="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-[#080B12]/95 border border-amber-500/75 shadow-[0_16px_40px_rgba(0,0,0,0.85)] backdrop-blur-2xl hover:scale-105 hover:border-amber-400 transition-all">
-            <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500/25 to-amber-600/10 border border-amber-500/50 flex items-center justify-center text-amber-400 shrink-0 shadow-inner">
+          <div style="border-color:${accentHex}bf;" class="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-[#080B12]/95 border shadow-[0_16px_40px_rgba(0,0,0,0.85)] backdrop-blur-2xl hover:scale-105 transition-all">
+            <div style="border-color:${accentHex}80;color:${accentHex};background:${accentHex}1f;" class="w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 shadow-inner">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
               </svg>
             </div>
             <div class="flex flex-col text-left">
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1.5">
                 <span class="text-xs font-black text-white tracking-tight">${safeName}</span>
+                ${levelBadgeHtml}
+                ${roofTagHtml}
                 ${safeDomain ? `<span class="text-[10px] font-medium text-amber-400/90">${safeDomain}</span>` : ""}
               </div>
               <div class="flex items-center gap-1.5 mt-0.5">
@@ -2495,7 +2525,7 @@ export function LiveOsmMap({
               </div>
             </div>
           </div>
-          <div class="w-2.5 h-2.5 -mt-1 bg-[#080B12] rotate-45 border-r border-b border-amber-500/75"></div>
+          <div style="border-color:${accentHex}bf;" class="w-2.5 h-2.5 -mt-1 bg-[#080B12] rotate-45 border-r border-b"></div>
         </div>
       `;
 
@@ -2575,16 +2605,24 @@ export function LiveOsmMap({
   const q = (searchQuery || "").trim().toLowerCase();
   const businessSearchResults = useMemo(() => {
     if (!q) return [];
-    return allLiveStorefronts.filter((s) => {
-      return (
-        (Boolean(s?.name) && s.name.toLowerCase().includes(q)) ||
-        (Boolean(s?.tagline) && s.tagline!.toLowerCase().includes(q)) ||
-        (Boolean(s?.city_name) && s.city_name!.toLowerCase().includes(q)) ||
-        (Boolean(s?.state_name) && s.state_name!.toLowerCase().includes(q)) ||
-        (Boolean(s?.pincode) && s.pincode!.toLowerCase().includes(q)) ||
-        (Boolean(s?.instagram_handle) && s.instagram_handle!.toLowerCase().includes(q))
-      );
-    });
+    return allLiveStorefronts
+      .filter((s) => {
+        return (
+          (Boolean(s?.name) && s.name.toLowerCase().includes(q)) ||
+          (Boolean(s?.tagline) && s.tagline!.toLowerCase().includes(q)) ||
+          (Boolean(s?.city_name) && s.city_name!.toLowerCase().includes(q)) ||
+          (Boolean(s?.state_name) && s.state_name!.toLowerCase().includes(q)) ||
+          (Boolean(s?.pincode) && s.pincode!.toLowerCase().includes(q)) ||
+          (Boolean(s?.instagram_handle) && s.instagram_handle!.toLowerCase().includes(q)) ||
+          (Boolean(s?.plot_config?.roofSignText) &&
+            s.plot_config!.roofSignText!.toLowerCase().includes(q))
+        );
+      })
+      .sort((a, b) => {
+        const lvlDiff = (b.plot_level || 1) - (a.plot_level || 1);
+        if (lvlDiff !== 0) return lvlDiff;
+        return (b.total_views || 0) - (a.total_views || 0);
+      });
   }, [q, allLiveStorefronts]);
 
   const placeSearchResults = useMemo(() => {
@@ -2863,15 +2901,28 @@ export function LiveOsmMap({
                           <Store className="w-3.5 h-3.5" />
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="font-bold truncate">{b.name}</span>
+                          <span className="font-bold truncate">
+                            {b.name}
+                            {b.plot_config?.roofSignText ? ` · ${b.plot_config.roofSignText}` : ""}
+                          </span>
                           <span className="text-[10px] text-neutral-400 truncate">
                             {b.city_name}{b.pincode ? ` · PIN ${b.pincode}` : ""} · {b.tagline || "Live Plot"}
                           </span>
                         </div>
                       </div>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold shrink-0">
-                        3D Plot
-                      </span>
+                      {(b.plot_level || 1) >= 3 ? (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold shrink-0 tabular-nums">
+                          LVL 3
+                        </span>
+                      ) : (b.plot_level || 1) === 2 ? (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold shrink-0 tabular-nums">
+                          LVL 2
+                        </span>
+                      ) : (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold shrink-0">
+                          3D Plot
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>

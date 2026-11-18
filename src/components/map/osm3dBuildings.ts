@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { CategoryId } from "@/types";
+import { CategoryId, FacadeTheme } from "@/types";
+import { FACADE_THEME_PRESETS } from "@/lib/constants/plotUpgrades";
 
 /**
  * Contact shadow plane helper to give tangible grounding to 3D objects
@@ -1819,16 +1820,19 @@ function createCategoryBasePlinth(
 
   // Main architectural base slab (y: 0 -> 0.36)
   const base = new THREE.Mesh(new THREE.BoxGeometry(22.0, 0.36, 18.0), plinthMat);
+  base.name = "plot_base_plinth";
   base.position.set(0, 0.18, 0);
   group.add(base);
 
   // Front paved pedestrian apron (+Z entrance forecourt, y: 0.36 -> 0.42)
   const apron = new THREE.Mesh(new THREE.BoxGeometry(20.6, 0.06, 6.2), apronMat);
+  apron.name = "plot_apron";
   apron.position.set(0, 0.39, 5.6);
   group.add(apron);
 
   // Subtle recessed architectural LED trim along front entrance edge
   const edgeStrip = new THREE.Mesh(new THREE.BoxGeometry(10.0, 0.05, 0.16), accentMat);
+  edgeStrip.name = "plot_accent_led";
   edgeStrip.position.set(0, 0.43, 8.7);
   group.add(edgeStrip);
 }
@@ -2560,27 +2564,208 @@ function buildCommercialFlagshipPlot(): THREE.Group {
   return g;
 }
 
+export interface CategoryPlotVisualOptions {
+  accentColor?: string;
+  facadeTheme?: FacadeTheme;
+  plotLevel?: 1 | 2 | 3;
+}
+
 /**
- * Factory returning a distinct, premium architectural base 3D plot for every registered business category.
+ * Level 2 Upgrade (Active Storefront):
+ * Glowing perimeter runway LED strips, 4 illuminated architectural garden bollards & dual courtyard trees.
  */
-export function createCategoryPlotMesh(categoryId: CategoryId): THREE.Group {
+function addLevel2ArchitecturalUpgrade(group: THREE.Group, accentColorNum: number) {
+  const ledMat = new THREE.MeshStandardMaterial({
+    color: accentColorNum,
+    emissive: new THREE.Color(accentColorNum),
+    emissiveIntensity: 2.2,
+  });
+  const bollardBodyMat = new THREE.MeshStandardMaterial({
+    color: 0x0f172a,
+    roughness: 0.5,
+    metalness: 0.5,
+  });
+
+  // Illuminated left & right plinth runway strips
+  for (const sx of [-10.75, 10.75]) {
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.06, 16.4), ledMat);
+    strip.position.set(sx, 0.41, 0);
+    group.add(strip);
+  }
+
+  // 4 Architectural Bollard Lights along front courtyard perimeter
+  const bollardCoords: [number, number][] = [
+    [-9.8, 8.1],
+    [9.8, 8.1],
+    [-9.8, 3.2],
+    [9.8, 3.2],
+  ];
+  for (const [bx, bz] of bollardCoords) {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 1.15, 10), bollardBodyMat);
+    post.position.set(bx, 0.94, bz);
+    group.add(post);
+
+    const bulb = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.28, 10), ledMat);
+    bulb.position.set(bx, 1.62, bz);
+    group.add(bulb);
+  }
+
+  // 2 Sculpted Ornamental Courtyard Trees cleanly anchored at rear plinth corners (ZERO wall clipping)
+  for (const tx of [-9.4, 9.4]) {
+    const tree = createTreeMesh("round");
+    tree.position.set(tx, 0.36, -7.3);
+    tree.scale.set(0.85, 0.85, 0.85);
+    group.add(tree);
+  }
+}
+
+/**
+ * Level 3 Upgrade (Landmark Flagship):
+ * Elevated Sky-Terrace Crown Pergola, glowing rooftop marquee halo, solar skylight canopy & vertical beacon fins.
+ */
+function addLevel3LandmarkCrown(group: THREE.Group, accentColorNum: number) {
+  const crownFrameMat = new THREE.MeshStandardMaterial({
+    color: 0x0f172a,
+    roughness: 0.35,
+    metalness: 0.65,
+  });
+  const glowMat = new THREE.MeshStandardMaterial({
+    color: accentColorNum,
+    emissive: new THREE.Color(accentColorNum),
+    emissiveIntensity: 2.6,
+  });
+  const solarMat = new THREE.MeshStandardMaterial({
+    color: 0x1e3a8a,
+    roughness: 0.2,
+    metalness: 0.7,
+  });
+
+  // Compute safe roof height dynamically from existing building geometry so crown sits cleanly above any category
+  const box = new THREE.Box3().setFromObject(group);
+  const roofTopY = Math.max(6.2, Math.min(8.6, box.max.y));
+  const crownBaseY = roofTopY + 0.15;
+  const crownTopY = crownBaseY + 2.15;
+
+  // 4 Sleek Steel Sky-Terrace Columns
+  for (const cx of [-5.8, 5.8]) {
+    for (const cz of [-4.6, 1.0]) {
+      const col = new THREE.Mesh(new THREE.BoxGeometry(0.32, 2.2, 0.32), crownFrameMat);
+      col.position.set(cx, crownBaseY + 1.1, cz);
+      group.add(col);
+    }
+  }
+
+  // Cantilevered Sky-Terrace Canopy Rim
+  const canopyRim = new THREE.Mesh(new THREE.BoxGeometry(13.2, 0.42, 6.8), crownFrameMat);
+  canopyRim.position.set(0, crownTopY, -1.8);
+  group.add(canopyRim);
+
+  // Glowing Brand Accent Marquee Halo wrapping the Sky-Terrace Crown
+  const frontHalo = new THREE.Mesh(new THREE.BoxGeometry(13.36, 0.16, 0.16), glowMat);
+  frontHalo.position.set(0, crownTopY, 1.62);
+  group.add(frontHalo);
+
+  const backHalo = new THREE.Mesh(new THREE.BoxGeometry(13.36, 0.16, 0.16), glowMat);
+  backHalo.position.set(0, crownTopY, -5.22);
+  group.add(backHalo);
+
+  // Angled Rooftop Solar Skylight Panels atop Sky-Terrace
+  for (const sx of [-3.6, 0, 3.6]) {
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.1, 4.4), solarMat);
+    panel.position.set(sx, crownTopY + 0.38, -1.8);
+    panel.rotation.x = 0.14;
+    group.add(panel);
+  }
+
+  // Twin Glowing Front Corner Vertical Beacon Fins
+  for (const fx of [-8.3, 8.3]) {
+    const fin = new THREE.Mesh(new THREE.BoxGeometry(0.18, 4.4, 0.24), glowMat);
+    fin.position.set(fx, 2.6, 3.35);
+    group.add(fin);
+  }
+}
+
+/**
+ * Factory returning a distinct, premium architectural base 3D plot for every registered business category,
+ * dynamically enhanced with owner facade theme, brand accent glow, and Level 2 / Level 3 upgrades.
+ */
+export function createCategoryPlotMesh(
+  categoryId: CategoryId,
+  options?: CategoryPlotVisualOptions
+): THREE.Group {
+  let group: THREE.Group;
   switch (categoryId) {
     case "creative-weddings":
-      return buildCreativeAtelierPlot();
+      group = buildCreativeAtelierPlot();
+      break;
     case "beauty-wellness":
-      return buildBeautySpaPlot();
+      group = buildBeautySpaPlot();
+      break;
     case "food-hospitality":
-      return buildFoodCafePlot();
+      group = buildFoodCafePlot();
+      break;
     case "tech-freelance":
-      return buildTechStudioPlot();
+      group = buildTechStudioPlot();
+      break;
     case "home-services":
-      return buildHomeServicesPlot();
+      group = buildHomeServicesPlot();
+      break;
     case "coaching-education":
-      return buildAcademyPlot();
+      group = buildAcademyPlot();
+      break;
     case "artisan-retail":
-      return buildArtisanBoutiquePlot();
+      group = buildArtisanBoutiquePlot();
+      break;
     case "other-business":
     default:
-      return buildCommercialFlagshipPlot();
+      group = buildCommercialFlagshipPlot();
+      break;
   }
+
+  // Apply Owner Facade Theme Finish (if non-default selected)
+  if (options?.facadeTheme && options.facadeTheme !== "default") {
+    const preset = FACADE_THEME_PRESETS.find((t) => t.id === options.facadeTheme);
+    if (preset) {
+      const plinth = group.getObjectByName("plot_base_plinth") as THREE.Mesh | undefined;
+      if (plinth && plinth.material instanceof THREE.MeshStandardMaterial) {
+        const mat = plinth.material.clone();
+        mat.color.setHex(preset.plinthHex);
+        plinth.material = mat;
+      }
+      const apron = group.getObjectByName("plot_apron") as THREE.Mesh | undefined;
+      if (apron && apron.material instanceof THREE.MeshStandardMaterial) {
+        const mat = apron.material.clone();
+        mat.color.setHex(preset.trimHex);
+        apron.material = mat;
+      }
+    }
+  }
+
+  // Apply Owner Brand Accent Glow Color
+  const accentHexNum = options?.accentColor
+    ? parseInt(options.accentColor.replace("#", ""), 16)
+    : 0xf59e0b;
+  const safeAccentNum = Number.isFinite(accentHexNum) ? accentHexNum : 0xf59e0b;
+
+  if (options?.accentColor) {
+    const led = group.getObjectByName("plot_accent_led") as THREE.Mesh | undefined;
+    if (led && led.material instanceof THREE.MeshStandardMaterial) {
+      const mat = led.material.clone();
+      mat.color.setHex(safeAccentNum);
+      mat.emissive.setHex(safeAccentNum);
+      mat.emissiveIntensity = 2.0;
+      led.material = mat;
+    }
+  }
+
+  // Apply Earned Level 2 & Level 3 3D Architectural Upgrades
+  const level = options?.plotLevel || 1;
+  if (level >= 2) {
+    addLevel2ArchitecturalUpgrade(group, safeAccentNum);
+  }
+  if (level >= 3) {
+    addLevel3LandmarkCrown(group, safeAccentNum);
+  }
+
+  return group;
 }

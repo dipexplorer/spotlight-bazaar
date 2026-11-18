@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { getAuthenticatedUserFromRequest } from "@/lib/supabase/auth";
+import { computeEarnedBazaarCoins, PLOT_LEVEL_TIERS } from "@/lib/constants/plotUpgrades";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export async function GET(req: NextRequest) {
       whatsapp_phone, instagram_handle, website_url, google_maps_url,
       starting_price, logo_url, is_verified, is_featured, status,
       total_views, total_leads, owner_id, created_at, updated_at,
+      plot_level, bazaar_coins, plot_config,
       portfolio:portfolio_items(id, business_id, image_url, caption, sort_order)
     `)
     .eq("owner_id", user.id)
@@ -35,17 +37,24 @@ export async function GET(req: NextRequest) {
   const businessList = businesses || [];
   const businessIds = businessList.map((b) => b.id);
 
-  // Aggregate real lead_events analytics (waves, whatsapp clicks, 7-day events) per owned business
+  // Aggregate real lead_events analytics & live broadcasts count per owned business
   const statsByBiz = new Map<
     string,
     { waves: number; whatsapp_clicks: number; events_7d: number }
   >();
+  const broadcastsByBiz = new Map<string, number>();
 
   if (businessIds.length > 0) {
-    const { data: events } = await supabase
-      .from("lead_events")
-      .select("business_id, event_type, created_at")
-      .in("business_id", businessIds);
+    const [{ data: events }, { data: posts }] = await Promise.all([
+      supabase
+        .from("lead_events")
+        .select("business_id, event_type, created_at")
+        .in("business_id", businessIds),
+      supabase
+        .from("business_posts")
+        .select("business_id")
+        .in("business_id", businessIds),
+    ]);
 
     const sevenDaysAgo = Date.now() - 7 * 86400000;
     for (const ev of events || []) {
@@ -61,7 +70,13 @@ export async function GET(req: NextRequest) {
       }
       statsByBiz.set(ev.business_id, entry);
     }
+
+    for (const p of posts || []) {
+      broadcastsByBiz.set(p.business_id, (broadcastsByBiz.get(p.business_id) || 0) + 1);
+    }
   }
+
+  const coinSyncUpdates: { id: string; coins: number }[] = [];
 
   const enriched = businessList.map((b) => {
     const sortedPortfolio = Array.isArray(b.portfolio)
@@ -72,12 +87,73 @@ export async function GET(req: NextRequest) {
       whatsapp_clicks: 0,
       events_7d: 0,
     };
+    const broadcastsCount = broadcastsByBiz.get(b.id) || 0;
+
+    const rawAudit = computeEarnedBazaarCoins({
+      photosCount: sortedPortfolio.length || (b.logo_url ? 1 : 0),
+      hasWebsite: Boolean(b.website_url && b.website_url.trim().length > 0),
+      hasGoogleMaps: Boolean(b.google_maps_url && b.google_maps_url.trim().length > 0),
+      hasDescription: Boolean(b.description && b.description.trim().length >= 30),
+      hasInstagram: Boolean(b.instagram_handle && b.instagram_handle.trim().length > 0),
+      totalViews: b.total_views || 0,
+      totalLeads: b.total_leads || 0,
+      wavesCount: evStats.waves,
+      broadcastsCount,
+    });
+
+    const storedCoins = typeof b.bazaar_coins === "number" ? b.bazaar_coins : 50;
+    const effectiveCoins = Math.max(storedCoins, rawAudit.totalCoins);
+    if (effectiveCoins > storedCoins) {
+      coinSyncUpdates.push({ id: b.id, coins: effectiveCoins });
+    }
+
+    const eligibleLevel: 1 | 2 | 3 =
+      effectiveCoins >= 750 ? 3 : effectiveCoins >= 250 ? 2 : 1;
+    const currentLevel: 1 | 2 | 3 =
+      b.plot_level === 3 ? 3 : b.plot_level === 2 ? 2 : 1;
+    const nextTier =
+      currentLevel === 1
+        ? PLOT_LEVEL_TIERS[1]
+        : currentLevel === 2
+          ? PLOT_LEVEL_TIERS[2]
+          : null;
+    const coinsToNextLevel = nextTier
+      ? Math.max(0, nextTier.minCoins - effectiveCoins)
+      : 0;
+    const progressPct = nextTier
+      ? Math.min(100, Math.round((effectiveCoins / nextTier.minCoins) * 100))
+      : 100;
+
     return {
       ...b,
+      plot_level: currentLevel,
+      bazaar_coins: effectiveCoins,
+      plot_config: b.plot_config || {},
       portfolio: sortedPortfolio,
       analytics: evStats,
+      coin_audit: {
+        ...rawAudit,
+        totalCoins: effectiveCoins,
+        eligibleLevel,
+        nextLevel: nextTier,
+        coinsToNextLevel,
+        progressPct,
+      },
     };
   });
+
+  // Auto-sync earned Bazaar Coins into Supabase in the background
+  if (coinSyncUpdates.length > 0) {
+    await Promise.all(
+      coinSyncUpdates.map((u) =>
+        supabase
+          .from("businesses")
+          .update({ bazaar_coins: u.coins })
+          .eq("id", u.id)
+          .eq("owner_id", user.id)
+      )
+    );
+  }
 
   return NextResponse.json({
     user: {

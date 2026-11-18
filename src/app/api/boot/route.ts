@@ -18,7 +18,8 @@ export async function GET() {
           id, slug, name, tagline, description, category_id, city_name, state_name, pincode,
           lat, lon, facing_bearing, road_anchor_lat, road_anchor_lon, connector_type,
           whatsapp_phone, instagram_handle, website_url, google_maps_url,
-          starting_price, logo_url, is_verified, is_featured, total_views, total_leads, created_at,
+          starting_price, logo_url, is_verified, is_featured, total_views, total_leads,
+          plot_level, bazaar_coins, plot_config, created_at,
           portfolio:portfolio_items(id, business_id, image_url, sort_order),
           active_posts:business_posts(id, business_id, post_type, title, details, coupon_code, cta_label, expires_at, clicks, created_at)
         `)

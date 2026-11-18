@@ -30,8 +30,10 @@ import {
 import { supabase } from "@/lib/supabase/client";
 import { BusinessStorefront, CategoryId } from "@/types";
 import { CATEGORY_PLOT_SPECS } from "@/lib/constants/categoryPlots";
+import { CoinAuditResult, computeEarnedBazaarCoins } from "@/lib/constants/plotUpgrades";
 import { CategoryDropdown } from "@/components/register/CategoryDropdown";
 import { BroadcastManager } from "@/components/dashboard/BroadcastManager";
+import { PlotCustomizer } from "@/components/dashboard/PlotCustomizer";
 import { compressImage } from "@/lib/utils/compressImage";
 
 interface OwnedBusiness extends BusinessStorefront {
@@ -41,9 +43,10 @@ interface OwnedBusiness extends BusinessStorefront {
     whatsapp_clicks: number;
     events_7d: number;
   };
+  coin_audit?: CoinAuditResult;
 }
 
-type DashboardTab = "details" | "broadcasts" | "photos" | "settings";
+type DashboardTab = "details" | "plot" | "broadcasts" | "photos" | "settings";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -586,6 +589,9 @@ export default function DashboardPage() {
                     />
                     {selectedBiz.status === "active" ? "Live on Map" : "Paused"}
                   </span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/12 border border-amber-500/35 text-amber-300 tabular-nums">
+                    Lv.{selectedBiz.plot_level || 1}
+                  </span>
                 </div>
                 <p className="text-xs text-neutral-400 flex flex-wrap items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-amber-400" />
@@ -704,12 +710,19 @@ export default function DashboardPage() {
               {(
                 [
                   { id: "details", label: "Details" },
+                  { id: "plot", label: "3D Plot" },
                   { id: "broadcasts", label: "Broadcasts" },
                   { id: "photos", label: `Photos (${photos.length}/6)` },
                   { id: "settings", label: "Settings" },
                 ] as const
               ).map((t) => {
                 const active = activeTab === t.id;
+                const upgradeAvailable =
+                  t.id === "plot" &&
+                  Boolean(
+                    selectedBiz.coin_audit &&
+                      selectedBiz.coin_audit.eligibleLevel > (selectedBiz.plot_level || 1)
+                  );
                 return (
                   <button
                     key={t.id}
@@ -720,13 +733,19 @@ export default function DashboardPage() {
                       setActiveTab(t.id);
                       setErrorMsg(null);
                     }}
-                    className={`min-h-[44px] px-3.5 sm:px-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors -mb-px ${
+                    className={`min-h-[44px] px-3.5 sm:px-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors -mb-px inline-flex items-center gap-1.5 ${
                       active
                         ? "border-amber-500 text-amber-400"
                         : "border-transparent text-neutral-400 hover:text-neutral-200"
                     }`}
                   >
-                    {t.label}
+                    <span>{t.label}</span>
+                    {upgradeAvailable && (
+                      <span
+                        aria-label="Upgrade available"
+                        className="w-2 h-2 rounded-full bg-amber-400"
+                      />
+                    )}
                   </button>
                 );
               })}
@@ -954,7 +973,50 @@ export default function DashboardPage() {
               </form>
             )}
 
-            {/* TAB 2: LIVE STREET BROADCASTS */}
+            {/* TAB 2: 3D PLOT CUSTOMIZER & BAZAAR COINS */}
+            {activeTab === "plot" && accessToken && (
+              <PlotCustomizer
+                businessId={selectedBiz.id}
+                businessName={selectedBiz.name}
+                businessSlug={selectedBiz.slug}
+                plotName={currentPlotSpec?.plotName || "3D Commercial Plot"}
+                currentLevel={(selectedBiz.plot_level as 1 | 2 | 3) || 1}
+                bazaarCoins={selectedBiz.bazaar_coins || 50}
+                plotConfig={selectedBiz.plot_config || {}}
+                coinAudit={
+                  selectedBiz.coin_audit ||
+                  computeEarnedBazaarCoins({
+                    photosCount: photos.length,
+                    hasWebsite: Boolean(selectedBiz.website_url),
+                    hasGoogleMaps: Boolean(selectedBiz.google_maps_url),
+                    hasDescription: Boolean(
+                      selectedBiz.description && selectedBiz.description.length >= 30
+                    ),
+                    hasInstagram: Boolean(selectedBiz.instagram_handle),
+                    totalViews: selectedBiz.total_views || 0,
+                    totalLeads: selectedBiz.total_leads || 0,
+                    wavesCount: selectedBiz.analytics?.waves || 0,
+                    broadcastsCount: 0,
+                  })
+                }
+                accessToken={accessToken}
+                onBusinessUpdated={(updated) => {
+                  setBusinesses((prev) =>
+                    prev.map((b) =>
+                      b.id === selectedBiz.id
+                        ? { ...b, ...(updated as Partial<OwnedBusiness>), analytics: b.analytics }
+                        : b
+                    )
+                  );
+                }}
+                onNavigateTab={(tab) => {
+                  setActiveTab(tab);
+                  setErrorMsg(null);
+                }}
+              />
+            )}
+
+            {/* TAB 3: LIVE STREET BROADCASTS */}
             {activeTab === "broadcasts" && accessToken && (
               <BroadcastManager
                 businessId={selectedBiz.id}
