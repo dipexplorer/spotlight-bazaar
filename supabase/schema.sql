@@ -54,6 +54,7 @@ ON CONFLICT (slug) DO NOTHING;
 -- 4. BUSINESSES TABLE (Storefronts on the 3D High Street)
 CREATE TABLE IF NOT EXISTS businesses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    owner_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     slug VARCHAR(150) UNIQUE NOT NULL,
     name VARCHAR(150) NOT NULL,
     tagline VARCHAR(255),

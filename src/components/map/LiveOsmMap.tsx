@@ -2908,7 +2908,16 @@ export function LiveOsmMap({
           </div>
 
           <Link
-            href={`/register?city=${currentCity.slug}`}
+            href="/dashboard"
+            title="Manage your registered business plot"
+            className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-neutral-950/90 hover:bg-neutral-900 border border-neutral-800 text-neutral-200 hover:text-white font-semibold text-xs shadow-2xl backdrop-blur-xl transition-all"
+          >
+            <Store className="w-3.5 h-3.5 text-amber-400" />
+            <span>My Business</span>
+          </Link>
+
+          <Link
+            href="/register"
             className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs shadow-2xl transition-all"
           >
             <Plus className="w-3.5 h-3.5" />

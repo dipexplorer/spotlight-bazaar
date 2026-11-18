@@ -128,6 +128,14 @@ export function ShareCardModal({ storefront, isOpen, onClose }: ShareCardModalPr
           </Link>
 
           <Link
+            href="/dashboard"
+            className="w-full min-h-[42px] py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-amber-500/30 text-amber-300 hover:text-amber-200 font-semibold text-xs flex items-center justify-center gap-2 transition-all"
+          >
+            <Store className="w-3.5 h-3.5" />
+            <span>Manage Plot in Owner Dashboard</span>
+          </Link>
+
+          <Link
             href={`/b/${storefront.slug}?new=true`}
             className="w-full py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white font-medium text-xs flex items-center justify-center gap-2 transition-all"
           >

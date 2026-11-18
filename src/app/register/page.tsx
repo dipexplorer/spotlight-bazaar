@@ -13,7 +13,9 @@ import {
   Loader2,
   MapPin,
   Phone,
+  ShieldCheck,
   Upload,
+  UserCheck,
   X,
 } from "lucide-react";
 import { CATEGORIES } from "@/lib/constants/categories";
@@ -22,6 +24,8 @@ import { INITIAL_CITIES } from "@/lib/constants/initialCities";
 import { BusinessStorefront, CategoryId } from "@/types";
 import { compressImage } from "@/lib/utils/compressImage";
 import { saveLocalStorefront } from "@/lib/utils/localStorefront";
+import { supabase } from "@/lib/supabase/client";
+import { OwnerAuthCard } from "@/components/auth/OwnerAuthCard";
 import { ShareCardModal } from "@/components/onboarding/ShareCardModal";
 import { CategoryDropdown } from "@/components/register/CategoryDropdown";
 import {
@@ -76,11 +80,36 @@ export default function RegisterPage() {
   const [portfolio, setPortfolio] = useState<string[]>([]);
   const [compressing, setCompressing] = useState(false);
 
-  // Step 4 — Consent & Confirmation
+  // Step 4 — Consent, Owner Session & Confirmation
   const [consent, setConsent] = useState(false);
+  const [ownerEmail, setOwnerEmail] = useState<string | null>(null);
+  const [ownerToken, setOwnerToken] = useState<string | null>(null);
+  const [showInlineAuth, setShowInlineAuth] = useState(false);
   const [createdStorefront, setCreatedStorefront] =
     useState<BusinessStorefront | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  // Sync current Supabase owner session so registered plots automatically attach to owner_id
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.access_token) {
+        setOwnerToken(data.session.access_token);
+        setOwnerEmail(data.session.user.email || null);
+      }
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_ev, sess) => {
+      if (sess?.access_token) {
+        setOwnerToken(sess.access_token);
+        setOwnerEmail(sess.user.email || null);
+        setShowInlineAuth(false);
+      } else {
+        setOwnerToken(null);
+        setOwnerEmail(null);
+      }
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   // Optional URL deep-link pre-fill (e.g. /register?city=mumbai)
   useEffect(() => {
@@ -266,9 +295,13 @@ export default function RegisterPage() {
     };
 
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (ownerToken) {
+        headers.Authorization = `Bearer ${ownerToken}`;
+      }
       const res = await fetch("/api/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(payload),
       });
 
@@ -953,6 +986,54 @@ export default function RegisterPage() {
                 </div>
               </dl>
             </div>
+
+            {/* Owner Account Attachment (lets owner log in anytime to edit/manage their 3D plot) */}
+            {ownerEmail ? (
+              <div className="px-4 py-3 rounded-xl bg-emerald-500/8 border border-emerald-500/30 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span className="text-neutral-200 truncate">
+                    Claiming as <strong className="text-white">{ownerEmail}</strong> · Manage anytime in My Business
+                  </span>
+                </div>
+                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+              </div>
+            ) : (
+              <div className="rounded-2xl bg-[#121215] border border-neutral-800 p-4 space-y-3.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="space-y-0.5">
+                    <div className="text-sm font-semibold text-white">
+                      Link Owner Account{" "}
+                      <span className="text-xs font-normal text-amber-400">(Recommended)</span>
+                    </div>
+                    <p className="text-xs text-neutral-400">
+                      Sign in so you can edit rates, upload photos, and view leads in My Business later.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowInlineAuth((v) => !v)}
+                    className="min-h-[38px] px-3.5 rounded-xl bg-amber-500/12 hover:bg-amber-500/20 border border-amber-500/35 text-xs font-semibold text-amber-300 transition-colors"
+                  >
+                    {showInlineAuth ? "Hide Sign-In" : "Sign In / Create Account"}
+                  </button>
+                </div>
+
+                {showInlineAuth && (
+                  <div className="pt-2 border-t border-neutral-800/80">
+                    <OwnerAuthCard
+                      compact
+                      redirectNext="/register"
+                      onAuthenticated={(u) => {
+                        setOwnerToken(u.accessToken);
+                        setOwnerEmail(u.email);
+                        setShowInlineAuth(false);
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Directory Listing Consent */}
             <label className="flex items-start gap-3 p-4 rounded-xl bg-[#121215]/70 border border-neutral-800 cursor-pointer hover:border-neutral-700 transition-colors">

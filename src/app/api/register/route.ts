@@ -1,51 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { getAuthenticatedUserFromRequest } from "@/lib/supabase/auth";
+import { uploadStorefrontImage } from "@/lib/supabase/storage";
 import { addLocalStorefront } from "@/lib/data/seedStorefronts";
 import { normalizeExternalUrl } from "@/lib/utils";
 import { BusinessStorefront } from "@/types";
-
-const STORAGE_BUCKET = "storefront-media";
-
-/**
- * Uploads a compressed data:image/* string into Supabase Storage (`storefront-media`)
- * and returns its public CDN URL. Passes through existing http(s) / relative URLs untouched.
- */
-async function uploadImageToStorage(
-  supabase: NonNullable<ReturnType<typeof createServerClient>>,
-  slug: string,
-  rawImg: string,
-  index: number
-): Promise<string> {
-  if (!rawImg || !rawImg.startsWith("data:image/")) {
-    return rawImg;
-  }
-
-  const match = rawImg.match(/^data:(image\/(?:webp|jpeg|jpg|png));base64,(.+)$/i);
-  if (!match) {
-    return rawImg;
-  }
-
-  const mimeType = match[1].toLowerCase() === "image/jpg" ? "image/jpeg" : match[1].toLowerCase();
-  const ext = mimeType === "image/webp" ? "webp" : mimeType === "image/png" ? "png" : "jpg";
-  const buffer = Buffer.from(match[2], "base64");
-  const filePath = `${slug}/${Date.now()}-${index + 1}.${ext}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from(STORAGE_BUCKET)
-    .upload(filePath, buffer, {
-      contentType: mimeType,
-      cacheControl: "31536000",
-      upsert: false,
-    });
-
-  if (uploadError) {
-    console.warn("[/api/register] Storage upload fallback:", uploadError.message);
-    return rawImg;
-  }
-
-  const { data: urlData } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(filePath);
-  return urlData?.publicUrl || rawImg;
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -113,6 +72,7 @@ export async function POST(req: NextRequest) {
 
     // 3. Database & Storage Persistence
     const supabase = createServerClient();
+    const authUser = await getAuthenticatedUserFromRequest(req);
     let businessId = `sb-temp-${Date.now()}`;
     let persistedToDb = false;
 
@@ -126,7 +86,7 @@ export async function POST(req: NextRequest) {
       // Upload base64 portfolio photos to Supabase Storage CDN bucket (`storefront-media`)
       if (rawImages.length > 0) {
         storedImageUrls = await Promise.all(
-          rawImages.map((img, idx) => uploadImageToStorage(supabase, slug, img, idx))
+          rawImages.map((img, idx) => uploadStorefrontImage(supabase, slug, img, idx))
         );
       }
 
@@ -134,6 +94,7 @@ export async function POST(req: NextRequest) {
         .from("businesses")
         .insert({
           slug,
+          owner_id: authUser?.id || null,
           name: name.trim(),
           tagline: tagline ? tagline.trim() : null,
           description: description ? description.trim() : null,

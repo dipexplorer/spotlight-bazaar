@@ -49,6 +49,8 @@ export interface BusinessStorefront {
   logo_url?: string;
   is_verified: boolean;
   is_featured: boolean;
+  status?: "active" | "pending" | "suspended";
+  owner_id?: string | null;
   total_views: number;
   total_leads: number;
   portfolio?: PortfolioItem[];
