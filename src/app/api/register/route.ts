@@ -20,6 +20,10 @@ export async function POST(req: NextRequest) {
       starting_price,
       lat,
       lon,
+      facing_bearing,
+      road_anchor_lat,
+      road_anchor_lon,
+      connector_type,
       portfolio_images,
     } = body;
 
@@ -114,6 +118,15 @@ export async function POST(req: NextRequest) {
       pincode: pincode || "",
       lat: Number(lat) || 26.1445,
       lon: Number(lon) || 91.7362,
+      facing_bearing: typeof facing_bearing === "number" ? facing_bearing : undefined,
+      road_anchor_lat: typeof road_anchor_lat === "number" ? road_anchor_lat : undefined,
+      road_anchor_lon: typeof road_anchor_lon === "number" ? road_anchor_lon : undefined,
+      connector_type:
+        connector_type === "osm_road" ||
+        connector_type === "colony_branch" ||
+        connector_type === "frontage"
+          ? connector_type
+          : undefined,
       whatsapp_phone: cleanPhone,
       instagram_handle: instagram_handle ? instagram_handle.replace(/^@/, "").trim() : "",
       starting_price: starting_price || "",

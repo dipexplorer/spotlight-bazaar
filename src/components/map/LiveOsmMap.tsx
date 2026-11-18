@@ -30,6 +30,13 @@ import {
 } from "lucide-react";
 import { searchLocalIndiaPlaces, IndiaPlaceEntry } from "@/lib/geo/indiaPlaces";
 import { getLocalStorefronts } from "@/lib/utils/localStorefront";
+import {
+  bearingToThreeRotationY,
+  extractNearbyOsmRoads,
+  getColonySeedRoads,
+  resolveAllStorefrontPlacements,
+  SnappedPlotPlacement,
+} from "@/lib/geo/plotSnapper";
 import { QuickTalkModal } from "@/components/map3d/QuickTalkModal";
 import { StorefrontDialogueModal } from "@/components/map3d/StorefrontDialogueModal";
 import { bazaarAudio } from "@/lib/audio/bazaarAudio";
@@ -268,7 +275,13 @@ export function LiveOsmMap({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
+  const markersBySlugRef = useRef<Map<string, Marker>>(new Map());
   const playerMarkerRef = useRef<Marker | null>(null);
+  const resolvedPlacementsRef = useRef<Map<string, SnappedPlotPlacement>>(new Map());
+  const dynamicConnectorsGeoJSONRef = useRef<GeoJSON.FeatureCollection<GeoJSON.LineString>>({
+    type: "FeatureCollection",
+    features: [],
+  });
 
   const [is3DMode, setIs3DMode] = useState(true);
   const isFlightActiveRef = useRef(false);
@@ -593,6 +606,55 @@ export function LiveOsmMap({
   useEffect(() => {
     allLiveStorefrontsRef.current = allLiveStorefronts;
   }, [allLiveStorefronts]);
+
+  // Automatically snap & interconnect every registered business plot with live OSM + Colony roads
+  const recomputePlotPlacements = useCallback((map: MapLibreMap | null) => {
+    if (!map || !map.getStyle()) return;
+    const center = map.getCenter();
+    const osmRoads =
+      map.getZoom() >= 13.0
+        ? extractNearbyOsmRoads(map, center.lng, center.lat, 650)
+        : [];
+    const colonySeedRoads = [
+      ...getColonySeedRoads(),
+      {
+        id: "colony-nerqiva-exact-connector",
+        source: "colony" as const,
+        coords: getConnectorRoadCoordinates(),
+        priority: 3,
+      },
+    ];
+
+    const { resolvedBySlug, connectorsGeoJSON } = resolveAllStorefrontPlacements({
+      storefronts: allLiveStorefrontsRef.current,
+      osmRoads,
+      colonySeedRoads,
+    });
+
+    resolvedPlacementsRef.current = resolvedBySlug;
+    dynamicConnectorsGeoJSONRef.current = connectorsGeoJSON;
+
+    const connSrc = map.getSource("dynamic-plot-connectors") as
+      | maplibregl.GeoJSONSource
+      | undefined;
+    if (connSrc) {
+      connSrc.setData(connectorsGeoJSON);
+    }
+
+    // Keep floating storefront cards centered directly above each snapped 3D plot
+    resolvedBySlug.forEach((placement, slug) => {
+      const m = markersBySlugRef.current.get(slug);
+      if (m) {
+        m.setLngLat([placement.lon, placement.lat]);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (mapLoaded && mapRef.current) {
+      recomputePlotPlacements(mapRef.current);
+    }
+  }, [mapLoaded, allLiveStorefronts, recomputePlotPlacements]);
 
   // Dynamic active cities summary for All-India National Explorer bar
   const activeCityGroups = useMemo(() => {
@@ -986,15 +1048,25 @@ export function LiveOsmMap({
             >;
             const viewCenter = map.getCenter();
             const zoomFactor = Math.max(0, Math.min(1, (currentZoom - 14.5) / 1.7));
-            const baseScale = 1.25 * zoomFactor;
+            const baseScale = 1.0 * zoomFactor;
 
             if (plotCache && baseScale > 0.01) {
               for (const s of allLiveStorefrontsRef.current) {
                 if (!s || s.slug === "nerqiva-studio") continue;
                 if (typeof s.lat !== "number" || typeof s.lon !== "number") continue;
+
+                const resolved = resolvedPlacementsRef.current.get(s.slug);
+                const plotLat = resolved ? resolved.lat : s.lat;
+                const plotLon = resolved ? resolved.lon : s.lon;
+                const facingBearing = resolved
+                  ? resolved.facingBearing
+                  : typeof s.facing_bearing === "number"
+                    ? s.facing_bearing
+                    : 180;
+
                 if (
-                  Math.abs(s.lat - viewCenter.lat) > 0.045 ||
-                  Math.abs(s.lon - viewCenter.lng) > 0.045
+                  Math.abs(plotLat - viewCenter.lat) > 0.045 ||
+                  Math.abs(plotLon - viewCenter.lng) > 0.045
                 ) {
                   continue;
                 }
@@ -1036,8 +1108,9 @@ export function LiveOsmMap({
                 }
 
                 entry.mesh.scale.set(baseScale, baseScale, baseScale);
+                entry.mesh.rotation.y = bearingToThreeRotationY(facingBearing);
 
-                const pCoord = maplibregl.MercatorCoordinate.fromLngLat([s.lon, s.lat], 0);
+                const pCoord = maplibregl.MercatorCoordinate.fromLngLat([plotLon, plotLat], 0);
                 const pScale = pCoord.meterInMercatorCoordinateUnits();
                 const pMatrix = new THREE.Matrix4()
                   .makeTranslation(pCoord.x, pCoord.y, pCoord.z)
@@ -1354,6 +1427,60 @@ export function LiveOsmMap({
           map.setPaintProperty("nerqiva-connector-fill", "line-color", fillColor);
           map.setPaintProperty("nerqiva-connector-fill", "line-width", fillWidth as any);
         }
+
+        // Dynamic Automated Driveways & Colony Interconnect Roads for ALL Registered Plots Across India
+        if (!map.getSource("dynamic-plot-connectors")) {
+          map.addSource("dynamic-plot-connectors", {
+            type: "geojson",
+            data: dynamicConnectorsGeoJSONRef.current,
+          });
+        }
+        if (!map.getLayer("dynamic-plot-connectors-case")) {
+          map.addLayer(
+            {
+              id: "dynamic-plot-connectors-case",
+              type: "line",
+              source: "dynamic-plot-connectors",
+              layout: {
+                "line-cap": "round",
+                "line-join": "round",
+              },
+              paint: {
+                "line-color": caseColor,
+                "line-width": caseWidth as any,
+                "line-opacity": 1.0,
+              },
+            },
+            map.getLayer("road_minor_case") ? "road_minor_case" : undefined
+          );
+        } else {
+          map.setPaintProperty("dynamic-plot-connectors-case", "line-color", caseColor);
+          map.setPaintProperty("dynamic-plot-connectors-case", "line-width", caseWidth as any);
+        }
+        if (!map.getLayer("dynamic-plot-connectors-fill")) {
+          map.addLayer(
+            {
+              id: "dynamic-plot-connectors-fill",
+              type: "line",
+              source: "dynamic-plot-connectors",
+              layout: {
+                "line-cap": "round",
+                "line-join": "round",
+              },
+              paint: {
+                "line-color": fillColor,
+                "line-width": fillWidth as any,
+                "line-opacity": 1.0,
+              },
+            },
+            map.getLayer("road_minor_fill") ? "road_minor_fill" : undefined
+          );
+        } else {
+          map.setPaintProperty("dynamic-plot-connectors-fill", "line-color", fillColor);
+          map.setPaintProperty("dynamic-plot-connectors-fill", "line-width", fillWidth as any);
+        }
+
+        recomputePlotPlacements(map);
       } catch (connErr) {
         console.warn("[LiveOsmMap] Connector road setup error:", connErr);
       }
@@ -1820,12 +1947,20 @@ export function LiveOsmMap({
             if (compactEl) compactEl.style.display = "flex";
             if (fullEl) fullEl.style.display = "none";
           } else {
-            // Tier 3 (14.8 – 19.8): Full flagship glassmorphic studio card above 3D building roof
+            // Tier 3 (14.8 – 19.8): In multi-plot colonies, use crisp compact roof pills to prevent overlapping cards (expands on hover!)
             el.style.visibility = "visible";
             el.style.pointerEvents = "auto";
-            m.setOffset([0, -125]);
-            if (compactEl) compactEl.style.display = "none";
-            if (fullEl) fullEl.style.display = "flex";
+            const isCrowded = el.dataset.crowded === "1";
+            const isHovered = el.dataset.hovered === "1";
+            if (isCrowded && !isHovered) {
+              m.setOffset([0, -54]);
+              if (compactEl) compactEl.style.display = "flex";
+              if (fullEl) fullEl.style.display = "none";
+            } else {
+              m.setOffset([0, -96]);
+              if (compactEl) compactEl.style.display = "none";
+              if (fullEl) fullEl.style.display = "flex";
+            }
           }
         });
       };
@@ -1913,7 +2048,10 @@ export function LiveOsmMap({
         for (const s of allLiveStorefrontsRef.current) {
           if (!s || s.slug === "nerqiva-studio") continue;
           if (typeof s.lat !== "number" || typeof s.lon !== "number") continue;
-          if (getDistMeters(clickLng, clickLat, s.lon, s.lat) <= 24) {
+          const resolved = resolvedPlacementsRef.current.get(s.slug);
+          const pLon = resolved ? resolved.lon : s.lon;
+          const pLat = resolved ? resolved.lat : s.lat;
+          if (getDistMeters(clickLng, clickLat, pLon, pLat) <= 24) {
             setFocusedStorefront(s);
             if (onStorefrontSelect) onStorefrontSelect(s);
             bazaarAudio.playStorefrontChime();
@@ -1937,6 +2075,13 @@ export function LiveOsmMap({
       });
 
       setup3DOnMap();
+
+      // Re-run automated OSM road snapping & colony connectors once street vector tiles settle
+      map.on("idle", () => {
+        if (map.getZoom() >= 13.5) {
+          recomputePlotPlacements(map);
+        }
+      });
     });
 
     map.on("style.load", () => {
@@ -2243,6 +2388,7 @@ export function LiveOsmMap({
 
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
+    markersBySlugRef.current.clear();
     if (playerMarkerRef.current) {
       playerMarkerRef.current.remove();
       playerMarkerRef.current = null;
@@ -2291,20 +2437,62 @@ export function LiveOsmMap({
         </div>
       `;
 
+      // Detect if neighboring plots sit within 120m (prevents overlapping giant cards in active colonies!)
+      const hasCloseNeighbor = allLiveStorefronts.some(
+        (other) =>
+          other.slug !== b.slug &&
+          getDistanceKm(b.lat, b.lon, other.lat, other.lon) < 0.14
+      );
+      cardEl.dataset.slug = b.slug;
+      cardEl.dataset.crowded = hasCloseNeighbor ? "1" : "0";
+      cardEl.dataset.hovered = "0";
+
       // Apply exact initial LOD state before attaching to map
       const compactEl = cardEl.querySelector<HTMLElement>("[data-lod='compact']");
       const fullEl = cardEl.querySelector<HTMLElement>("[data-lod='full']");
-      let initOffsetY = -125;
+      let initOffsetY = hasCloseNeighbor ? -54 : -96;
       if (currZoom < 9.5 || currZoom >= 19.9 || isWalkModeRef.current) {
         cardEl.style.visibility = "hidden";
         cardEl.style.pointerEvents = "none";
       } else if (currZoom < 14.8) {
         initOffsetY = -14;
         if (compactEl) compactEl.style.display = "flex";
+      } else if (hasCloseNeighbor) {
+        initOffsetY = -54;
+        if (compactEl) compactEl.style.display = "flex";
       } else {
-        initOffsetY = -125;
+        initOffsetY = -96;
         if (fullEl) fullEl.style.display = "flex";
       }
+
+      const resolvedPos = resolvedPlacementsRef.current.get(b.slug);
+      const marker = new maplibregl.Marker({
+        element: cardEl,
+        anchor: "bottom",
+        offset: [0, initOffsetY],
+      })
+        .setLngLat([resolvedPos ? resolvedPos.lon : b.lon, resolvedPos ? resolvedPos.lat : b.lat])
+        .addTo(mapRef.current!);
+
+      // Expand compact colony pill smoothly into full card on hover
+      cardEl.addEventListener("mouseenter", () => {
+        if (!mapRef.current || mapRef.current.getZoom() < 14.8 || mapRef.current.getZoom() >= 19.9) return;
+        cardEl.dataset.hovered = "1";
+        cardEl.style.zIndex = "50";
+        marker.setOffset([0, -88]);
+        if (compactEl) compactEl.style.display = "none";
+        if (fullEl) fullEl.style.display = "flex";
+      });
+      cardEl.addEventListener("mouseleave", () => {
+        cardEl.dataset.hovered = "0";
+        cardEl.style.zIndex = "";
+        if (!mapRef.current || mapRef.current.getZoom() < 14.8) return;
+        if (cardEl.dataset.crowded === "1") {
+          marker.setOffset([0, -54]);
+          if (compactEl) compactEl.style.display = "flex";
+          if (fullEl) fullEl.style.display = "none";
+        }
+      });
 
       cardEl.addEventListener("click", () => {
         if (mapRef.current && mapRef.current.getZoom() < 15.2) {
@@ -2316,14 +2504,8 @@ export function LiveOsmMap({
         bazaarAudio.playStorefrontChime();
       });
 
-      const marker = new maplibregl.Marker({
-        element: cardEl,
-        anchor: "bottom",
-        offset: [0, initOffsetY],
-      })
-        .setLngLat([b.lon, b.lat])
-        .addTo(mapRef.current!);
       markersRef.current.push(marker);
+      markersBySlugRef.current.set(b.slug, marker);
     });
   }, [mapLoaded, allLiveStorefronts, onStorefrontSelect, flyToStorefront]);
 

@@ -37,6 +37,10 @@ export interface BusinessStorefront {
   pincode?: string;
   lat: number;
   lon: number;
+  facing_bearing?: number;
+  road_anchor_lat?: number;
+  road_anchor_lon?: number;
+  connector_type?: "osm_road" | "colony_branch" | "frontage";
   whatsapp_phone: string;
   instagram_handle?: string;
   website_url?: string;

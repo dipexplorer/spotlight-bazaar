@@ -14,6 +14,14 @@ import {
   X,
 } from "lucide-react";
 import { searchLocalIndiaPlaces } from "@/lib/geo/indiaPlaces";
+import {
+  computeSnappedPlotPlacement,
+  extractNearbyOsmRoads,
+  getColonySeedRoads,
+  SnappedPlotPlacement,
+} from "@/lib/geo/plotSnapper";
+import { getLocalStorefronts } from "@/lib/utils/localStorefront";
+import { SEED_STOREFRONTS } from "@/lib/data/seedStorefronts";
 
 if (typeof window !== "undefined") {
   config.WORKER_URL = "/maplibre-gl-worker.mjs";
@@ -63,6 +71,10 @@ interface GeoSuggestion {
 export interface PickedLocation {
   lat: number;
   lon: number;
+  facingBearing?: number;
+  roadAnchorLat?: number;
+  roadAnchorLon?: number;
+  connectorType?: "osm_road" | "colony_branch" | "frontage";
   city?: string;
   state?: string;
   pincode?: string;
@@ -82,8 +94,8 @@ function createPinElement(): HTMLDivElement {
   el.className = "flex flex-col items-center cursor-grab active:cursor-grabbing select-none";
   el.innerHTML = `
     <div style="
-      width: 34px;
-      height: 34px;
+      width: 30px;
+      height: 30px;
       border-radius: 9999px;
       background: #f59e0b;
       border: 3px solid #09090b;
@@ -92,11 +104,11 @@ function createPinElement(): HTMLDivElement {
       align-items: center;
       justify-content: center;
     ">
-      <div style="width: 9px; height: 9px; border-radius: 9999px; background: #09090b;"></div>
+      <div style="width: 8px; height: 8px; border-radius: 9999px; background: #09090b;"></div>
     </div>
     <div style="
       width: 2px;
-      height: 10px;
+      height: 9px;
       background: #09090b;
       border-radius: 2px;
       margin-top: -1px;
@@ -176,6 +188,7 @@ export function LocationMapPicker({
   const [locatingGps, setLocatingGps] = useState(false);
   const [reverseLoading, setReverseLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [snapBadge, setSnapBadge] = useState<string | null>(null);
 
   // Search box state
   const [searchQuery, setSearchQuery] = useState("");
@@ -185,7 +198,196 @@ export function LocationMapPicker({
   const [activeIdx, setActiveIdx] = useState(-1);
   const searchWrapRef = useRef<HTMLDivElement>(null);
 
-  // Place or move marker cleanly on the mini-map
+  // Render live 22m x 18m rotated plot footprint + driveway preview on mini-map
+  const renderPlotPreviewOverlay = useCallback((placement: SnappedPlotPlacement | null) => {
+    const map = mapRef.current;
+    if (!map || !map.getStyle()) return;
+
+    const polySrc = map.getSource("plot-footprint-preview") as maplibregl.GeoJSONSource | undefined;
+    const connSrc = map.getSource("plot-driveway-preview") as maplibregl.GeoJSONSource | undefined;
+
+    if (!placement) {
+      polySrc?.setData({ type: "FeatureCollection", features: [] });
+      connSrc?.setData({ type: "FeatureCollection", features: [] });
+      return;
+    }
+
+    polySrc?.setData({
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "Polygon",
+            coordinates: [placement.footprintPolygon],
+          },
+        },
+      ],
+    });
+
+    connSrc?.setData({
+      type: "FeatureCollection",
+      features:
+        placement.connectorCoords.length >= 2
+          ? [
+              {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                  type: "LineString",
+                  coordinates: placement.connectorCoords,
+                },
+              },
+            ]
+          : [],
+    });
+  }, []);
+
+  // Ensure preview overlay layers exist on the mini-map
+  const ensurePreviewLayers = useCallback((map: MapLibreMap) => {
+    try {
+      // Show existing colony seed spine road (e.g. Nerqiva access road) on mini-map
+      const seedRoads = getColonySeedRoads();
+      if (!map.getSource("mini-colony-seeds")) {
+        map.addSource("mini-colony-seeds", {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: seedRoads.map((r) => ({
+              type: "Feature",
+              properties: { id: r.id },
+              geometry: { type: "LineString", coordinates: r.coords },
+            })),
+          },
+        });
+        map.addLayer({
+          id: "mini-colony-seeds-line",
+          type: "line",
+          source: "mini-colony-seeds",
+          paint: {
+            "line-color": "#64748b",
+            "line-width": 4,
+            "line-opacity": 0.75,
+          },
+        });
+      }
+
+      if (!map.getSource("plot-driveway-preview")) {
+        map.addSource("plot-driveway-preview", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+        map.addLayer({
+          id: "plot-driveway-preview-line",
+          type: "line",
+          source: "plot-driveway-preview",
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: {
+            "line-color": "#f59e0b",
+            "line-width": 4,
+            "line-dasharray": [1.5, 1.2],
+          },
+        });
+      }
+
+      if (!map.getSource("plot-footprint-preview")) {
+        map.addSource("plot-footprint-preview", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+        map.addLayer({
+          id: "plot-footprint-preview-fill",
+          type: "fill",
+          source: "plot-footprint-preview",
+          paint: {
+            "fill-color": "#f59e0b",
+            "fill-opacity": 0.28,
+          },
+        });
+        map.addLayer({
+          id: "plot-footprint-preview-stroke",
+          type: "line",
+          source: "plot-footprint-preview",
+          paint: {
+            "line-color": "#d97706",
+            "line-width": 2.2,
+          },
+        });
+      }
+    } catch {
+      // Ignore if style is still transitioning
+    }
+  }, []);
+
+  // Snap raw pin cleanly off nearby OSM/colony roads, face street, and draw live footprint preview
+  const snapAndPlacePin = useCallback(
+    (
+      rawLon: number,
+      rawLat: number,
+      extraMeta?: { city?: string; state?: string; pincode?: string; label?: string }
+    ): SnappedPlotPlacement => {
+      const map = mapRef.current;
+      const osmRoads = extractNearbyOsmRoads(map, rawLon, rawLat, 240);
+      const colonyRoads = getColonySeedRoads();
+      const existingStorefronts = [...SEED_STOREFRONTS, ...getLocalStorefronts()].map((s) => ({
+        lat: s.lat,
+        lon: s.lon,
+        slug: s.slug,
+      }));
+
+      // Also include previously generated connectors from local storefronts in the road graph
+      const localConnectors = getLocalStorefronts()
+        .filter((s) => typeof s.road_anchor_lat === "number" && typeof s.road_anchor_lon === "number")
+        .map((s) => ({
+          id: `local-conn-${s.slug}`,
+          source: "colony" as const,
+          coords: [
+            [s.lon, s.lat] as [number, number],
+            [s.road_anchor_lon!, s.road_anchor_lat!] as [number, number],
+          ],
+          priority: 2,
+        }));
+
+      const snapped = computeSnappedPlotPlacement({
+        rawLat,
+        rawLon,
+        roads: [...osmRoads, ...colonyRoads, ...localConnectors],
+        existingPlots: existingStorefronts,
+      });
+
+      placeMarker(snapped.lon, snapped.lat);
+      renderPlotPreviewOverlay(snapped);
+
+      if (snapped.connectorType === "colony_branch") {
+        setSnapBadge("Snapped beside colony road · Auto-connected");
+      } else if (snapped.connectorType === "osm_road") {
+        setSnapBadge(
+          snapped.wasAutoAdjusted
+            ? "Auto-set back off road · Facing street"
+            : "Connected to nearby OSM road"
+        );
+      } else {
+        setSnapBadge("Open land · Frontage avenue created");
+      }
+
+      onChangeRef.current({
+        lat: snapped.lat,
+        lon: snapped.lon,
+        facingBearing: snapped.facingBearing,
+        roadAnchorLat: snapped.roadAnchorLat,
+        roadAnchorLon: snapped.roadAnchorLon,
+        connectorType: snapped.connectorType,
+        ...extraMeta,
+      });
+
+      return snapped;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [renderPlotPreviewOverlay]
+  );
+
+  // Place or move draggable marker cleanly on the mini-map
   const placeMarker = useCallback((nextLon: number, nextLat: number) => {
     const map = mapRef.current;
     if (!map) return;
@@ -200,17 +402,15 @@ export function LocationMapPicker({
 
       marker.on("dragend", () => {
         const pos = marker.getLngLat();
-        onChangeRef.current({
-          lat: Number(pos.lat.toFixed(6)),
-          lon: Number(pos.lng.toFixed(6)),
-        });
-        reverseGeocode(pos.lat, pos.lng);
+        const snapped = snapAndPlacePin(pos.lng, pos.lat);
+        reverseGeocode(snapped.lat, snapped.lon);
       });
 
       markerRef.current = marker;
     } else {
       markerRef.current.setLngLat([nextLon, nextLat]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Gentle reverse geocoder (fills city/state/pincode when user clicks/drags pin or uses GPS)
@@ -265,7 +465,7 @@ export function LocationMapPicker({
       container: mapContainerRef.current,
       style: CARTO_VOYAGER_STYLE,
       center: hasInitial ? [lon, lat] : INDIA_CENTER,
-      zoom: hasInitial ? 15.5 : 3.05,
+      zoom: hasInitial ? 16 : 3.05,
       minZoom: 2.7,
       maxZoom: 19.5,
       maxBounds: INDIA_MAX_BOUNDS,
@@ -286,22 +486,30 @@ export function LocationMapPicker({
     });
 
     map.on("load", () => {
+      ensurePreviewLayers(map);
       setMapReady(true);
       if (hasInitial) {
-        placeMarker(lon, lat);
+        snapAndPlacePin(lon, lat);
       }
     });
 
     map.on("click", (e) => {
       const clickLat = Number(e.lngLat.lat.toFixed(6));
       const clickLon = Number(e.lngLat.lng.toFixed(6));
-      placeMarker(clickLon, clickLat);
       setStatusMessage(null);
-      onChangeRef.current({ lat: clickLat, lon: clickLon });
-      if (map.getZoom() < 13) {
-        map.easeTo({ center: [clickLon, clickLat], zoom: 14.5, duration: 550 });
+
+      if (map.getZoom() < 14.5) {
+        // Zoom into street level first so vector road tiles load, then snap cleanly off the road!
+        placeMarker(clickLon, clickLat);
+        map.easeTo({ center: [clickLon, clickLat], zoom: 16.5, duration: 600 });
+        map.once("idle", () => {
+          const snapped = snapAndPlacePin(clickLon, clickLat);
+          reverseGeocode(snapped.lat, snapped.lon);
+        });
+      } else {
+        const snapped = snapAndPlacePin(clickLon, clickLat);
+        reverseGeocode(snapped.lat, snapped.lon);
       }
-      reverseGeocode(clickLat, clickLon);
     });
 
     mapRef.current = map;
@@ -319,15 +527,19 @@ export function LocationMapPicker({
   // React to external coordinate fly triggers (e.g. user typed a 6-digit Indian PIN code above)
   useEffect(() => {
     if (!externalFlyTarget || !mapRef.current || !mapReady) return;
-    const { lat: fLat, lon: fLon, zoom = 15 } = externalFlyTarget;
+    const { lat: fLat, lon: fLon, zoom = 16 } = externalFlyTarget;
+    const map = mapRef.current;
     placeMarker(fLon, fLat);
-    mapRef.current.flyTo({
+    map.flyTo({
       center: [fLon, fLat],
-      zoom,
+      zoom: Math.max(zoom, 16),
       duration: 950,
       essential: true,
     });
-  }, [externalFlyTarget, mapReady, placeMarker]);
+    map.once("idle", () => {
+      snapAndPlacePin(fLon, fLat);
+    });
+  }, [externalFlyTarget, mapReady, placeMarker, snapAndPlacePin]);
 
   // Close search dropdown on outside click
   useEffect(() => {
@@ -404,24 +616,38 @@ export function LocationMapPicker({
     setStatusMessage(null);
 
     const parsed = parseCityStateFromSuggestion(s);
-    const nextZoom = Math.max(s.zoom || 14, s.kind === "state" ? 8.5 : 15.5);
+    const nextZoom = Math.max(s.zoom || 15.5, s.kind === "state" ? 8.5 : 16.5);
+    const label = s.subtitle ? `${s.name}, ${s.subtitle}` : s.name;
 
+    const map = mapRef.current;
     placeMarker(s.lon, s.lat);
-    mapRef.current?.flyTo({
-      center: [s.lon, s.lat],
-      zoom: nextZoom,
-      duration: 950,
-      essential: true,
-    });
-
     onChange({
       lat: Number(s.lat.toFixed(6)),
       lon: Number(s.lon.toFixed(6)),
       city: parsed.city,
       state: parsed.state,
       pincode: parsed.pincode,
-      label: s.subtitle ? `${s.name}, ${s.subtitle}` : s.name,
+      label,
     });
+
+    if (map) {
+      map.flyTo({
+        center: [s.lon, s.lat],
+        zoom: nextZoom,
+        duration: 950,
+        essential: true,
+      });
+      if (s.kind !== "state") {
+        map.once("idle", () => {
+          snapAndPlacePin(s.lon, s.lat, {
+            city: parsed.city,
+            state: parsed.state,
+            pincode: parsed.pincode,
+            label,
+          });
+        });
+      }
+    }
   };
 
   const handleUseGPS = () => {
@@ -437,15 +663,23 @@ export function LocationMapPicker({
       (pos) => {
         const gpsLat = Number(pos.coords.latitude.toFixed(6));
         const gpsLon = Number(pos.coords.longitude.toFixed(6));
+        const map = mapRef.current;
         placeMarker(gpsLon, gpsLat);
-        mapRef.current?.flyTo({
-          center: [gpsLon, gpsLat],
-          zoom: 17,
-          duration: 1000,
-          essential: true,
-        });
-        onChange({ lat: gpsLat, lon: gpsLon });
-        reverseGeocode(gpsLat, gpsLon);
+        if (map) {
+          map.flyTo({
+            center: [gpsLon, gpsLat],
+            zoom: 17.2,
+            duration: 1000,
+            essential: true,
+          });
+          map.once("idle", () => {
+            const snapped = snapAndPlacePin(gpsLon, gpsLat);
+            reverseGeocode(snapped.lat, snapped.lon);
+          });
+        } else {
+          onChange({ lat: gpsLat, lon: gpsLon });
+          reverseGeocode(gpsLat, gpsLon);
+        }
         setLocatingGps(false);
       },
       () => {
@@ -459,7 +693,7 @@ export function LocationMapPicker({
   const handleZoom = (delta: number) => {
     const map = mapRef.current;
     if (!map) return;
-    map.easeTo({ zoom: Math.min(19.5, Math.max(3.4, map.getZoom() + delta)), duration: 240 });
+    map.easeTo({ zoom: Math.min(19.5, Math.max(2.7, map.getZoom() + delta)), duration: 240 });
   };
 
   const hasPinned = typeof lat === "number" && typeof lon === "number";
@@ -476,7 +710,7 @@ export function LocationMapPicker({
             Pin Exact Plot Location on India Map <span className="text-amber-400">*</span>
           </label>
           <p className="text-xs text-neutral-400 mt-0.5">
-            Search any area or PIN, use GPS, or tap &amp; drag the pin to your exact shopfront.
+            Plots automatically set back off the road, rotate to face traffic, and connect their driveway.
           </p>
         </div>
 
@@ -617,9 +851,9 @@ export function LocationMapPicker({
           </button>
         </div>
 
-        {/* Helper Pill inside map */}
-        <div className="absolute top-3 left-3 z-10 pointer-events-none px-2.5 py-1 rounded-lg bg-[#09090b]/85 border border-neutral-800/90 backdrop-blur-md text-[11px] font-medium text-neutral-200">
-          {hasPinned ? "Drag pin or click to refine" : "Click anywhere in India to drop pin"}
+        {/* Live Snap Status Pill inside map */}
+        <div className="absolute top-3 left-3 z-10 pointer-events-none px-2.5 py-1 rounded-lg bg-[#09090b]/88 border border-neutral-800/90 backdrop-blur-md text-[11px] font-medium text-neutral-100 max-w-[260px] truncate">
+          {snapBadge || (hasPinned ? "Drag pin or click to refine" : "Click anywhere in India to drop pin")}
         </div>
 
         {/* Bottom Coordinate Bar */}

@@ -51,6 +51,12 @@ export default function RegisterPage() {
   const [pinLookupLoading, setPinLookupLoading] = useState(false);
   const [lat, setLat] = useState<number | null>(null);
   const [lon, setLon] = useState<number | null>(null);
+  const [facingBearing, setFacingBearing] = useState<number | undefined>(undefined);
+  const [roadAnchorLat, setRoadAnchorLat] = useState<number | undefined>(undefined);
+  const [roadAnchorLon, setRoadAnchorLon] = useState<number | undefined>(undefined);
+  const [connectorType, setConnectorType] = useState<
+    "osm_road" | "colony_branch" | "frontage" | undefined
+  >(undefined);
   const [locationLabel, setLocationLabel] = useState("");
   const [flyTarget, setFlyTarget] = useState<{
     lat: number;
@@ -139,6 +145,10 @@ export default function RegisterPage() {
   const handleMapPick = useCallback((loc: PickedLocation) => {
     setLat(loc.lat);
     setLon(loc.lon);
+    if (typeof loc.facingBearing === "number") setFacingBearing(loc.facingBearing);
+    if (typeof loc.roadAnchorLat === "number") setRoadAnchorLat(loc.roadAnchorLat);
+    if (typeof loc.roadAnchorLon === "number") setRoadAnchorLon(loc.roadAnchorLon);
+    if (loc.connectorType) setConnectorType(loc.connectorType);
     if (loc.city) setCity(loc.city);
     if (loc.state) setStateName(loc.state);
     if (loc.pincode) setPincode(loc.pincode);
@@ -240,6 +250,10 @@ export default function RegisterPage() {
       starting_price: startingPrice.trim(),
       lat,
       lon,
+      facing_bearing: facingBearing,
+      road_anchor_lat: roadAnchorLat,
+      road_anchor_lon: roadAnchorLon,
+      connector_type: connectorType,
       portfolio_images: portfolio,
     };
 
@@ -266,6 +280,10 @@ export default function RegisterPage() {
         pincode: payload.pincode,
         lat: payload.lat,
         lon: payload.lon,
+        facing_bearing: payload.facing_bearing,
+        road_anchor_lat: payload.road_anchor_lat,
+        road_anchor_lon: payload.road_anchor_lon,
+        connector_type: payload.connector_type,
         whatsapp_phone: payload.whatsapp_phone,
         instagram_handle: payload.instagram_handle,
         website_url: payload.website_url,
