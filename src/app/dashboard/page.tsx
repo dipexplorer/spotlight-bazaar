@@ -31,6 +31,7 @@ import { supabase } from "@/lib/supabase/client";
 import { BusinessStorefront, CategoryId } from "@/types";
 import { CATEGORY_PLOT_SPECS } from "@/lib/constants/categoryPlots";
 import { CategoryDropdown } from "@/components/register/CategoryDropdown";
+import { BroadcastManager } from "@/components/dashboard/BroadcastManager";
 import { compressImage } from "@/lib/utils/compressImage";
 
 interface OwnedBusiness extends BusinessStorefront {
@@ -42,7 +43,7 @@ interface OwnedBusiness extends BusinessStorefront {
   };
 }
 
-type DashboardTab = "details" | "photos" | "settings";
+type DashboardTab = "details" | "broadcasts" | "photos" | "settings";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -698,11 +699,12 @@ export default function DashboardPage() {
             <div
               role="tablist"
               aria-label="Manage business sections"
-              className="flex items-center gap-1 border-b border-neutral-800"
+              className="flex items-center gap-1 border-b border-neutral-800 overflow-x-auto no-scrollbar"
             >
               {(
                 [
-                  { id: "details", label: "Details & Links" },
+                  { id: "details", label: "Details" },
+                  { id: "broadcasts", label: "Broadcasts" },
                   { id: "photos", label: `Photos (${photos.length}/6)` },
                   { id: "settings", label: "Settings" },
                 ] as const
@@ -952,7 +954,16 @@ export default function DashboardPage() {
               </form>
             )}
 
-            {/* TAB 2: PHOTOS */}
+            {/* TAB 2: LIVE STREET BROADCASTS */}
+            {activeTab === "broadcasts" && accessToken && (
+              <BroadcastManager
+                businessId={selectedBiz.id}
+                businessName={selectedBiz.name}
+                accessToken={accessToken}
+              />
+            )}
+
+            {/* TAB 3: PHOTOS */}
             {activeTab === "photos" && (
               <div className="space-y-5">
                 <label

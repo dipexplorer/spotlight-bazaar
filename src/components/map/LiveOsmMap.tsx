@@ -29,12 +29,21 @@ import {
   X,
   Navigation,
   ExternalLink,
+  Radio,
 } from "lucide-react";
 import {
   formatWebsiteDisplay,
   getGoogleMapsUrl,
   normalizeExternalUrl,
 } from "@/lib/utils";
+import {
+  BROADCAST_TYPE_MAP,
+  BROADCAST_TYPES,
+} from "@/lib/constants/broadcasts";
+import {
+  LiveBroadcastEntry,
+  LiveBroadcastsDrawer,
+} from "@/components/map/LiveBroadcastsDrawer";
 import { searchLocalIndiaPlaces, IndiaPlaceEntry } from "@/lib/geo/indiaPlaces";
 import { getLocalStorefronts } from "@/lib/utils/localStorefront";
 import {
@@ -353,9 +362,10 @@ export function LiveOsmMap({
   const searchPinMarkerRef = useRef<Marker | null>(null);
   const searchBoxRef = useRef<HTMLDivElement>(null);
 
-  // Proximity Talk Modals
+  // Proximity Talk & Live Broadcasts Drawer
   const [showQuickTalkModal, setShowQuickTalkModal] = useState(false);
   const [dialogueStorefront, setDialogueStorefront] = useState<BusinessStorefront | null>(null);
+  const [showBroadcastsDrawer, setShowBroadcastsDrawer] = useState(false);
 
   // 3D Player Avatar Position on approach road outside Nerqiva Studio front gate, facing the studio
   const initRoadAngle = -2.0179;
@@ -608,6 +618,22 @@ export function LiveOsmMap({
     const hasNerqiva = valid.some((b) => b.slug === "nerqiva-studio");
     return hasNerqiva ? valid : [nerqivaBusiness, ...valid];
   }, [storefronts, nerqivaBusiness]);
+
+  // Flatten all currently active (non-expired) live street broadcasts across India
+  const liveBroadcastEntries: LiveBroadcastEntry[] = useMemo(() => {
+    const nowMs = Date.now();
+    const list: LiveBroadcastEntry[] = [];
+    for (const s of allLiveStorefronts) {
+      for (const post of s.active_posts || []) {
+        if (new Date(post.expires_at).getTime() > nowMs) {
+          list.push({ post, storefront: s });
+        }
+      }
+    }
+    return list.sort(
+      (a, b) => new Date(b.post.created_at).getTime() - new Date(a.post.created_at).getTime()
+    );
+  }, [allLiveStorefronts]);
 
   const allLiveStorefrontsRef = useRef<BusinessStorefront[]>(allLiveStorefronts);
   useEffect(() => {
@@ -2403,25 +2429,54 @@ export function LiveOsmMap({
 
     const currZoom = mapRef.current.getZoom();
 
+    const escapeHtml = (str: string) =>
+      str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
     allLiveStorefronts.forEach((b) => {
       const domain = b.website_url ? b.website_url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "") : "";
       const areaLabel = b.slug === "nerqiva-studio" ? "North Guwahati" : b.city_name || "India";
       const taglineShort = b.tagline || "Local Business";
+      const safeName = escapeHtml(b.name);
+      const safeTagline = escapeHtml(taglineShort);
+      const safeArea = escapeHtml(areaLabel);
+      const safeDomain = escapeHtml(domain);
+
+      // Active Live Broadcast Sky-Badge (floating above roof when business has an active Deal/Need/Hiring/Event!)
+      const activeBroadcast = (b.active_posts || []).find(
+        (p) => new Date(p.expires_at).getTime() > Date.now()
+      );
+      const bMeta = activeBroadcast
+        ? BROADCAST_TYPE_MAP.get(activeBroadcast.post_type) || BROADCAST_TYPES[0]
+        : null;
+      const skyBadgeHtml =
+        activeBroadcast && bMeta
+          ? `<div style="margin-bottom:5px;padding:3px 9px;border-radius:9999px;background:#080B12;border:1px solid ${bMeta.hexAccent};box-shadow:0 6px 18px rgba(0,0,0,0.65);display:inline-flex;align-items:center;gap:5px;max-width:210px;">
+              <span style="width:6px;height:6px;border-radius:9999px;background:${bMeta.hexAccent};flex-shrink:0;"></span>
+              <span style="font-size:9px;font-weight:800;letter-spacing:0.04em;color:${bMeta.hexAccent};flex-shrink:0;">${bMeta.shortTag}</span>
+              <span style="font-size:10px;font-weight:700;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(activeBroadcast.coupon_code ? `${activeBroadcast.title} · ${activeBroadcast.coupon_code}` : activeBroadcast.title)}</span>
+            </div>`
+          : "";
 
       const cardEl = document.createElement("div");
       cardEl.className = "cursor-pointer select-none relative group pointer-events-auto flex flex-col items-center";
       cardEl.innerHTML = `
-        <!-- Tier 2 (zoom 9.5 – 14.8): Compact Mini-Pill -->
+        <!-- Tier 2 (zoom 9.5 – 14.8) & Colony Compact Roof Pill -->
         <div data-lod="compact" class="flex-col items-center" style="display:none;">
+          ${skyBadgeHtml}
           <div class="px-2.5 py-1 rounded-full bg-[#080B12]/95 border border-amber-500/75 shadow-xl flex items-center gap-1.5 backdrop-blur-md hover:scale-105 transition-all">
             <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-            <span class="text-[11px] font-bold text-white tracking-tight whitespace-nowrap">${b.name}</span>
+            <span class="text-[11px] font-bold text-white tracking-tight whitespace-nowrap">${safeName}</span>
           </div>
           <div class="w-1.5 h-1.5 -mt-0.5 bg-[#080B12] rotate-45 border-r border-b border-amber-500/75"></div>
         </div>
 
         <!-- Tier 3 (zoom 14.8 – 19.8): Flagship Glassmorphic Card -->
         <div data-lod="full" class="flex-col items-center" style="display:none;">
+          ${skyBadgeHtml}
           <div class="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-[#080B12]/95 border border-amber-500/75 shadow-[0_16px_40px_rgba(0,0,0,0.85)] backdrop-blur-2xl hover:scale-105 hover:border-amber-400 transition-all">
             <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500/25 to-amber-600/10 border border-amber-500/50 flex items-center justify-center text-amber-400 shrink-0 shadow-inner">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2430,13 +2485,13 @@ export function LiveOsmMap({
             </div>
             <div class="flex flex-col text-left">
               <div class="flex items-center gap-2">
-                <span class="text-xs font-black text-white tracking-tight">${b.name}</span>
-                ${domain ? `<span class="text-[10px] font-medium text-amber-400/90">${domain}</span>` : ""}
+                <span class="text-xs font-black text-white tracking-tight">${safeName}</span>
+                ${safeDomain ? `<span class="text-[10px] font-medium text-amber-400/90">${safeDomain}</span>` : ""}
               </div>
               <div class="flex items-center gap-1.5 mt-0.5">
-                <span class="text-[10px] text-neutral-300 font-medium">${taglineShort}</span>
+                <span class="text-[10px] text-neutral-300 font-medium">${safeTagline}</span>
                 <span class="text-neutral-500 text-[10px]">·</span>
-                <span class="text-[10px] text-neutral-400">${areaLabel}</span>
+                <span class="text-[10px] text-neutral-400">${safeArea}</span>
               </div>
             </div>
           </div>
@@ -2718,6 +2773,20 @@ export function LiveOsmMap({
               <span className="sm:hidden">India</span>
             </button>
           )}
+
+          {/* Live Street Broadcasts Pulse Trigger */}
+          <button
+            type="button"
+            onClick={() => setShowBroadcastsDrawer(true)}
+            title="Live deals, coupons, hiring & service requests across India"
+            className="px-3 py-1.5 rounded-2xl bg-neutral-950/92 hover:bg-neutral-900 border border-emerald-500/45 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 shadow-2xl backdrop-blur-xl transition-all"
+          >
+            <Radio className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden md:inline">Live Pulse</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-[10px] font-mono tabular-nums text-emerald-300">
+              {liveBroadcastEntries.length}
+            </span>
+          </button>
         </div>
 
         {/* Center: Dynamic Hybrid Omnibox Search (Businesses + States + Cities + Areas + 6-Digit PIN Codes) */}
@@ -3227,6 +3296,13 @@ export function LiveOsmMap({
         onOpenFullProfile={(shop) => {
           if (onStorefrontSelect) onStorefrontSelect(shop);
         }}
+      />
+
+      <LiveBroadcastsDrawer
+        isOpen={showBroadcastsDrawer}
+        onClose={() => setShowBroadcastsDrawer(false)}
+        entries={liveBroadcastEntries}
+        onFlyToStorefront={(shop) => flyToStorefront(shop)}
       />
     </div>
   );

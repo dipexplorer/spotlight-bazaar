@@ -25,6 +25,37 @@ export interface City {
   slug: string;
 }
 
+export type BroadcastType = "deal" | "need" | "hiring" | "event";
+
+export interface BusinessPost {
+  id: string;
+  business_id: string;
+  post_type: BroadcastType;
+  title: string;
+  details?: string | null;
+  coupon_code?: string | null;
+  cta_label?: string | null;
+  expires_at: string;
+  clicks: number;
+  created_at: string;
+}
+
+export interface BusinessPostWithStorefront extends BusinessPost {
+  business?: {
+    id: string;
+    slug: string;
+    name: string;
+    city_name: string;
+    state_name: string;
+    pincode?: string | null;
+    lat: number;
+    lon: number;
+    whatsapp_phone: string;
+    category_id: CategoryId;
+    logo_url?: string | null;
+  };
+}
+
 export interface BusinessStorefront {
   id: string;
   slug: string;
@@ -54,6 +85,7 @@ export interface BusinessStorefront {
   total_views: number;
   total_leads: number;
   portfolio?: PortfolioItem[];
+  active_posts?: BusinessPost[];
   created_at: string;
 }
 

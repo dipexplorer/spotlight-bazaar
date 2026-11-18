@@ -13,9 +13,19 @@ import {
   Globe,
   Navigation,
   ExternalLink,
+  Clock,
+  Copy,
+  Check,
+  MessageCircle,
 } from "lucide-react";
 import { BusinessStorefront } from "@/types";
 import { CATEGORY_MAP } from "@/lib/constants/categories";
+import {
+  BROADCAST_TYPES,
+  BROADCAST_TYPE_MAP,
+  buildBroadcastWhatsAppUrl,
+  formatTimeRemaining,
+} from "@/lib/constants/broadcasts";
 import { getLocalStorefront } from "@/lib/utils/localStorefront";
 import {
   formatWebsiteDisplay,
@@ -50,6 +60,7 @@ interface StorefrontViewProps {
 
 export function StorefrontView({ initialStorefront, slug }: StorefrontViewProps) {
   const [storefront, setStorefront] = useState<BusinessStorefront | null>(initialStorefront);
+  const [copiedPostId, setCopiedPostId] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const isNew = searchParams.get("new") === "true";
 
@@ -210,6 +221,83 @@ export function StorefrontView({ initialStorefront, slug }: StorefrontViewProps)
             </div>
           </div>
         </section>
+
+        {/* Active Live Street Broadcasts */}
+        {(() => {
+          const livePosts = (storefront.active_posts || []).filter(
+            (p) => new Date(p.expires_at).getTime() > Date.now()
+          );
+          if (livePosts.length === 0) return null;
+          return (
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold text-white tracking-tight">
+                Live Broadcasts ({livePosts.length})
+              </h2>
+              <div className="space-y-3">
+                {livePosts.map((p) => {
+                  const meta = BROADCAST_TYPE_MAP.get(p.post_type) || BROADCAST_TYPES[0];
+                  const waUrl = buildBroadcastWhatsAppUrl({
+                    phone: storefront.whatsapp_phone,
+                    businessName: storefront.name,
+                    postType: p.post_type,
+                    title: p.title,
+                    couponCode: p.coupon_code,
+                  });
+                  return (
+                    <div
+                      key={p.id}
+                      className={`p-4 sm:p-5 rounded-2xl border ${meta.badgeBg} ${meta.badgeBorder} space-y-2.5`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide ${meta.badgeText}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${meta.dotColor}`} />
+                          {meta.label}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-xs text-neutral-300 tabular-nums">
+                          <Clock className="w-3.5 h-3.5" />
+                          {formatTimeRemaining(p.expires_at)}
+                        </span>
+                      </div>
+                      <h3 className="text-base font-bold text-white">{p.title}</h3>
+                      {p.details && (
+                        <p className="text-xs text-neutral-200 leading-relaxed">{p.details}</p>
+                      )}
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        {p.coupon_code && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              fetch(`/api/posts/${p.id}/click`, { method: "POST", keepalive: true }).catch(() => {});
+                              navigator.clipboard?.writeText(p.coupon_code!);
+                              setCopiedPostId(p.id);
+                              setTimeout(() => setCopiedPostId(null), 2200);
+                            }}
+                            className="min-h-[38px] px-3 rounded-xl bg-black/50 hover:bg-black/70 border border-emerald-400/40 text-xs font-mono font-bold text-emerald-200 inline-flex items-center gap-1.5 transition-colors"
+                          >
+                            <span>CODE: {p.coupon_code}</span>
+                            {copiedPostId === p.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        )}
+                        <a
+                          href={waUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => {
+                            fetch(`/api/posts/${p.id}/click`, { method: "POST", keepalive: true }).catch(() => {});
+                          }}
+                          className="min-h-[38px] px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white inline-flex items-center gap-1.5 transition-colors"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          <span>{meta.defaultCta}</span>
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })()}
 
         {/* Rate Card & Discovery Activity */}
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">

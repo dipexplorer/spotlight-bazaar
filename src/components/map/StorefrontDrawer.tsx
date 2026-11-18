@@ -16,9 +16,17 @@ import {
   Globe,
   ExternalLink,
   Navigation,
+  Copy,
+  Clock,
 } from "lucide-react";
 import { BusinessStorefront } from "@/types";
 import { CATEGORY_MAP } from "@/lib/constants/categories";
+import {
+  BROADCAST_TYPES,
+  BROADCAST_TYPE_MAP,
+  buildBroadcastWhatsAppUrl,
+  formatTimeRemaining,
+} from "@/lib/constants/broadcasts";
 import {
   formatWebsiteDisplay,
   getGoogleMapsUrl,
@@ -35,6 +43,7 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
   const [wavesCount, setWavesCount] = useState<number>(0);
   const [hasWaved, setHasWaved] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedCoupon, setCopiedCoupon] = useState(false);
 
   // Sync waves count on storefront change
   useEffect(() => {
@@ -199,6 +208,69 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
               {storefront.tagline}
             </p>
           )}
+
+          {/* Active Live Broadcast Banner (Deals, Coupons, Need Service, Hiring, Events) */}
+          {(() => {
+            const activePost = (storefront.active_posts || []).find(
+              (p) => new Date(p.expires_at).getTime() > Date.now()
+            );
+            if (!activePost) return null;
+            const bMeta = BROADCAST_TYPE_MAP.get(activePost.post_type) || BROADCAST_TYPES[0];
+            const postWaUrl = buildBroadcastWhatsAppUrl({
+              phone: storefront.whatsapp_phone,
+              businessName: storefront.name,
+              postType: activePost.post_type,
+              title: activePost.title,
+              couponCode: activePost.coupon_code,
+            });
+            return (
+              <div className={`p-3 rounded-2xl border ${bMeta.badgeBg} ${bMeta.badgeBorder} space-y-2`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide ${bMeta.badgeText}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${bMeta.dotColor}`} />
+                    {bMeta.label}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[10px] text-neutral-300 tabular-nums">
+                    <Clock className="w-3 h-3" />
+                    {formatTimeRemaining(activePost.expires_at)}
+                  </span>
+                </div>
+                <div className="text-xs font-bold text-white leading-snug">{activePost.title}</div>
+                {activePost.details && (
+                  <p className="text-[11px] text-neutral-200/90 leading-relaxed">{activePost.details}</p>
+                )}
+                <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                  {activePost.coupon_code && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        fetch(`/api/posts/${activePost.id}/click`, { method: "POST", keepalive: true }).catch(() => {});
+                        navigator.clipboard?.writeText(activePost.coupon_code!);
+                        setCopiedCoupon(true);
+                        setTimeout(() => setCopiedCoupon(false), 2200);
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-black/45 hover:bg-black/65 border border-emerald-400/40 text-[11px] font-mono font-bold text-emerald-200 inline-flex items-center gap-1.5 transition-colors"
+                    >
+                      <span>{activePost.coupon_code}</span>
+                      {copiedCoupon ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    </button>
+                  )}
+                  <a
+                    href={postWaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => {
+                      fetch(`/api/posts/${activePost.id}/click`, { method: "POST", keepalive: true }).catch(() => {});
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] font-semibold text-white inline-flex items-center gap-1 transition-colors"
+                  >
+                    <span>{bMeta.defaultCta}</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Rate & Live Wave Bar */}
           <div className="flex items-center justify-between gap-2 p-3 rounded-2xl bg-neutral-900/70 border border-neutral-800/90">
