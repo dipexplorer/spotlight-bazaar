@@ -1,7 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { addLocalStorefront } from "@/lib/data/seedStorefronts";
+import { normalizeExternalUrl } from "@/lib/utils";
 import { BusinessStorefront } from "@/types";
+
+const STORAGE_BUCKET = "storefront-media";
+
+/**
+ * Uploads a compressed data:image/* string into Supabase Storage (`storefront-media`)
+ * and returns its public CDN URL. Passes through existing http(s) / relative URLs untouched.
+ */
+async function uploadImageToStorage(
+  supabase: NonNullable<ReturnType<typeof createServerClient>>,
+  slug: string,
+  rawImg: string,
+  index: number
+): Promise<string> {
+  if (!rawImg || !rawImg.startsWith("data:image/")) {
+    return rawImg;
+  }
+
+  const match = rawImg.match(/^data:(image\/(?:webp|jpeg|jpg|png));base64,(.+)$/i);
+  if (!match) {
+    return rawImg;
+  }
+
+  const mimeType = match[1].toLowerCase() === "image/jpg" ? "image/jpeg" : match[1].toLowerCase();
+  const ext = mimeType === "image/webp" ? "webp" : mimeType === "image/png" ? "png" : "jpg";
+  const buffer = Buffer.from(match[2], "base64");
+  const filePath = `${slug}/${Date.now()}-${index + 1}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .upload(filePath, buffer, {
+      contentType: mimeType,
+      cacheControl: "31536000",
+      upsert: false,
+    });
+
+  if (uploadError) {
+    console.warn("[/api/register] Storage upload fallback:", uploadError.message);
+    return rawImg;
+  }
+
+  const { data: urlData } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(filePath);
+  return urlData?.publicUrl || rawImg;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,6 +61,7 @@ export async function POST(req: NextRequest) {
       whatsapp_phone,
       instagram_handle,
       website_url,
+      google_maps_url,
       starting_price,
       lat,
       lon,
@@ -48,6 +93,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const validConnectorType =
+      connector_type === "osm_road" ||
+      connector_type === "colony_branch" ||
+      connector_type === "frontage"
+        ? connector_type
+        : null;
+
+    const safeWebsiteUrl = normalizeExternalUrl(website_url);
+    const safeGoogleMapsUrl = normalizeExternalUrl(google_maps_url);
+
     // 2. Slug generation
     const baseSlug = `${name} ${city_name}`
       .toLowerCase()
@@ -56,11 +111,25 @@ export async function POST(req: NextRequest) {
     const randomSuffix = Math.random().toString(36).substring(2, 6);
     const slug = `${baseSlug}-${randomSuffix}`;
 
-    // 3. Database Insertion (if Supabase is configured)
+    // 3. Database & Storage Persistence
     const supabase = createServerClient();
     let businessId = `sb-temp-${Date.now()}`;
+    let persistedToDb = false;
+
+    const rawImages: string[] = Array.isArray(portfolio_images)
+      ? portfolio_images.slice(0, 6).filter((x): x is string => typeof x === "string" && x.length > 0)
+      : [];
+
+    let storedImageUrls = rawImages;
 
     if (supabase) {
+      // Upload base64 portfolio photos to Supabase Storage CDN bucket (`storefront-media`)
+      if (rawImages.length > 0) {
+        storedImageUrls = await Promise.all(
+          rawImages.map((img, idx) => uploadImageToStorage(supabase, slug, img, idx))
+        );
+      }
+
       const { data: businessData, error: businessError } = await supabase
         .from("businesses")
         .insert({
@@ -74,11 +143,16 @@ export async function POST(req: NextRequest) {
           pincode: pincode || null,
           lat: Number(lat) || 26.1445,
           lon: Number(lon) || 91.7362,
+          facing_bearing: typeof facing_bearing === "number" ? facing_bearing : null,
+          road_anchor_lat: typeof road_anchor_lat === "number" ? road_anchor_lat : null,
+          road_anchor_lon: typeof road_anchor_lon === "number" ? road_anchor_lon : null,
+          connector_type: validConnectorType,
           whatsapp_phone: cleanPhone,
           instagram_handle: instagram_handle ? instagram_handle.replace(/^@/, "").trim() : null,
-          website_url: website_url || null,
+          website_url: safeWebsiteUrl,
+          google_maps_url: safeGoogleMapsUrl,
           starting_price: starting_price || null,
-          logo_url: Array.isArray(portfolio_images) && portfolio_images[0] ? portfolio_images[0] : null,
+          logo_url: storedImageUrls[0] || null,
           is_verified: false,
           is_featured: false,
           status: "active",
@@ -92,15 +166,19 @@ export async function POST(req: NextRequest) {
 
       if (businessData) {
         businessId = businessData.id;
+        persistedToDb = true;
 
-        // Insert portfolio items
-        if (Array.isArray(portfolio_images) && portfolio_images.length > 0) {
-          const items = portfolio_images.slice(0, 6).map((imgUrl: string, idx: number) => ({
+        // Insert portfolio items using CDN Storage URLs
+        if (storedImageUrls.length > 0) {
+          const items = storedImageUrls.map((imgUrl: string, idx: number) => ({
             business_id: businessId,
             image_url: imgUrl,
             sort_order: idx + 1,
           }));
-          await supabase.from("portfolio_items").insert(items);
+          const { error: portfolioError } = await supabase.from("portfolio_items").insert(items);
+          if (portfolioError) {
+            console.error("[/api/register] portfolio_items insert error:", portfolioError.message);
+          }
         }
       }
     }
@@ -121,28 +199,23 @@ export async function POST(req: NextRequest) {
       facing_bearing: typeof facing_bearing === "number" ? facing_bearing : undefined,
       road_anchor_lat: typeof road_anchor_lat === "number" ? road_anchor_lat : undefined,
       road_anchor_lon: typeof road_anchor_lon === "number" ? road_anchor_lon : undefined,
-      connector_type:
-        connector_type === "osm_road" ||
-        connector_type === "colony_branch" ||
-        connector_type === "frontage"
-          ? connector_type
-          : undefined,
+      connector_type: validConnectorType || undefined,
       whatsapp_phone: cleanPhone,
       instagram_handle: instagram_handle ? instagram_handle.replace(/^@/, "").trim() : "",
+      website_url: safeWebsiteUrl || undefined,
+      google_maps_url: safeGoogleMapsUrl || undefined,
       starting_price: starting_price || "",
-      logo_url: Array.isArray(portfolio_images) && portfolio_images[0] ? portfolio_images[0] : "",
+      logo_url: storedImageUrls[0] || "",
       is_verified: false,
       is_featured: false,
       total_views: 1,
       total_leads: 0,
-      portfolio: Array.isArray(portfolio_images)
-        ? portfolio_images.slice(0, 6).map((imgUrl: string, idx: number) => ({
-            id: `p-${businessId}-${idx}`,
-            business_id: businessId,
-            image_url: imgUrl,
-            sort_order: idx + 1,
-          }))
-        : [],
+      portfolio: storedImageUrls.map((imgUrl: string, idx: number) => ({
+        id: `p-${businessId}-${idx}`,
+        business_id: businessId,
+        image_url: imgUrl,
+        sort_order: idx + 1,
+      })),
       created_at: new Date().toISOString(),
     };
     addLocalStorefront(localStorefront);
@@ -150,8 +223,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: true,
+        persisted_to_db: persistedToDb,
         id: businessId,
         slug,
+        logo_url: storedImageUrls[0] || "",
+        portfolio_urls: storedImageUrls,
         message: "Storefront registered successfully!",
       },
       { status: 201 }
@@ -161,4 +237,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-

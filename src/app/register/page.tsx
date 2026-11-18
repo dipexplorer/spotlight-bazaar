@@ -69,6 +69,7 @@ export default function RegisterPage() {
   const [whatsapp, setWhatsapp] = useState("");
   const [instagram, setInstagram] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
+  const [googleMapsUrl, setGoogleMapsUrl] = useState("");
   const [startingPrice, setStartingPrice] = useState("");
 
   // Step 3 — Portfolio Photos
@@ -237,6 +238,12 @@ export default function RegisterPage() {
         : `https://${websiteUrl.trim()}`
       : undefined;
 
+    const normalizedGoogleMaps = googleMapsUrl.trim()
+      ? /^https?:\/\//i.test(googleMapsUrl.trim())
+        ? googleMapsUrl.trim()
+        : `https://${googleMapsUrl.trim()}`
+      : undefined;
+
     const payload = {
       name: name.trim(),
       tagline: tagline.trim(),
@@ -247,6 +254,7 @@ export default function RegisterPage() {
       whatsapp_phone: cleanPhone,
       instagram_handle: instagram.replace(/^@/, "").trim() || undefined,
       website_url: normalizedWebsite,
+      google_maps_url: normalizedGoogleMaps,
       starting_price: startingPrice.trim(),
       lat,
       lon,
@@ -269,6 +277,11 @@ export default function RegisterPage() {
         throw new Error(data.error || "Registration failed. Please try again.");
       }
 
+      const finalPortfolioUrls: string[] =
+        Array.isArray(data.portfolio_urls) && data.portfolio_urls.length > 0
+          ? data.portfolio_urls
+          : portfolio;
+
       const newStorefront: BusinessStorefront = {
         id: data.id || `sb-${Date.now()}`,
         slug: data.slug,
@@ -287,13 +300,14 @@ export default function RegisterPage() {
         whatsapp_phone: payload.whatsapp_phone,
         instagram_handle: payload.instagram_handle,
         website_url: payload.website_url,
+        google_maps_url: payload.google_maps_url,
         starting_price: payload.starting_price,
-        logo_url: portfolio[0] || "",
+        logo_url: data.logo_url || finalPortfolioUrls[0] || "",
         is_verified: false,
         is_featured: false,
         total_views: 1,
         total_leads: 0,
-        portfolio: portfolio.map((url, i) => ({
+        portfolio: finalPortfolioUrls.map((url, i) => ({
           id: `p-${i}`,
           business_id: data.id,
           image_url: url,
@@ -666,21 +680,45 @@ export default function RegisterPage() {
                     htmlFor="website-url"
                     className="block text-sm font-medium text-neutral-100"
                   >
-                    Website{" "}
+                    Official Website{" "}
                     <span className="text-xs font-normal text-neutral-400">
                       (Optional)
                     </span>
                   </label>
                   <input
                     id="website-url"
-                    type="url"
+                    type="text"
+                    inputMode="url"
                     value={websiteUrl}
                     onChange={(e) => setWebsiteUrl(e.target.value)}
-                    placeholder="yourbusiness.in"
-                    maxLength={120}
-                    className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+                    placeholder="https://yourbusiness.in"
+                    maxLength={160}
+                    className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
                   />
                 </div>
+              </div>
+
+              {/* Official Google Maps Link */}
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="google-maps-url"
+                  className="block text-sm font-medium text-neutral-100"
+                >
+                  Official Google Maps Link{" "}
+                  <span className="text-xs font-normal text-neutral-400">
+                    (Optional)
+                  </span>
+                </label>
+                <input
+                  id="google-maps-url"
+                  type="text"
+                  inputMode="url"
+                  value={googleMapsUrl}
+                  onChange={(e) => setGoogleMapsUrl(e.target.value)}
+                  placeholder="https://maps.app.goo.gl/... (for direct Google Maps & reviews)"
+                  maxLength={300}
+                  className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+                />
               </div>
             </div>
 

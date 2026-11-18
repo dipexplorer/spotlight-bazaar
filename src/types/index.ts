@@ -44,6 +44,7 @@ export interface BusinessStorefront {
   whatsapp_phone: string;
   instagram_handle?: string;
   website_url?: string;
+  google_maps_url?: string;
   starting_price?: string;
   logo_url?: string;
   is_verified: boolean;

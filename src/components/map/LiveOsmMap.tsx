@@ -27,7 +27,14 @@ import {
   RotateCcw,
   Globe2,
   X,
+  Navigation,
+  ExternalLink,
 } from "lucide-react";
+import {
+  formatWebsiteDisplay,
+  getGoogleMapsUrl,
+  normalizeExternalUrl,
+} from "@/lib/utils";
 import { searchLocalIndiaPlaces, IndiaPlaceEntry } from "@/lib/geo/indiaPlaces";
 import { getLocalStorefronts } from "@/lib/utils/localStorefront";
 import {
@@ -3065,12 +3072,35 @@ export function LiveOsmMap({
                   </div>
                 </div>
 
-                {activeStreetBusiness.website_url && (
-                  <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-[11px] font-medium text-amber-300 shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                    <span>{activeStreetBusiness.website_url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}</span>
-                  </div>
-                )}
+                <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+                  {normalizeExternalUrl(activeStreetBusiness.website_url) && (
+                    <a
+                      href={normalizeExternalUrl(activeStreetBusiness.website_url)!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={`Visit ${formatWebsiteDisplay(activeStreetBusiness.website_url)}`}
+                      className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/35 text-[11px] font-medium text-amber-300 transition-colors"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                      <span className="max-w-[140px] truncate">
+                        {formatWebsiteDisplay(activeStreetBusiness.website_url)}
+                      </span>
+                      <ExternalLink className="w-3 h-3 opacity-80" />
+                    </a>
+                  )}
+                  {getGoogleMapsUrl(activeStreetBusiness) && (
+                    <a
+                      href={getGoogleMapsUrl(activeStreetBusiness)!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Open in Google Maps"
+                      aria-label={`Open ${activeStreetBusiness.name} in Google Maps`}
+                      className="p-1.5 rounded-full bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 transition-colors"
+                    >
+                      <Navigation className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </div>
               </div>
 
               {/* Action Row */}

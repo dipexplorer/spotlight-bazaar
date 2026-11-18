@@ -17,7 +17,8 @@ async function getStorefront(slug: string): Promise<BusinessStorefront | null> {
         .from("businesses")
         .select(`
           id, slug, name, tagline, description, category_id, city_name, state_name,
-          pincode, lat, lon, whatsapp_phone, instagram_handle, website_url,
+          pincode, lat, lon, facing_bearing, road_anchor_lat, road_anchor_lon, connector_type,
+          whatsapp_phone, instagram_handle, website_url, google_maps_url,
           starting_price, logo_url, is_verified, is_featured, total_views, total_leads, created_at,
           portfolio:portfolio_items(id, business_id, image_url, caption, sort_order)
         `)

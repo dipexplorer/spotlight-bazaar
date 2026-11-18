@@ -15,10 +15,16 @@ import {
   Check,
   Globe,
   ExternalLink,
+  Navigation,
 } from "lucide-react";
 import { BusinessStorefront } from "@/types";
 import { CATEGORY_MAP } from "@/lib/constants/categories";
-import { getWhatsAppUrl } from "@/lib/utils";
+import {
+  formatWebsiteDisplay,
+  getGoogleMapsUrl,
+  getWhatsAppUrl,
+  normalizeExternalUrl,
+} from "@/lib/utils";
 
 interface StorefrontDrawerProps {
   storefront: BusinessStorefront | null;
@@ -194,7 +200,7 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
             </p>
           )}
 
-          {/* Rate & Live Wave Bar (Inspired by indiaagain.live social interaction) */}
+          {/* Rate & Live Wave Bar */}
           <div className="flex items-center justify-between gap-2 p-3 rounded-2xl bg-neutral-900/70 border border-neutral-800/90">
             <div className="flex flex-col">
               <span className="text-[11px] text-neutral-400">Starting Rate</span>
@@ -225,18 +231,35 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
             </button>
           </div>
 
-          {/* Official Website Link */}
-          {storefront.website_url && (
-            <a
-              href={storefront.website_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-950/40"
-            >
-              <Globe className="w-3.5 h-3.5" />
-              <span>Visit Official Website ({storefront.website_url.replace(/^https?:\/\//, "").replace(/\/$/, "")})</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
+          {/* Official Website & Google Maps Links */}
+          {(normalizeExternalUrl(storefront.website_url) || getGoogleMapsUrl(storefront)) && (
+            <div className="flex flex-wrap items-center gap-2">
+              {normalizeExternalUrl(storefront.website_url) && (
+                <a
+                  href={normalizeExternalUrl(storefront.website_url)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 min-w-[160px] py-2.5 px-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-md shadow-amber-950/30"
+                >
+                  <Globe className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{formatWebsiteDisplay(storefront.website_url)}</span>
+                  <ExternalLink className="w-3 h-3 shrink-0" />
+                </a>
+              )}
+
+              {getGoogleMapsUrl(storefront) && (
+                <a
+                  href={getGoogleMapsUrl(storefront)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 min-w-[130px] py-2.5 px-3.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-100 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <Navigation className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                  <span>{storefront.google_maps_url ? "Google Maps" : "Directions"}</span>
+                  <ExternalLink className="w-3 h-3 text-neutral-400 shrink-0" />
+                </a>
+              )}
+            </div>
           )}
 
           {/* Action CTAs */}

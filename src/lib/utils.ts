@@ -25,3 +25,47 @@ export function getWhatsAppUrl(phone: string, businessName: string, serviceName?
   return `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(text)}`;
 }
 
+/**
+ * Safely normalizes a user-supplied external URL (adds https:// if omitted, blocks non-http schemes)
+ */
+export function normalizeExternalUrl(raw?: string | null): string | null {
+  if (!raw || typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (/^(javascript|data|vbscript):/i.test(trimmed)) return null;
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const parsed = new URL(withScheme);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Formats a clean display host/path for an official website URL
+ */
+export function formatWebsiteDisplay(raw?: string | null): string {
+  const safe = normalizeExternalUrl(raw);
+  if (!safe) return "";
+  return safe.replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
+}
+
+/**
+ * Returns the business's official Google Maps link if provided, or falls back to exact lat/lon Google Maps directions
+ */
+export function getGoogleMapsUrl(storefront: {
+  google_maps_url?: string | null;
+  lat?: number;
+  lon?: number;
+  name?: string;
+}): string | null {
+  const official = normalizeExternalUrl(storefront.google_maps_url);
+  if (official) return official;
+  if (typeof storefront.lat === "number" && typeof storefront.lon === "number") {
+    return `https://www.google.com/maps/search/?api=1&query=${storefront.lat},${storefront.lon}`;
+  }
+  return null;
+}
+
