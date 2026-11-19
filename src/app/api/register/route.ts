@@ -70,9 +70,27 @@ export async function POST(req: NextRequest) {
     const randomSuffix = Math.random().toString(36).substring(2, 6);
     const slug = `${baseSlug}-${randomSuffix}`;
 
-    // 3. Database & Storage Persistence
+    // 3. Database & Authentication Verification
     const supabase = createServerClient();
     const authUser = await getAuthenticatedUserFromRequest(req);
+
+    if (!authUser || !authUser.id) {
+      return NextResponse.json(
+        {
+          error:
+            "Owner account required. You must create or sign in to an owner account to register a 3D business plot. No unowned plots are permitted.",
+        },
+        { status: 401 }
+      );
+    }
+
+    if (!supabase) {
+      return NextResponse.json(
+        { error: "Database service is temporarily unavailable. Please try again later." },
+        { status: 503 }
+      );
+    }
+
     let businessId = `sb-temp-${Date.now()}`;
     let persistedToDb = false;
 
@@ -94,7 +112,7 @@ export async function POST(req: NextRequest) {
         .from("businesses")
         .insert({
           slug,
-          owner_id: authUser?.id || null,
+          owner_id: authUser.id,
           name: name.trim(),
           tagline: tagline ? tagline.trim() : null,
           description: description ? description.trim() : null,

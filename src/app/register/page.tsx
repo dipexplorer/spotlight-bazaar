@@ -11,9 +11,11 @@ import {
   Check,
   ImagePlus,
   Loader2,
+  Lock,
   MapPin,
   Phone,
   ShieldCheck,
+  Store,
   Upload,
   UserCheck,
   X,
@@ -252,6 +254,10 @@ export default function RegisterPage() {
       setErrorMsg("Please confirm directory listing consent to publish your plot.");
       return;
     }
+    if (!ownerEmail || !ownerToken) {
+      setErrorMsg("Owner account required. Please create or sign in to your owner account below to publish this 3D plot. No unowned plots are permitted.");
+      return;
+    }
     if (!hasPinnedCoords) {
       setErrorMsg("Please pin your plot location on the map first.");
       setStep(1);
@@ -458,6 +464,36 @@ export default function RegisterPage() {
                 Your category selects your base 3D building architecture and your map pin places it directly on India&apos;s live street map.
               </p>
             </div>
+
+            {/* Owner Auth Awareness Banner */}
+            {!ownerEmail ? (
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Store className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span className="text-neutral-200">
+                    An owner account is required to place your 3D plot. You can sign in now or create your account before publishing.
+                  </span>
+                </div>
+                <Link
+                  href="/login?next=/register"
+                  className="min-h-[32px] px-3 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-semibold text-xs flex items-center shrink-0 transition-colors"
+                >
+                  Sign In
+                </Link>
+              </div>
+            ) : (
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <UserCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="text-neutral-300 truncate">
+                    Signed in as <strong className="text-white">{ownerEmail}</strong>. This 3D plot will be permanently linked to your owner console.
+                  </span>
+                </div>
+                <span className="text-[11px] text-emerald-400 font-semibold uppercase tracking-wider shrink-0">
+                  Owner Ready
+                </span>
+              </div>
+            )}
 
             <div className="space-y-5 pt-1">
               {/* Business Name */}
@@ -987,51 +1023,56 @@ export default function RegisterPage() {
               </dl>
             </div>
 
-            {/* Owner Account Attachment (lets owner log in anytime to edit/manage their 3D plot) */}
+            {/* Owner Account Verification (Mandatory: Every 3D plot requires an authenticated owner) */}
             {ownerEmail ? (
-              <div className="px-4 py-3 rounded-xl bg-emerald-500/8 border border-emerald-500/30 flex items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span className="text-neutral-200 truncate">
-                    Claiming as <strong className="text-white">{ownerEmail}</strong> · Manage anytime in My Business
-                  </span>
-                </div>
-                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-              </div>
-            ) : (
-              <div className="rounded-2xl bg-[#121215] border border-neutral-800 p-4 space-y-3.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="space-y-0.5">
-                    <div className="text-sm font-semibold text-white">
-                      Link Owner Account{" "}
-                      <span className="text-xs font-normal text-amber-400">(Recommended)</span>
+              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0">
+                    <UserCheck className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-white">Owner Account Linked</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30">
+                        Verified
+                      </span>
                     </div>
-                    <p className="text-xs text-neutral-400">
-                      Sign in so you can edit rates, upload photos, and view leads in My Business later.
+                    <p className="text-neutral-300 truncate mt-0.5">
+                      Publishing as <strong className="text-white">{ownerEmail}</strong>. You can manage this plot anytime in your Owner Dashboard.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowInlineAuth((v) => !v)}
-                    className="min-h-[38px] px-3.5 rounded-xl bg-amber-500/12 hover:bg-amber-500/20 border border-amber-500/35 text-xs font-semibold text-amber-300 transition-colors"
-                  >
-                    {showInlineAuth ? "Hide Sign-In" : "Sign In / Create Account"}
-                  </button>
+                </div>
+                <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+              </div>
+            ) : (
+              <div className="rounded-2xl bg-[#121215] border border-amber-500/35 p-5 space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                    <Store className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-white flex items-center gap-2">
+                      <span>Owner Account Required</span>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-wider">
+                        Mandatory
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
+                      Every business plot on India&apos;s 3D street map must have an authenticated owner. Sign in or enter your email &amp; password below to create your owner account and claim this plot.
+                    </p>
+                  </div>
                 </div>
 
-                {showInlineAuth && (
-                  <div className="pt-2 border-t border-neutral-800/80">
-                    <OwnerAuthCard
-                      compact
-                      redirectNext="/register"
-                      onAuthenticated={(u) => {
-                        setOwnerToken(u.accessToken);
-                        setOwnerEmail(u.email);
-                        setShowInlineAuth(false);
-                      }}
-                    />
-                  </div>
-                )}
+                <div className="pt-2 border-t border-neutral-800">
+                  <OwnerAuthCard
+                    compact
+                    redirectNext="/register"
+                    onAuthenticated={(u) => {
+                      setOwnerToken(u.accessToken);
+                      setOwnerEmail(u.email);
+                    }}
+                  />
+                </div>
               </div>
             )}
 
@@ -1048,6 +1089,15 @@ export default function RegisterPage() {
               </span>
             </label>
 
+            {!ownerEmail && (
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center gap-2.5 text-xs text-amber-200">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>
+                  Please create or sign in to your owner account above to unlock publishing. No unowned plots are permitted on the map.
+                </span>
+              </div>
+            )}
+
             <div className="pt-1 flex items-center gap-3">
               <button
                 type="button"
@@ -1062,11 +1112,16 @@ export default function RegisterPage() {
               </button>
               <button
                 type="button"
-                disabled={!consent || submitting}
+                disabled={!consent || submitting || !ownerEmail || !ownerToken}
                 onClick={handleSubmit}
-                className="flex-1 min-h-[48px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:bg-neutral-800 disabled:text-neutral-400 disabled:cursor-not-allowed text-neutral-950 font-semibold text-sm flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                className="flex-1 min-h-[48px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:bg-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed text-neutral-950 font-semibold text-sm flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
               >
-                {submitting ? (
+                {!ownerEmail ? (
+                  <>
+                    <Lock className="w-4 h-4" />
+                    <span>Owner Account Required to Publish</span>
+                  </>
+                ) : submitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     <span>Spawning 3D Plot…</span>

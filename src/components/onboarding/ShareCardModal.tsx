@@ -20,7 +20,7 @@ export function ShareCardModal({ storefront, isOpen, onClose }: ShareCardModalPr
   const category = CATEGORY_MAP.get(storefront.category_id);
   const shareUrl = typeof window !== "undefined"
     ? `${window.location.origin}/b/${storefront.slug}`
-    : `https://spotlight.nerqiva.com/b/${storefront.slug}`;
+    : `https://spotlightbazaar.com/b/${storefront.slug}`;
 
   const handleWhatsAppShare = () => {
     const text = `🎉 We just claimed our official digital storefront on Spotlight Bazaar! Check out our portfolio & rates here: ${shareUrl}`;
@@ -109,10 +109,10 @@ export function ShareCardModal({ storefront, isOpen, onClose }: ShareCardModalPr
             </div>
           </div>
 
-          {/* Card Bottom: Branding Footer */}
-          <div className="pt-3 border-t border-neutral-800/80 flex items-center justify-between text-[10px] text-neutral-400 font-mono tracking-wider">
-            <span>spotlight.nerqiva.com</span>
-            <span className="text-neutral-300 font-sans">by @nq_insta</span>
+          {/* Card Bottom: Clean Platform Identity */}
+          <div className="pt-3 border-t border-neutral-800/80 flex items-center justify-between text-[10px] text-neutral-400 font-medium tracking-wide">
+            <span>Spotlight Bazaar</span>
+            <span className="text-neutral-400">India&apos;s 3D Business Map</span>
           </div>
         </div>
 

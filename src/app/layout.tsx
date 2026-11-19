@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Spotlight Bazaar | India's Open Business Street",
   description: "Discover curated local wedding photographers, cafes, freelancers, and businesses across India on an open interactive map.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://spotlight.nerqiva.com"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://spotlightbazaar.com"),
   openGraph: {
     title: "Spotlight Bazaar | India's Open Business Street",
     description: "Discover verified local businesses, explore rates, and connect instantly on WhatsApp.",
