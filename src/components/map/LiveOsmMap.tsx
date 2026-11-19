@@ -30,6 +30,7 @@ import {
   Navigation,
   ExternalLink,
   Radio,
+  ShieldCheck,
 } from "lucide-react";
 import {
   formatWebsiteDisplay,
@@ -2471,6 +2472,15 @@ export function LiveOsmMap({
       const roofTagHtml = roofTag
         ? `<span style="font-size:9px;font-weight:700;letter-spacing:0.03em;padding:1px 6px;border-radius:9999px;background:rgba(255,255,255,0.08);color:#e5e7eb;flex-shrink:0;">${roofTag}</span>`
         : "";
+      const verifiedBadgeHtml = b.is_verified
+        ? `<span title="Verified by Nerqiva" style="font-size:9px;font-weight:700;display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:9999px;background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.4);flex-shrink:0;">
+            <svg style="width:10px;height:10px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+            <span>Verified</span>
+          </span>`
+        : "";
+      const featuredBadgeHtml = b.is_featured
+        ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:9999px;background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);flex-shrink:0;">★ Featured</span>`
+        : "";
 
       // Active Live Broadcast Sky-Badge (floating above roof when business has an active Deal/Need/Hiring/Event!)
       const activeBroadcast = (b.active_posts || []).find(
@@ -2497,6 +2507,7 @@ export function LiveOsmMap({
           <div style="border-color:${accentHex}bf;" class="px-2.5 py-1 rounded-full bg-[#080B12]/95 border shadow-xl flex items-center gap-1.5 backdrop-blur-md hover:scale-105 transition-all">
             <span style="background:${accentHex};" class="w-2 h-2 rounded-full"></span>
             <span class="text-[11px] font-bold text-white tracking-tight whitespace-nowrap">${safeName}</span>
+            ${verifiedBadgeHtml}
             ${levelBadgeHtml}
           </div>
           <div style="border-color:${accentHex}bf;" class="w-1.5 h-1.5 -mt-0.5 bg-[#080B12] rotate-45 border-r border-b"></div>
@@ -2514,6 +2525,8 @@ export function LiveOsmMap({
             <div class="flex flex-col text-left">
               <div class="flex items-center gap-1.5">
                 <span class="text-xs font-black text-white tracking-tight">${safeName}</span>
+                ${verifiedBadgeHtml}
+                ${featuredBadgeHtml}
                 ${levelBadgeHtml}
                 ${roofTagHtml}
                 ${safeDomain ? `<span class="text-[10px] font-medium text-amber-400/90">${safeDomain}</span>` : ""}
@@ -3188,6 +3201,17 @@ export function LiveOsmMap({
                       <span className="text-sm font-bold text-white tracking-tight truncate">
                         {activeStreetBusiness.name}
                       </span>
+                      {activeStreetBusiness.is_verified && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-semibold flex items-center gap-1 shrink-0">
+                          <ShieldCheck className="w-3 h-3 text-cyan-400" />
+                          <span>Verified</span>
+                        </span>
+                      )}
+                      {activeStreetBusiness.is_featured && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold shrink-0">
+                          ★ Featured
+                        </span>
+                      )}
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold flex items-center gap-1 shrink-0">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         Live Plot
