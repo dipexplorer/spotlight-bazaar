@@ -14,6 +14,8 @@ export const ACCENT_COLOR_PRESETS: AccentColorPreset[] = [
   { id: "rose", name: "Rose Quartz", hex: "#f43f5e", hexNum: 0xf43f5e },
   { id: "violet", name: "Royal Violet", hex: "#a78bfa", hexNum: 0xa78bfa },
   { id: "terracotta", name: "Sunset Copper", hex: "#fb923c", hexNum: 0xfb923c },
+  { id: "lime", name: "Electric Lime", hex: "#84cc16", hexNum: 0x84cc16 },
+  { id: "white", name: "Arctic Ice", hex: "#f8fafc", hexNum: 0xf8fafc },
 ];
 
 export const ALLOWED_ACCENT_HEXES = new Set(ACCENT_COLOR_PRESETS.map((c) => c.hex));
@@ -225,8 +227,11 @@ export function sanitizePlotConfig(raw: unknown): PlotConfig {
   if (!raw || typeof raw !== "object") return {};
   const obj = raw as Record<string, unknown>;
   const out: PlotConfig = {};
-  if (typeof obj.accentColor === "string" && ALLOWED_ACCENT_HEXES.has(obj.accentColor)) {
-    out.accentColor = obj.accentColor;
+  if (
+    typeof obj.accentColor === "string" &&
+    (ALLOWED_ACCENT_HEXES.has(obj.accentColor) || /^#[0-9a-fA-F]{6}$/i.test(obj.accentColor))
+  ) {
+    out.accentColor = obj.accentColor.toLowerCase();
   }
   if (
     typeof obj.facadeTheme === "string" &&

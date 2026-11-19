@@ -157,8 +157,16 @@ export default function DashboardPage() {
       return;
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      const sess = data.session;
+    supabase.auth.getSession().then(async ({ data }) => {
+      let sess = data.session;
+      if (sess && sess.expires_at && sess.expires_at * 1000 < Date.now() + 60000 && supabase) {
+        try {
+          const { data: refreshed } = await supabase.auth.refreshSession();
+          if (refreshed?.session) sess = refreshed.session;
+        } catch {
+          // ignore refresh error
+        }
+      }
       setAuthChecked(true);
       if (sess?.access_token) {
         setAccessToken(sess.access_token);
@@ -1044,6 +1052,7 @@ export default function DashboardPage() {
                 businessId={selectedBiz.id}
                 businessName={selectedBiz.name}
                 businessSlug={selectedBiz.slug}
+                categoryId={selectedBiz.category_id}
                 plotName={currentPlotSpec?.plotName || "3D Commercial Plot"}
                 currentLevel={(selectedBiz.plot_level as 1 | 2 | 3) || 1}
                 bazaarCoins={selectedBiz.bazaar_coins || 50}

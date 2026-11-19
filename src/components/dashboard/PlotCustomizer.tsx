@@ -15,18 +15,20 @@ import {
   Lock,
   Sparkles,
 } from "lucide-react";
-import { FacadeTheme, PlotConfig } from "@/types";
+import { CategoryId, FacadeTheme, PlotConfig } from "@/types";
 import {
   ACCENT_COLOR_PRESETS,
   CoinAuditResult,
   FACADE_THEME_PRESETS,
   PLOT_LEVEL_TIERS,
 } from "@/lib/constants/plotUpgrades";
+import { PlotLive3DViewer } from "./PlotLive3DViewer";
 
 interface PlotCustomizerProps {
   businessId: string;
   businessName: string;
   businessSlug: string;
+  categoryId?: CategoryId;
   plotName: string;
   currentLevel: 1 | 2 | 3;
   bazaarCoins: number;
@@ -41,6 +43,7 @@ export function PlotCustomizer({
   businessId,
   businessName,
   businessSlug,
+  categoryId = "other-business",
   plotName,
   currentLevel,
   bazaarCoins,
@@ -364,15 +367,18 @@ export function PlotCustomizer({
         onSubmit={handleSaveStyle}
         className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start"
       >
-        {/* Left: Interactive Live Elevation Preview */}
-        <div className="lg:col-span-5 rounded-2xl bg-[#121215] border border-neutral-800/90 overflow-hidden">
-          <div className="px-4 py-3 border-b border-neutral-800/80 flex items-center justify-between gap-2">
+        {/* Left: Interactive Live 3D WebGL POV Viewer */}
+        <div className="lg:col-span-7 rounded-2xl bg-[#121215] border border-neutral-800/90 overflow-hidden shadow-2xl flex flex-col">
+          <div className="px-4 py-3 border-b border-neutral-800/80 flex items-center justify-between gap-2 bg-[#0d0e12]">
             <div className="min-w-0">
-              <div className="text-xs font-semibold text-white truncate">
-                {plotName}
+              <div className="text-xs font-semibold text-white truncate flex items-center gap-2">
+                <span>{plotName}</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                  Interactive 3D WebGL
+                </span>
               </div>
               <div className="text-[11px] text-neutral-400">
-                Architectural elevation preview
+                Live 360° POV · Category Architectural Mesh
               </div>
             </div>
 
@@ -389,9 +395,9 @@ export function PlotCustomizer({
                     key={lvl}
                     type="button"
                     onClick={() => setPreviewLevel(lvl)}
-                    className={`min-h-[30px] px-2 rounded-md text-[11px] font-semibold tabular-nums transition-colors ${
+                    className={`min-h-[30px] px-2.5 rounded-md text-[11px] font-semibold tabular-nums transition-colors ${
                       active
-                        ? "bg-amber-500 text-neutral-950"
+                        ? "bg-amber-500 text-neutral-950 font-bold"
                         : "text-neutral-400 hover:text-white"
                     }`}
                   >
@@ -402,244 +408,28 @@ export function PlotCustomizer({
             </div>
           </div>
 
-          {/* Authored Architectural SVG Schematic */}
-          <div className="relative bg-[#09090b] p-4 flex flex-col items-center justify-center">
-            <svg
-              viewBox="0 0 360 225"
-              className="w-full max-w-[340px] h-auto"
-              role="img"
-              aria-label={`Level ${previewLevel} architectural preview with ${activeFacadePreset.name} finish and ${accentColor} accent`}
-            >
-              <defs>
-                <pattern
-                  id="plotDraftGrid"
-                  width="18"
-                  height="18"
-                  patternUnits="userSpaceOnUse"
-                >
-                  <path
-                    d="M 18 0 L 0 0 0 18"
-                    fill="none"
-                    stroke="#1c1c22"
-                    strokeWidth="0.7"
-                  />
-                </pattern>
-                <filter id="accentGlow" x="-30%" y="-30%" width="160%" height="160%">
-                  <feGaussianBlur stdDeviation="3.2" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-              </defs>
-
-              {/* Drafting background */}
-              <rect width="360" height="225" fill="url(#plotDraftGrid)" rx="10" />
-
-              {/* Ground shadow */}
-              <ellipse cx="180" cy="186" rx="134" ry="16" fill="#000000" opacity="0.55" />
-
-              {/* Base Plinth & Apron reacting to Facade Theme */}
-              <rect
-                x="46"
-                y="168"
-                width="268"
-                height="16"
-                rx="3"
-                fill={activeFacadePreset.swatches[0]}
-                stroke="#334155"
-                strokeWidth="1"
-              />
-              <rect
-                x="56"
-                y="163"
-                width="248"
-                height="6"
-                rx="1.5"
-                fill={activeFacadePreset.swatches[1]}
-                opacity="0.9"
-              />
-
-              {/* Level 2+: Glowing Perimeter Runway LEDs + Corner Bollards + Courtyard Trees */}
-              {previewLevel >= 2 && (
-                <g>
-                  {/* Rear Ornamental Courtyard Trees */}
-                  <g>
-                    <rect x="65" y="138" width="4" height="25" fill="#78350f" />
-                    <circle cx="67" cy="130" r="13" fill="#15803d" />
-                    <circle cx="63" cy="126" r="9" fill="#16a34a" />
-                  </g>
-                  <g>
-                    <rect x="291" y="138" width="4" height="25" fill="#78350f" />
-                    <circle cx="293" cy="130" r="13" fill="#15803d" />
-                    <circle cx="297" cy="126" r="9" fill="#16a34a" />
-                  </g>
-
-                  {/* Perimeter Runway LED Strip */}
-                  <rect
-                    x="48"
-                    y="167"
-                    width="264"
-                    height="2.8"
-                    rx="1.4"
-                    fill={accentColor}
-                    filter="url(#accentGlow)"
-                  />
-
-                  {/* Corner Bollard Lights */}
-                  {[58, 92, 268, 302].map((bx) => (
-                    <g key={bx}>
-                      <rect x={bx - 2} y="152" width="4" height="12" rx="1" fill="#1e293b" />
-                      <rect
-                        x={bx - 2.4}
-                        y="149"
-                        width="4.8"
-                        height="3.6"
-                        rx="1"
-                        fill={accentColor}
-                        filter="url(#accentGlow)"
-                      />
-                    </g>
-                  ))}
-                </g>
-              )}
-
-              {/* Main Category Building Massing */}
-              <rect
-                x="100"
-                y="88"
-                width="160"
-                height="75"
-                rx="3"
-                fill={facadeTheme === "obsidian" ? "#18181b" : facadeTheme === "terracotta" ? "#451a03" : "#1e293b"}
-                stroke="#475569"
-                strokeWidth="1.2"
-              />
-              {/* Upper Architectural Trim Band */}
-              <rect
-                x="96"
-                y="82"
-                width="168"
-                height="9"
-                rx="2"
-                fill={activeFacadePreset.swatches[1]}
-              />
-
-              {/* Ground Floor Glass Showroom & Doorway */}
-              <rect x="112" y="122" width="48" height="36" rx="2" fill="#0f172a" stroke="#334155" />
-              <rect x="166" y="126" width="28" height="37" rx="2" fill="#020617" stroke={accentColor} strokeWidth="1.2" />
-              <rect x="200" y="122" width="48" height="36" rx="2" fill="#0f172a" stroke="#334155" />
-              {/* Warm Interior Glow */}
-              <rect x="115" y="125" width="42" height="30" rx="1" fill="#fef3c7" opacity="0.16" />
-              <rect x="203" y="125" width="42" height="30" rx="1" fill="#fef3c7" opacity="0.16" />
-
-              {/* Storefront Fascia Accent LED Bar */}
-              <rect
-                x="104"
-                y="113"
-                width="152"
-                height="3.2"
-                rx="1.6"
-                fill={accentColor}
-                filter="url(#accentGlow)"
-              />
-
-              {/* Upper Windows */}
-              <rect x="114" y="96" width="38" height="12" rx="1.5" fill="#38bdf8" opacity="0.28" />
-              <rect x="161" y="96" width="38" height="12" rx="1.5" fill="#38bdf8" opacity="0.28" />
-              <rect x="208" y="96" width="38" height="12" rx="1.5" fill="#38bdf8" opacity="0.28" />
-
-              {/* Level 3: Sky-Terrace Crown Pergola + Solar Canopy + Vertical Beacon Fins */}
-              {previewLevel >= 3 && (
-                <g>
-                  {/* Twin Vertical Corner Beacon Fins */}
-                  <rect
-                    x="95"
-                    y="92"
-                    width="3"
-                    height="64"
-                    rx="1.5"
-                    fill={accentColor}
-                    filter="url(#accentGlow)"
-                  />
-                  <rect
-                    x="262"
-                    y="92"
-                    width="3"
-                    height="64"
-                    rx="1.5"
-                    fill={accentColor}
-                    filter="url(#accentGlow)"
-                  />
-
-                  {/* Steel Sky-Terrace Columns */}
-                  <rect x="118" y="56" width="4" height="26" fill="#334155" />
-                  <rect x="238" y="56" width="4" height="26" fill="#334155" />
-
-                  {/* Cantilevered Sky-Terrace Canopy Rim */}
-                  <rect
-                    x="104"
-                    y="49"
-                    width="152"
-                    height="9"
-                    rx="2"
-                    fill="#0f172a"
-                    stroke="#475569"
-                    strokeWidth="1"
-                  />
-
-                  {/* Rooftop Solar Skylight Panels */}
-                  <polygon points="122,49 156,42 162,49" fill="#1d4ed8" opacity="0.9" />
-                  <polygon points="164,49 198,42 204,49" fill="#1d4ed8" opacity="0.9" />
-                  <polygon points="206,49 240,42 246,49" fill="#1d4ed8" opacity="0.9" />
-
-                  {/* Glowing Brand Marquee Crown Halo */}
-                  <rect
-                    x="102"
-                    y="53"
-                    width="156"
-                    height="3"
-                    rx="1.5"
-                    fill={accentColor}
-                    filter="url(#accentGlow)"
-                  />
-                </g>
-              )}
-
-              {/* Rooftop Tag Pill */}
-              <g transform={previewLevel >= 3 ? "translate(180, 24)" : "translate(180, 62)"}>
-                <rect
-                  x="-76"
-                  y="-12"
-                  width="152"
-                  height="22"
-                  rx="11"
-                  fill="#09090b"
-                  stroke={accentColor}
-                  strokeWidth="1.2"
-                />
-                <text
-                  x="0"
-                  y="3"
-                  textAnchor="middle"
-                  fill="#ffffff"
-                  fontSize="10"
-                  fontWeight="700"
-                  fontFamily="ui-sans-serif, system-ui, sans-serif"
-                >
-                  {displayTag}
-                </text>
-              </g>
-            </svg>
+          {/* Interactive Three.js WebGL POV Canvas */}
+          <div className="relative bg-[#09090b] flex-1">
+            <PlotLive3DViewer
+              categoryId={categoryId}
+              plotLevel={previewLevel}
+              facadeTheme={facadeTheme}
+              accentColor={accentColor}
+              signText={roofSignText}
+              businessName={businessName}
+              className="w-full h-[400px] sm:h-[480px] rounded-none border-0"
+            />
 
             {previewLevel > currentLevel && (
-              <p className="mt-2 text-[11px] text-amber-300/90 text-center">
-                Previewing Level {previewLevel} upgrade ({PLOT_LEVEL_TIERS[previewLevel - 1].minCoins} coins required)
-              </p>
+              <div className="px-3 py-2 bg-amber-500/10 border-t border-amber-500/25 text-center">
+                <p className="text-[11px] text-amber-300/95 font-medium">
+                  Previewing Level {previewLevel} upgrade ({PLOT_LEVEL_TIERS[previewLevel - 1].minCoins} coins required) · 3D model updates in real-time
+                </p>
+              </div>
             )}
           </div>
 
-          <div className="px-4 py-3 border-t border-neutral-800/80 flex items-center justify-between gap-2 text-xs">
+          <div className="px-4 py-3 border-t border-neutral-800/80 flex items-center justify-between gap-2 text-xs bg-[#0e0f13]">
             <span className="text-neutral-400">
               Live tier: <strong className="text-neutral-200">Level {currentLevel}</strong>
             </span>
@@ -654,7 +444,7 @@ export function PlotCustomizer({
         </div>
 
         {/* Right: Material, Accent Glow & Rooftop Tag Controls */}
-        <div className="lg:col-span-7 space-y-5">
+        <div className="lg:col-span-5 space-y-5">
           {/* Facade Material Finish */}
           <fieldset className="space-y-2.5">
             <legend className="text-sm font-semibold text-white">
