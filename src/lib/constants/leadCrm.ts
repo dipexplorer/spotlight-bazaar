@@ -14,17 +14,23 @@ export interface EvaluatedLead {
   businessId: string;
   slug: string;
   name: string;
+  tagline: string;
+  description: string;
   city: string;
   state: string;
   pincode: string;
+  lat: number;
+  lon: number;
   category: CategoryId;
   phone: string;
   cleanPhone: string;
   instagram: string;
   website: string | null;
   googleMaps: string | null;
+  startingPrice: string;
   plotLevel: 1 | 2 | 3;
   bazaarCoins: number;
+  plotConfig: Record<string, unknown>;
   totalViews: number;
   totalLeads: number;
   wavesCount: number;
@@ -39,6 +45,7 @@ export interface EvaluatedLead {
   hasInstagram: boolean;
   activeNeedsService: BusinessPost[];
   activePosts: BusinessPost[];
+  allPosts: BusinessPost[];
 
   leadScore: number;
   leadPriority: LeadPriority;
@@ -192,17 +199,23 @@ export function evaluateNerqivaLead(
     businessId: business.id,
     slug: business.slug,
     name: business.name,
+    tagline: business.tagline || "",
+    description: business.description || "",
     city: business.city_name || "India",
     state: business.state_name || "India",
     pincode: business.pincode || "",
+    lat: typeof business.lat === "number" ? business.lat : 26.1445,
+    lon: typeof business.lon === "number" ? business.lon : 91.7362,
     category: business.category_id,
     phone: business.whatsapp_phone,
     cleanPhone,
     instagram: business.instagram_handle || "",
     website: business.website_url || null,
     googleMaps: business.google_maps_url || null,
+    startingPrice: business.starting_price || "",
     plotLevel: (business.plot_level === 3 ? 3 : business.plot_level === 2 ? 2 : 1) as 1 | 2 | 3,
     bazaarCoins: business.bazaar_coins || 50,
+    plotConfig: (business.plot_config as Record<string, unknown>) || {},
     totalViews: business.total_views || 0,
     totalLeads: business.total_leads || 0,
     wavesCount,
@@ -216,6 +229,7 @@ export function evaluateNerqivaLead(
     hasInstagram,
     activeNeedsService,
     activePosts: validActivePosts,
+    allPosts: activePosts,
 
     leadScore,
     leadPriority,

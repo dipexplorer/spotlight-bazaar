@@ -9,6 +9,7 @@ import {
   Check,
   CheckCircle2,
   Copy,
+  Edit3,
   ExternalLink,
   Eye,
   Filter,
@@ -21,6 +22,7 @@ import {
   MapPin,
   MessageCircle,
   Phone,
+  Plus,
   Radio,
   Search,
   ShieldAlert,
@@ -28,6 +30,7 @@ import {
   Sparkles,
   Star,
   Store,
+  Trash2,
   TrendingUp,
   X,
   Zap,
@@ -35,8 +38,9 @@ import {
 import { CATEGORIES } from "@/lib/constants/categories";
 import { EvaluatedLead, LeadPriority } from "@/lib/constants/leadCrm";
 import { supabase } from "@/lib/supabase/client";
+import { CategoryId, BusinessPost } from "@/types";
 
-function InstagramIcon({ className = "w-3 h-3" }: { className?: string }) {
+function InstagramIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
@@ -56,9 +60,74 @@ interface AdminMetrics {
 }
 
 type FilterTab = "all" | "hot_needs" | "missing_website" | "unverified" | "verified" | "featured";
+type DrawerTab = "edit" | "broadcasts" | "outreach" | "danger";
+
+interface EditFormState {
+  name: string;
+  tagline: string;
+  description: string;
+  category_id: CategoryId;
+  city_name: string;
+  state_name: string;
+  pincode: string;
+  lat: number;
+  lon: number;
+  whatsapp_phone: string;
+  instagram_handle: string;
+  website_url: string;
+  google_maps_url: string;
+  starting_price: string;
+  plot_level: 1 | 2 | 3;
+  bazaar_coins: number;
+  is_verified: boolean;
+  is_featured: boolean;
+  status: "active" | "pending" | "suspended";
+}
+
+interface CreateFormState {
+  name: string;
+  tagline: string;
+  description: string;
+  category_id: CategoryId;
+  city_name: string;
+  state_name: string;
+  pincode: string;
+  whatsapp_phone: string;
+  instagram_handle: string;
+  website_url: string;
+  google_maps_url: string;
+  starting_price: string;
+  lat: number;
+  lon: number;
+  plot_level: 1 | 2 | 3;
+  bazaar_coins: number;
+  is_verified: boolean;
+  is_featured: boolean;
+}
+
+const DEFAULT_CREATE_FORM: CreateFormState = {
+  name: "",
+  tagline: "",
+  description: "",
+  category_id: "food-hospitality",
+  city_name: "Guwahati",
+  state_name: "Assam",
+  pincode: "781001",
+  whatsapp_phone: "",
+  instagram_handle: "",
+  website_url: "",
+  google_maps_url: "",
+  starting_price: "",
+  lat: 26.1445,
+  lon: 91.7362,
+  plot_level: 1,
+  bazaar_coins: 50,
+  is_verified: true,
+  is_featured: false,
+};
 
 export default function AdminLeadsPage() {
-  // Auth state
+  // 1. Auth state
   const [adminKey, setAdminKey] = useState<string>("");
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
   const [checkingAuth, setCheckingAuth] = useState<boolean>(true);
@@ -67,7 +136,7 @@ export default function AdminLeadsPage() {
   const [unlocking, setUnlocking] = useState<boolean>(false);
   const [showPasskey, setShowPasskey] = useState<boolean>(false);
 
-  // Data state
+  // 2. Data state
   const [loading, setLoading] = useState<boolean>(false);
   const [leads, setLeads] = useState<EvaluatedLead[]>([]);
   const [metrics, setMetrics] = useState<AdminMetrics>({
@@ -79,13 +148,25 @@ export default function AdminLeadsPage() {
     totalLeads: 0,
   });
 
-  // Filter & Search state
+  // 3. Filter & Search state
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
-  // Drawer & Outreach modal state
-  const [activeLead, setActiveLead] = useState<EvaluatedLead | null>(null);
+  // 4. Drawer & Modal state
+  const [selectedLead, setSelectedLead] = useState<EvaluatedLead | null>(null);
+  const [drawerTab, setDrawerTab] = useState<DrawerTab>("edit");
+  const [editFormData, setEditFormData] = useState<EditFormState | null>(null);
+  const [savingEdit, setSavingEdit] = useState<boolean>(false);
+
+  const [deleteTarget, setDeleteTarget] = useState<EvaluatedLead | null>(null);
+  const [deleting, setDeleting] = useState<boolean>(false);
+
+  const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+  const [createFormData, setCreateFormData] = useState<CreateFormState>(DEFAULT_CREATE_FORM);
+  const [creating, setCreating] = useState<boolean>(false);
+
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [copiedScript, setCopiedScript] = useState<boolean>(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -96,6 +177,35 @@ export default function AdminLeadsPage() {
       setToastMessage((curr) => (curr === msg ? null : curr));
     }, 3200);
   };
+
+  // Sync editFormData when selectedLead changes
+  useEffect(() => {
+    if (selectedLead) {
+      setEditFormData({
+        name: selectedLead.name,
+        tagline: selectedLead.tagline,
+        description: selectedLead.description,
+        category_id: selectedLead.category,
+        city_name: selectedLead.city,
+        state_name: selectedLead.state,
+        pincode: selectedLead.pincode,
+        lat: selectedLead.lat,
+        lon: selectedLead.lon,
+        whatsapp_phone: selectedLead.phone,
+        instagram_handle: selectedLead.instagram,
+        website_url: selectedLead.website || "",
+        google_maps_url: selectedLead.googleMaps || "",
+        starting_price: selectedLead.startingPrice,
+        plot_level: selectedLead.plotLevel,
+        bazaar_coins: selectedLead.bazaarCoins,
+        is_verified: selectedLead.isVerified,
+        is_featured: selectedLead.isFeatured,
+        status: selectedLead.status,
+      });
+    } else {
+      setEditFormData(null);
+    }
+  }, [selectedLead]);
 
   // Fetch leads from backend
   const fetchLeads = useCallback(async (key: string) => {
@@ -237,6 +347,9 @@ export default function AdminLeadsPage() {
     setLeads((prev) =>
       prev.map((l) => (l.businessId === lead.businessId ? { ...l, isVerified: nextVal } : l))
     );
+    if (selectedLead?.businessId === lead.businessId) {
+      setSelectedLead((prev) => (prev ? { ...prev, isVerified: nextVal } : null));
+    }
 
     try {
       const res = await fetch(`/api/admin/leads/${lead.businessId}`, {
@@ -251,7 +364,6 @@ export default function AdminLeadsPage() {
       if (!res.ok) throw new Error("Failed to update verification status.");
       showToast(nextVal ? `Verified badge granted to ${lead.name}` : `Verified badge revoked from ${lead.name}`);
     } catch {
-      // Revert on failure
       setLeads((prev) =>
         prev.map((l) => (l.businessId === lead.businessId ? { ...l, isVerified: !nextVal } : l))
       );
@@ -266,10 +378,12 @@ export default function AdminLeadsPage() {
     const nextVal = !lead.isFeatured;
     setUpdatingId(lead.businessId);
 
-    // Optimistic UI update
     setLeads((prev) =>
       prev.map((l) => (l.businessId === lead.businessId ? { ...l, isFeatured: nextVal } : l))
     );
+    if (selectedLead?.businessId === lead.businessId) {
+      setSelectedLead((prev) => (prev ? { ...prev, isFeatured: nextVal } : null));
+    }
 
     try {
       const res = await fetch(`/api/admin/leads/${lead.businessId}`, {
@@ -300,6 +414,9 @@ export default function AdminLeadsPage() {
     setLeads((prev) =>
       prev.map((l) => (l.businessId === lead.businessId ? { ...l, status } : l))
     );
+    if (selectedLead?.businessId === lead.businessId) {
+      setSelectedLead((prev) => (prev ? { ...prev, status } : null));
+    }
 
     try {
       const res = await fetch(`/api/admin/leads/${lead.businessId}`, {
@@ -317,6 +434,142 @@ export default function AdminLeadsPage() {
       showToast("Status change failed.");
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  // Save Full Edit Form
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedLead || !editFormData) return;
+
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/admin/leads/${selectedLead.businessId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey,
+        },
+        body: JSON.stringify(editFormData),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to update business.");
+      }
+
+      showToast(`Changes saved successfully for ${editFormData.name}`);
+      fetchLeads(adminKey);
+      setSelectedLead(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save edits.";
+      showToast(msg);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  // Delete Business Permanent
+  const handleDeleteBusiness = async () => {
+    if (!deleteTarget) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/leads/${deleteTarget.businessId}`, {
+        method: "DELETE",
+        headers: {
+          "x-admin-key": adminKey,
+        },
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to delete business.");
+      }
+
+      showToast(`Permanently deleted ${deleteTarget.name}`);
+      setLeads((prev) => prev.filter((l) => l.businessId !== deleteTarget.businessId));
+      if (selectedLead?.businessId === deleteTarget.businessId) {
+        setSelectedLead(null);
+      }
+      setDeleteTarget(null);
+      fetchLeads(adminKey);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Delete failed.";
+      showToast(msg);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Delete a specific street broadcast
+  const handleDeleteBroadcast = async (postId: string) => {
+    if (!selectedLead) return;
+
+    setDeletingPostId(postId);
+    try {
+      const res = await fetch(`/api/admin/posts/${postId}`, {
+        method: "DELETE",
+        headers: {
+          "x-admin-key": adminKey,
+        },
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to delete broadcast.");
+      }
+
+      showToast("Street broadcast deleted.");
+      // Optimistic remove from local state
+      setSelectedLead((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          allPosts: prev.allPosts.filter((p) => p.id !== postId),
+          activePosts: prev.activePosts.filter((p) => p.id !== postId),
+          activeNeedsService: prev.activeNeedsService.filter((p) => p.id !== postId),
+        };
+      });
+      fetchLeads(adminKey);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Broadcast deletion failed.";
+      showToast(msg);
+    } finally {
+      setDeletingPostId(null);
+    }
+  };
+
+  // Create Business Onboarding
+  const handleCreateBusiness = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createFormData.name.trim()) return;
+
+    setCreating(true);
+    try {
+      const res = await fetch("/api/admin/leads", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey,
+        },
+        body: JSON.stringify(createFormData),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to create business.");
+      }
+
+      showToast(`Onboarded ${createFormData.name} successfully!`);
+      setShowCreateModal(false);
+      setCreateFormData(DEFAULT_CREATE_FORM);
+      fetchLeads(adminKey);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to create business.";
+      showToast(msg);
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -360,6 +613,12 @@ export default function AdminLeadsPage() {
     });
   };
 
+  // Open Drawer to specific tab
+  const openLeadDrawer = (lead: EvaluatedLead, tab: DrawerTab = "edit") => {
+    setSelectedLead(lead);
+    setDrawerTab(tab);
+  };
+
   // Loading Screen
   if (checkingAuth) {
     return (
@@ -388,20 +647,16 @@ export default function AdminLeadsPage() {
 
         <main className="flex-1 flex items-center justify-center px-4 py-12">
           <div className="max-w-md w-full space-y-6 text-center">
-            <div className="mx-auto w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <div className="mx-auto w-16 h-16 rounded-2xl bg-[#121215] border border-neutral-800 flex items-center justify-center text-amber-400">
               <KeyRound className="w-7 h-7" />
             </div>
 
             <div className="space-y-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/15 border border-amber-500/35 text-amber-300">
-                <Radio className="w-3.5 h-3.5 animate-pulse" />
-                <span>NERQIVA COMMAND</span>
-              </span>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-                Admin Lead CRM
+                Nerqiva Admin CRM
               </h1>
               <p className="text-sm text-neutral-400 leading-relaxed max-w-sm mx-auto">
-                Protected console for reviewing incoming high-street registrations, issuing verified checkmarks, and managing client outreach.
+                Protected console for reviewing incoming registrations, managing verified badges, full storefront CRUD, and client outreach.
               </p>
             </div>
 
@@ -454,7 +709,7 @@ export default function AdminLeadsPage() {
                 ) : (
                   <>
                     <Lock className="w-4 h-4" />
-                    <span>Unlock Admin CRM</span>
+                    <span>Unlock Admin Console</span>
                   </>
                 )}
               </button>
@@ -499,15 +754,24 @@ export default function AdminLeadsPage() {
             <div className="flex items-center gap-2 min-w-0">
               <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
               <span className="text-xs font-bold text-white tracking-tight truncate">
-                NERQIVA LEAD CRM
+                NERQIVA COMMAND
               </span>
-              <span className="hidden md:inline text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-300 font-mono">
-                Live Operations
+              <span className="hidden md:inline text-[11px] px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-400 font-mono">
+                Storefront Operations
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(true)}
+              className="inline-flex items-center gap-1.5 min-h-[38px] px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Business</span>
+            </button>
+
             <Link
               href="/dashboard"
               className="inline-flex items-center gap-1.5 min-h-[38px] px-3 rounded-xl bg-[#121215] hover:bg-neutral-800 border border-neutral-800 text-xs font-medium text-neutral-200 hover:text-white transition-colors"
@@ -642,11 +906,11 @@ export default function AdminLeadsPage() {
             {(
               [
                 { id: "all", label: `All (${leads.length})` },
-                { id: "hot_needs", label: `🔥 Hot Needs (${metrics.hotNeedsCount})` },
-                { id: "missing_website", label: `⚡ No Website (${metrics.missingWebsiteCount})` },
-                { id: "unverified", label: `⏳ Pending Review (${leads.filter((l) => !l.isVerified).length})` },
-                { id: "verified", label: `✓ Verified (${metrics.verifiedCount})` },
-                { id: "featured", label: `⭐ Featured (${leads.filter((l) => l.isFeatured).length})` },
+                { id: "hot_needs", label: `Hot Needs (${metrics.hotNeedsCount})` },
+                { id: "missing_website", label: `No Website (${metrics.missingWebsiteCount})` },
+                { id: "unverified", label: `Pending Review (${leads.filter((l) => !l.isVerified).length})` },
+                { id: "verified", label: `Verified (${metrics.verifiedCount})` },
+                { id: "featured", label: `Featured (${leads.filter((l) => l.isFeatured).length})` },
               ] as const
             ).map((t) => {
               const active = activeTab === t.id;
@@ -703,6 +967,9 @@ export default function AdminLeadsPage() {
                             <span className="font-bold text-white text-sm truncate">{lead.name}</span>
                             <span className="text-[10px] px-1.5 py-0.2 rounded bg-neutral-900 border border-neutral-800 text-neutral-400 font-mono">
                               Lv.{lead.plotLevel}
+                            </span>
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/10 border border-amber-500/25 text-amber-300 font-mono">
+                              {lead.bazaarCoins} coins
                             </span>
                             {lead.isVerified && (
                               <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.2 rounded-full bg-cyan-500/15 border border-cyan-500/35 text-cyan-300 font-semibold">
@@ -766,8 +1033,8 @@ export default function AdminLeadsPage() {
                         </Link>
                       </div>
 
-                      <div className="pt-1 flex items-center justify-between gap-2 border-t border-neutral-800/60">
-                        <div className="flex items-center gap-2">
+                      <div className="pt-2 flex items-center justify-between gap-2 border-t border-neutral-800/60">
+                        <div className="flex items-center gap-1.5">
                           <button
                             type="button"
                             disabled={isUpdating}
@@ -811,14 +1078,25 @@ export default function AdminLeadsPage() {
                           </select>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => setActiveLead(lead)}
-                          className="min-h-[38px] px-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs inline-flex items-center gap-1.5 transition-colors"
-                        >
-                          <Zap className="w-3.5 h-3.5" />
-                          <span>Outreach</span>
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openLeadDrawer(lead, "edit")}
+                            className="min-h-[38px] px-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-medium text-xs inline-flex items-center gap-1 transition-colors"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => openLeadDrawer(lead, "outreach")}
+                            className="min-h-[38px] px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs inline-flex items-center gap-1 transition-colors"
+                          >
+                            <Zap className="w-3.5 h-3.5" />
+                            <span>Outreach</span>
+                          </button>
+                        </div>
                       </div>
                     </article>
                   );
@@ -833,11 +1111,12 @@ export default function AdminLeadsPage() {
                       <th className="py-3.5 px-4">Business</th>
                       <th className="py-3.5 px-4">Location</th>
                       <th className="py-3.5 px-4">Digital Presence</th>
+                      <th className="py-3.5 px-4 text-center">Level &amp; Coins</th>
                       <th className="py-3.5 px-4 text-center">Score</th>
                       <th className="py-3.5 px-4 text-center">Verified</th>
                       <th className="py-3.5 px-4 text-center">Featured</th>
                       <th className="py-3.5 px-4 text-center">Status</th>
-                      <th className="py-3.5 px-4 text-right">Outreach</th>
+                      <th className="py-3.5 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-800/60">
@@ -859,9 +1138,6 @@ export default function AdminLeadsPage() {
                             <div className="flex flex-col">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className="font-bold text-white text-sm">{lead.name}</span>
-                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-neutral-900 border border-neutral-800 text-neutral-400 font-mono">
-                                  Lv.{lead.plotLevel}
-                                </span>
                                 {lead.activeNeedsService.length > 0 && (
                                   <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/35 text-rose-300 font-bold">
                                     <Flame className="w-2.5 h-2.5" />
@@ -943,6 +1219,14 @@ export default function AdminLeadsPage() {
                             </div>
                           </td>
 
+                          {/* Level & Coins */}
+                          <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                            <div className="flex flex-col items-center gap-0.5 font-mono">
+                              <span className="text-xs font-bold text-white">Lv.{lead.plotLevel}</span>
+                              <span className="text-[10px] text-amber-400">{lead.bazaarCoins} coins</span>
+                            </div>
+                          </td>
+
                           {/* Opportunity Score */}
                           <td className="py-3.5 px-4 text-center whitespace-nowrap">
                             <span
@@ -998,11 +1282,11 @@ export default function AdminLeadsPage() {
                               aria-label={`Update listing status for ${lead.name}`}
                               className={`px-2 py-1 rounded-lg text-xs font-semibold border bg-[#09090b] focus:outline-none ${
                                 lead.status === "active"
-                                ? "text-emerald-400 border-emerald-500/30"
-                                : lead.status === "pending"
-                                  ? "text-amber-400 border-amber-500/30"
-                                  : "text-red-400 border-red-500/30"
-                            }`}
+                                  ? "text-emerald-400 border-emerald-500/30"
+                                  : lead.status === "pending"
+                                    ? "text-amber-400 border-amber-500/30"
+                                    : "text-red-400 border-red-500/30"
+                              }`}
                             >
                               <option value="active">Active</option>
                               <option value="pending">Pending</option>
@@ -1010,16 +1294,38 @@ export default function AdminLeadsPage() {
                             </select>
                           </td>
 
-                          {/* Outreach Button */}
+                          {/* Actions: Edit & Outreach & Delete */}
                           <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                            <button
-                              type="button"
-                              onClick={() => setActiveLead(lead)}
-                              className="inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs transition-colors"
-                            >
-                              <Zap className="w-3.5 h-3.5" />
-                              <span>Outreach</span>
-                            </button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => openLeadDrawer(lead, "edit")}
+                                title="Edit Business Storefront"
+                                className="min-h-[36px] px-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 text-neutral-300 hover:text-white font-medium text-xs inline-flex items-center gap-1 transition-colors"
+                              >
+                                <Edit3 className="w-3.5 h-3.5 text-neutral-400" />
+                                <span>Edit</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => openLeadDrawer(lead, "outreach")}
+                                title="Outreach Intelligence"
+                                className="min-h-[36px] px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs inline-flex items-center gap-1 transition-colors"
+                              >
+                                <Zap className="w-3.5 h-3.5" />
+                                <span>Outreach</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setDeleteTarget(lead)}
+                                title="Delete Storefront"
+                                className="min-h-[36px] min-w-[36px] p-2 rounded-xl bg-neutral-900 hover:bg-red-500/20 border border-neutral-800 hover:border-red-500/40 text-neutral-500 hover:text-red-400 inline-flex items-center justify-center transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1032,211 +1338,883 @@ export default function AdminLeadsPage() {
         </section>
       </main>
 
-      {/* 3. NERQIVA LEAD INTELLIGENCE & COLD OUTREACH DRAWER */}
-      {activeLead && (
+      {/* 3. UNIFIED BUSINESS MANAGEMENT DRAWER (EDIT / BROADCASTS / OUTREACH / DANGER) */}
+      {selectedLead && editFormData && (
         <div
           role="dialog"
           aria-modal="true"
-          aria-label={`Lead Intelligence for ${activeLead.name}`}
-          className="fixed inset-0 z-50 flex items-center justify-end bg-black/70 backdrop-blur-sm animate-in fade-in"
+          aria-label={`Manage ${selectedLead.name}`}
+          className="fixed inset-0 z-50 flex items-center justify-end bg-black/75 backdrop-blur-sm animate-in fade-in"
         >
-          <div className="w-full max-w-xl h-full bg-[#121215] border-l border-neutral-800 p-6 flex flex-col justify-between overflow-y-auto space-y-6">
-            <div className="space-y-6">
-              {/* Drawer Header */}
-              <div className="flex items-start justify-between gap-4 pb-4 border-b border-neutral-800">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-amber-400 tracking-wider uppercase font-mono">
-                      Nerqiva Outreach Intel
+          <div className="w-full max-w-2xl h-full bg-[#121215] border-l border-neutral-800 flex flex-col justify-between overflow-y-auto">
+            {/* Drawer Header */}
+            <div className="p-5 border-b border-neutral-800/80 bg-[#09090b]/80 sticky top-0 z-10 space-y-3">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-white tracking-tight truncate">
+                      {selectedLead.name}
                     </span>
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
-                        activeLead.leadPriority === "HOT"
-                          ? "text-rose-300 bg-rose-500/15 border-rose-500/35"
-                          : activeLead.leadPriority === "HIGH"
-                            ? "text-amber-300 bg-amber-500/15 border-amber-500/35"
-                            : "text-sky-300 bg-sky-500/15 border-sky-500/35"
-                      }`}
-                    >
-                      {activeLead.leadScore}/100 · {activeLead.leadPriority} LEAD
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold border text-amber-300 bg-amber-500/15 border-amber-500/35 font-mono">
+                      Lv.{selectedLead.plotLevel} · {selectedLead.bazaarCoins} Coins
                     </span>
+                    {selectedLead.isVerified && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold border text-cyan-300 bg-cyan-500/15 border-cyan-500/35">
+                        Verified
+                      </span>
+                    )}
                   </div>
-                  <h2 className="text-xl font-bold text-white tracking-tight">{activeLead.name}</h2>
                   <p className="text-xs text-neutral-400 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-amber-400" />
-                    <span>
-                      {activeLead.city}, {activeLead.state}
-                    </span>
+                    <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>{selectedLead.city}, {selectedLead.state}</span>
                     <span>·</span>
-                    <span>{activeLead.category}</span>
+                    <span>{selectedLead.category}</span>
                   </p>
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => setActiveLead(null)}
-                  aria-label="Close outreach drawer"
+                  onClick={() => setSelectedLead(null)}
+                  aria-label="Close drawer"
                   className="min-h-[38px] min-w-[38px] rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white flex items-center justify-center transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Verified Contact Details Grid */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3 rounded-xl bg-[#09090b] border border-neutral-800/80 space-y-1">
-                  <span className="text-neutral-500 flex items-center gap-1">
-                    <Phone className="w-3 h-3" />
-                    <span>WhatsApp Mobile</span>
-                  </span>
-                  <div className="font-mono text-neutral-100 font-semibold">
-                    {activeLead.phone || "Not provided"}
-                  </div>
-                </div>
+              {/* Drawer Tabs */}
+              <div className="flex items-center gap-1.5 pt-1 overflow-x-auto text-xs">
+                <button
+                  type="button"
+                  onClick={() => setDrawerTab("edit")}
+                  className={`min-h-[34px] px-3 rounded-lg font-medium transition-colors ${
+                    drawerTab === "edit"
+                      ? "bg-amber-500/15 border border-amber-500/40 text-amber-300"
+                      : "text-neutral-400 hover:text-white"
+                  }`}
+                >
+                  Edit Profile
+                </button>
 
-                <div className="p-3 rounded-xl bg-[#09090b] border border-neutral-800/80 space-y-1">
-                  <span className="text-neutral-500 flex items-center gap-1">
-                    <InstagramIcon className="w-3 h-3" />
-                    <span>Instagram</span>
-                  </span>
-                  <div className="font-mono text-neutral-100 font-semibold truncate">
-                    {activeLead.instagram ? `@${activeLead.instagram}` : "Not connected"}
-                  </div>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setDrawerTab("broadcasts")}
+                  className={`min-h-[34px] px-3 rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
+                    drawerTab === "broadcasts"
+                      ? "bg-amber-500/15 border border-amber-500/40 text-amber-300"
+                      : "text-neutral-400 hover:text-white"
+                  }`}
+                >
+                  <span>Broadcasts</span>
+                  {selectedLead.allPosts.length > 0 && (
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-neutral-800 text-neutral-300">
+                      {selectedLead.allPosts.length}
+                    </span>
+                  )}
+                </button>
 
-                <div className="p-3 rounded-xl bg-[#09090b] border border-neutral-800/80 space-y-1">
-                  <span className="text-neutral-500 flex items-center gap-1">
-                    <Globe className="w-3 h-3" />
-                    <span>Official Website</span>
-                  </span>
-                  <div className="truncate">
-                    {activeLead.hasWebsite ? (
-                      <a
-                        href={activeLead.website!}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-emerald-400 hover:underline flex items-center gap-1"
-                      >
-                        <span className="truncate">{activeLead.website}</span>
-                        <ExternalLink className="w-3 h-3 shrink-0" />
-                      </a>
-                    ) : (
-                      <span className="text-amber-400 font-medium">None (Prime Target)</span>
-                    )}
-                  </div>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setDrawerTab("outreach")}
+                  className={`min-h-[34px] px-3 rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
+                    drawerTab === "outreach"
+                      ? "bg-amber-500/15 border border-amber-500/40 text-amber-300"
+                      : "text-neutral-400 hover:text-white"
+                  }`}
+                >
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Outreach Intel</span>
+                </button>
 
-                <div className="p-3 rounded-xl bg-[#09090b] border border-neutral-800/80 space-y-1">
-                  <span className="text-neutral-500 flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    <span>Google Maps Link</span>
-                  </span>
-                  <div className="truncate">
-                    {activeLead.hasGoogleMaps ? (
-                      <a
-                        href={activeLead.googleMaps!}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sky-400 hover:underline flex items-center gap-1"
-                      >
-                        <span>Verified Map Pin</span>
-                        <ExternalLink className="w-3 h-3 shrink-0" />
-                      </a>
-                    ) : (
-                      <span className="text-neutral-500">Unlinked</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Objective Opportunity Diagnosis */}
-              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-1.5">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
-                  <Zap className="w-4 h-4 text-amber-400" />
-                  <span>OBJECTIVE OPPORTUNITY</span>
-                </div>
-                <p className="text-xs text-neutral-200 leading-relaxed">
-                  {activeLead.opportunitySummary}
-                </p>
-                <div className="pt-1 flex items-center justify-between text-[11px] text-neutral-400">
-                  <span>Suggested solution: <strong className="text-white">{activeLead.suggestedService}</strong></span>
-                  <span className="text-amber-300 font-mono font-bold">{activeLead.suggestedPriceFormatted}</span>
-                </div>
-              </div>
-
-              {/* The Brutally Honest 2-Message Cold Outreach Script */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-white tracking-wider uppercase font-mono flex items-center gap-1.5">
-                    <MessageCircle className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Brutally Honest 2-Message Script</span>
-                  </h3>
-                  <span className="text-[11px] text-neutral-500">Zero fluff · Concrete price</span>
-                </div>
-
-                {/* Message Bubble 1 */}
-                <div className="p-3.5 rounded-2xl bg-[#09090b] border border-neutral-800 space-y-1">
-                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
-                    Message 1 (The Observation)
-                  </span>
-                  <p className="text-xs text-neutral-100 leading-relaxed font-sans">
-                    {activeLead.outreachMessage1}
-                  </p>
-                </div>
-
-                {/* Message Bubble 2 */}
-                <div className="p-3.5 rounded-2xl bg-[#09090b] border border-neutral-800 space-y-1">
-                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
-                    Message 2 (Solution + Price + Low-Pressure Question)
-                  </span>
-                  <p className="text-xs text-neutral-100 leading-relaxed font-sans">
-                    {activeLead.outreachMessage2}
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setDrawerTab("danger")}
+                  className={`min-h-[34px] px-3 rounded-lg font-medium transition-colors text-red-400 hover:text-red-300 ${
+                    drawerTab === "danger"
+                      ? "bg-red-500/15 border border-red-500/40 text-red-300"
+                      : ""
+                  }`}
+                >
+                  Danger
+                </button>
               </div>
             </div>
 
-            {/* Action Bar */}
-            <div className="pt-4 border-t border-neutral-800 flex flex-col sm:flex-row items-center gap-3">
+            {/* Drawer Body */}
+            <div className="p-6 flex-1 overflow-y-auto space-y-6">
+              {/* TAB 1: EDIT PROFILE */}
+              {drawerTab === "edit" && (
+                <form id="edit-lead-form" onSubmit={handleSaveEdit} className="space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-neutral-300 font-medium">Business Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editFormData.name}
+                        onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white focus:outline-none focus:border-amber-500/75"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-neutral-300 font-medium">Tagline</label>
+                      <input
+                        type="text"
+                        value={editFormData.tagline}
+                        onChange={(e) => setEditFormData({ ...editFormData, tagline: e.target.value })}
+                        placeholder="e.g. Handmade Silk Sarees & Assamese Muga"
+                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white focus:outline-none focus:border-amber-500/75"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-neutral-300 font-medium">Description</label>
+                      <textarea
+                        rows={3}
+                        value={editFormData.description}
+                        onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                        placeholder="Detailed storefront story..."
+                        className="w-full p-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white focus:outline-none focus:border-amber-500/75 resize-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-neutral-300 font-medium">Category *</label>
+                      <select
+                        value={editFormData.category_id}
+                        onChange={(e) =>
+                          setEditFormData({ ...editFormData, category_id: e.target.value as CategoryId })
+                        }
+                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white focus:outline-none focus:border-amber-500/75"
+                      >
+                        {CATEGORIES.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-neutral-300 font-medium">WhatsApp Mobile (10 digits) *</label>
+                      <input
+                        type="tel"
+                        required
+                        value={editFormData.whatsapp_phone}
+                        onChange={(e) => setEditFormData({ ...editFormData, whatsapp_phone: e.target.value })}
+                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white font-mono focus:outline-none focus:border-amber-500/75"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-neutral-300 font-medium">City Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editFormData.city_name}
+                        onChange={(e) => setEditFormData({ ...editFormData, city_name: e.target.value })}
+                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white focus:outline-none focus:border-amber-500/75"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-neutral-300 font-medium">State Name</label>
+                      <input
+                        type="text"
+                        value={editFormData.state_name}
+                        onChange={(e) => setEditFormData({ ...editFormData, state_name: e.target.value })}
+                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white focus:outline-none focus:border-amber-500/75"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-neutral-300 font-medium">PIN Code</label>
+                      <input
+                        type="text"
+                        value={editFormData.pincode}
+                        onChange={(e) => setEditFormData({ ...editFormData, pincode: e.target.value })}
+                        placeholder="781001"
+                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white font-mono focus:outline-none focus:border-amber-500/75"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-neutral-300 font-medium">Starting Price (₹)</label>
+                      <input
+                        type="text"
+                        value={editFormData.starting_price}
+                        onChange={(e) => setEditFormData({ ...editFormData, starting_price: e.target.value })}
+                        placeholder="₹500 / ₹2,500"
+                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white focus:outline-none focus:border-amber-500/75"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-neutral-300 font-medium">Latitude</label>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        value={editFormData.lat}
+                        onChange={(e) => setEditFormData({ ...editFormData, lat: parseFloat(e.target.value) || 0 })}
+                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white font-mono focus:outline-none focus:border-amber-500/75"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-neutral-300 font-medium">Longitude</label>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        value={editFormData.lon}
+                        onChange={(e) => setEditFormData({ ...editFormData, lon: parseFloat(e.target.value) || 0 })}
+                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white font-mono focus:outline-none focus:border-amber-500/75"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-neutral-300 font-medium">Instagram Handle</label>
+                      <input
+                        type="text"
+                        value={editFormData.instagram_handle}
+                        onChange={(e) => setEditFormData({ ...editFormData, instagram_handle: e.target.value })}
+                        placeholder="@username"
+                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white focus:outline-none focus:border-amber-500/75"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-neutral-300 font-medium">Website URL</label>
+                      <input
+                        type="url"
+                        value={editFormData.website_url}
+                        onChange={(e) => setEditFormData({ ...editFormData, website_url: e.target.value })}
+                        placeholder="https://..."
+                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white focus:outline-none focus:border-amber-500/75"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-neutral-300 font-medium">Google Maps URL</label>
+                      <input
+                        type="url"
+                        value={editFormData.google_maps_url}
+                        onChange={(e) => setEditFormData({ ...editFormData, google_maps_url: e.target.value })}
+                        placeholder="https://maps.app.goo.gl/..."
+                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white focus:outline-none focus:border-amber-500/75"
+                      />
+                    </div>
+
+                    {/* Gamification & 3D Plot Controls */}
+                    <div className="space-y-1.5 sm:col-span-2 pt-2 border-t border-neutral-800">
+                      <span className="text-xs font-bold text-amber-400">3D Plot &amp; Gamification</span>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-neutral-300 font-medium">Plot Level</label>
+                      <select
+                        value={editFormData.plot_level}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            plot_level: parseInt(e.target.value, 10) as 1 | 2 | 3,
+                          })
+                        }
+                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white focus:outline-none focus:border-amber-500/75"
+                      >
+                        <option value={1}>Level 1 (Standard Shop &amp; Planters)</option>
+                        <option value={2}>Level 2 (Canopy, Festoon String Lights &amp; Bench)</option>
+                        <option value={3}>Level 3 (Dual-Tier Glass, Neon Sign &amp; Fountain)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-neutral-300 font-medium">Bazaar Coins Balance</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editFormData.bazaar_coins}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            bazaar_coins: Math.max(0, parseInt(e.target.value, 10) || 0),
+                          })
+                        }
+                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white font-mono focus:outline-none focus:border-amber-500/75"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 sm:col-span-2 pt-2 border-t border-neutral-800">
+                      <span className="text-xs font-bold text-cyan-400">Status &amp; Verification Badges</span>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-neutral-300 font-medium">Storefront Status</label>
+                      <select
+                        value={editFormData.status}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            status: e.target.value as "active" | "pending" | "suspended",
+                          })
+                        }
+                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white focus:outline-none focus:border-amber-500/75"
+                      >
+                        <option value="active">Active (Visible on 3D Map)</option>
+                        <option value="pending">Pending (Awaiting Review)</option>
+                        <option value="suspended">Suspended (Hidden from Map)</option>
+                      </select>
+                    </div>
+
+                    <div className="flex items-center gap-6 pt-5">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editFormData.is_verified}
+                          onChange={(e) => setEditFormData({ ...editFormData, is_verified: e.target.checked })}
+                          className="w-4 h-4 rounded text-cyan-500 focus:ring-cyan-400 bg-neutral-900 border-neutral-700"
+                        />
+                        <span className="text-neutral-200 font-medium">Verified Badge</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editFormData.is_featured}
+                          onChange={(e) => setEditFormData({ ...editFormData, is_featured: e.target.checked })}
+                          className="w-4 h-4 rounded text-amber-500 focus:ring-amber-400 bg-neutral-900 border-neutral-700"
+                        />
+                        <span className="text-neutral-200 font-medium">Featured Spotlight</span>
+                      </label>
+                    </div>
+                  </div>
+                </form>
+              )}
+
+              {/* TAB 2: STREET BROADCASTS & POSTS */}
+              {drawerTab === "broadcasts" && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-white">Live Street Broadcasts</h3>
+                      <p className="text-xs text-neutral-400">
+                        Moderate promotional deals, discount coupons, and service/dev inquiries posted by this business.
+                      </p>
+                    </div>
+                  </div>
+
+                  {selectedLead.allPosts.length === 0 ? (
+                    <div className="py-12 text-center rounded-2xl bg-[#09090b] border border-neutral-800 space-y-2 p-4">
+                      <Radio className="w-8 h-8 text-neutral-600 mx-auto" />
+                      <div className="text-xs font-semibold text-neutral-300">No broadcasts found</div>
+                      <p className="text-[11px] text-neutral-500 max-w-xs mx-auto">
+                        This business has not published any live deals, hiring alerts, or service requests yet.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {selectedLead.allPosts.map((post) => {
+                        const isDeleting = deletingPostId === post.id;
+                        const isExpired = new Date(post.expires_at).getTime() < Date.now();
+
+                        return (
+                          <div
+                            key={post.id}
+                            className="p-4 rounded-xl bg-[#09090b] border border-neutral-800 space-y-2 text-xs"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-white text-sm">{post.title}</span>
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-neutral-800 text-amber-300 font-mono">
+                                    {post.post_type}
+                                  </span>
+                                  {isExpired && (
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/25 text-red-400">
+                                      Expired
+                                    </span>
+                                  )}
+                                </div>
+                                {post.details && (
+                                  <p className="text-neutral-300 leading-relaxed">{post.details}</p>
+                                )}
+                              </div>
+
+                              <button
+                                type="button"
+                                disabled={isDeleting}
+                                onClick={() => handleDeleteBroadcast(post.id)}
+                                title="Delete this broadcast"
+                                className="min-h-[34px] px-2.5 rounded-lg bg-neutral-900 hover:bg-red-500/20 text-neutral-400 hover:text-red-400 border border-neutral-800 transition-colors inline-flex items-center gap-1 shrink-0"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>{isDeleting ? "Deleting…" : "Delete"}</span>
+                              </button>
+                            </div>
+
+                            <div className="flex items-center justify-between text-[11px] text-neutral-500 pt-1 border-t border-neutral-900 font-mono">
+                              <span>Clicks: {post.clicks || 0}</span>
+                              <span>Expires: {new Date(post.expires_at).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 3: NERQIVA OUTREACH INTEL */}
+              {drawerTab === "outreach" && (
+                <div className="space-y-6">
+                  {/* Verified Contact Details Grid */}
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="p-3 rounded-xl bg-[#09090b] border border-neutral-800/80 space-y-1">
+                      <span className="text-neutral-500 flex items-center gap-1">
+                        <Phone className="w-3 h-3" />
+                        <span>WhatsApp Mobile</span>
+                      </span>
+                      <div className="font-mono text-neutral-100 font-semibold">
+                        {selectedLead.phone || "Not provided"}
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-[#09090b] border border-neutral-800/80 space-y-1">
+                      <span className="text-neutral-500 flex items-center gap-1">
+                        <InstagramIcon className="w-3 h-3" />
+                        <span>Instagram</span>
+                      </span>
+                      <div className="font-mono text-neutral-100 font-semibold truncate">
+                        {selectedLead.instagram ? `@${selectedLead.instagram}` : "Not connected"}
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-[#09090b] border border-neutral-800/80 space-y-1">
+                      <span className="text-neutral-500 flex items-center gap-1">
+                        <Globe className="w-3 h-3" />
+                        <span>Official Website</span>
+                      </span>
+                      <div className="truncate">
+                        {selectedLead.hasWebsite ? (
+                          <a
+                            href={selectedLead.website!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-emerald-400 hover:underline flex items-center gap-1"
+                          >
+                            <span className="truncate">{selectedLead.website}</span>
+                            <ExternalLink className="w-3 h-3 shrink-0" />
+                          </a>
+                        ) : (
+                          <span className="text-amber-400 font-medium">None (Prime Target)</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-[#09090b] border border-neutral-800/80 space-y-1">
+                      <span className="text-neutral-500 flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        <span>Google Maps Link</span>
+                      </span>
+                      <div className="truncate">
+                        {selectedLead.hasGoogleMaps ? (
+                          <a
+                            href={selectedLead.googleMaps!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sky-400 hover:underline flex items-center gap-1"
+                          >
+                            <span>Verified Map Pin</span>
+                            <ExternalLink className="w-3 h-3 shrink-0" />
+                          </a>
+                        ) : (
+                          <span className="text-neutral-500">Unlinked</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Objective Opportunity Diagnosis */}
+                  <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
+                      <Zap className="w-4 h-4 text-amber-400" />
+                      <span>OBJECTIVE OPPORTUNITY</span>
+                    </div>
+                    <p className="text-xs text-neutral-200 leading-relaxed">
+                      {selectedLead.opportunitySummary}
+                    </p>
+                    <div className="pt-1 flex items-center justify-between text-[11px] text-neutral-400">
+                      <span>Suggested solution: <strong className="text-white">{selectedLead.suggestedService}</strong></span>
+                      <span className="text-amber-300 font-mono font-bold">{selectedLead.suggestedPriceFormatted}</span>
+                    </div>
+                  </div>
+
+                  {/* The Brutally Honest 2-Message Cold Outreach Script */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-bold text-white tracking-wider uppercase font-mono flex items-center gap-1.5">
+                        <MessageCircle className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Brutally Honest 2-Message Script</span>
+                      </h3>
+                      <span className="text-[11px] text-neutral-500">Zero fluff · Concrete price</span>
+                    </div>
+
+                    {/* Message Bubble 1 */}
+                    <div className="p-3.5 rounded-2xl bg-[#09090b] border border-neutral-800 space-y-1">
+                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                        Message 1 (The Observation)
+                      </span>
+                      <p className="text-xs text-neutral-100 leading-relaxed font-sans">
+                        {selectedLead.outreachMessage1}
+                      </p>
+                    </div>
+
+                    {/* Message Bubble 2 */}
+                    <div className="p-3.5 rounded-2xl bg-[#09090b] border border-neutral-800 space-y-1">
+                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                        Message 2 (Solution + Price + Low-Pressure Question)
+                      </span>
+                      <p className="text-xs text-neutral-100 leading-relaxed font-sans">
+                        {selectedLead.outreachMessage2}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Action Bar */}
+                  <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyScript(selectedLead.combinedScript)}
+                      className="w-full sm:flex-1 min-h-[46px] px-4 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-xs font-semibold text-white flex items-center justify-center gap-2 transition-colors"
+                    >
+                      {copiedScript ? (
+                        <>
+                          <Check className="w-4 h-4 text-emerald-400" />
+                          <span>Copied Script</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          <span>Copy 2-Message Script</span>
+                        </>
+                      )}
+                    </button>
+
+                    {selectedLead.cleanPhone.length === 10 ? (
+                      <a
+                        href={selectedLead.whatsAppClickUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full sm:flex-1 min-h-[46px] px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-lg shadow-emerald-950/50"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        <span>Open WhatsApp Direct</span>
+                      </a>
+                    ) : selectedLead.instagram ? (
+                      <a
+                        href={selectedLead.instagramDirectUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full sm:flex-1 min-h-[46px] px-4 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-lg"
+                      >
+                        <InstagramIcon className="w-4 h-4" />
+                        <span>Open Instagram DM</span>
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: DANGER ZONE */}
+              {drawerTab === "danger" && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 space-y-2 text-xs">
+                    <div className="flex items-center gap-2 font-bold text-red-400 text-sm">
+                      <ShieldAlert className="w-4 h-4" />
+                      <span>Permanent Deletion</span>
+                    </div>
+                    <p className="text-neutral-300 leading-relaxed">
+                      Permanently delete this business profile from Spotlight Bazaar. This will immediately remove
+                      its 3D plot from the map and cascade-delete all associated street broadcasts, lead events, and
+                      portfolio media.
+                    </p>
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTarget(selectedLead)}
+                        className="min-h-[42px] px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center gap-1.5 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span>Delete Business Profile</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Drawer Footer */}
+            {drawerTab === "edit" && (
+              <div className="p-4 border-t border-neutral-800 bg-[#09090b] flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedLead(null)}
+                  className="min-h-[42px] px-4 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 font-medium text-xs transition-colors"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  form="edit-lead-form"
+                  disabled={savingEdit}
+                  className="min-h-[42px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center gap-2 transition-colors disabled:opacity-50"
+                >
+                  {savingEdit ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-neutral-950 border-t-transparent rounded-full animate-spin" />
+                      <span>Saving Changes…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Save Storefront Changes</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 4. ONBOARD NEW BUSINESS MODAL */}
+      {showCreateModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Add Business Storefront"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in"
+        >
+          <div className="max-w-xl w-full bg-[#121215] border border-neutral-800 rounded-2xl p-6 space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <Store className="w-4 h-4 text-amber-400" />
+                <span>Onboard New Business Storefront</span>
+              </h2>
               <button
                 type="button"
-                onClick={() => handleCopyScript(activeLead.combinedScript)}
-                className="w-full sm:flex-1 min-h-[46px] px-4 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-xs font-semibold text-white flex items-center justify-center gap-2 transition-colors"
+                onClick={() => setShowCreateModal(false)}
+                className="text-neutral-400 hover:text-white"
               >
-                {copiedScript ? (
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateBusiness} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-neutral-300 font-medium">Business Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={createFormData.name}
+                    onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+                    placeholder="e.g. Kamakhya Organic Tea Lounge"
+                    className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white focus:outline-none focus:border-amber-500/75"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-neutral-300 font-medium">Category *</label>
+                  <select
+                    value={createFormData.category_id}
+                    onChange={(e) =>
+                      setCreateFormData({ ...createFormData, category_id: e.target.value as CategoryId })
+                    }
+                    className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white focus:outline-none focus:border-amber-500/75"
+                  >
+                    {CATEGORIES.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-neutral-300 font-medium">WhatsApp Mobile (10 digits) *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={createFormData.whatsapp_phone}
+                    onChange={(e) => setCreateFormData({ ...createFormData, whatsapp_phone: e.target.value })}
+                    placeholder="9876543210"
+                    className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white font-mono focus:outline-none focus:border-amber-500/75"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-neutral-300 font-medium">City *</label>
+                  <input
+                    type="text"
+                    required
+                    value={createFormData.city_name}
+                    onChange={(e) => setCreateFormData({ ...createFormData, city_name: e.target.value })}
+                    className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white focus:outline-none focus:border-amber-500/75"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-neutral-300 font-medium">State</label>
+                  <input
+                    type="text"
+                    value={createFormData.state_name}
+                    onChange={(e) => setCreateFormData({ ...createFormData, state_name: e.target.value })}
+                    className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white focus:outline-none focus:border-amber-500/75"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-neutral-300 font-medium">PIN Code</label>
+                  <input
+                    type="text"
+                    value={createFormData.pincode}
+                    onChange={(e) => setCreateFormData({ ...createFormData, pincode: e.target.value })}
+                    placeholder="781001"
+                    className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white font-mono focus:outline-none focus:border-amber-500/75"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-neutral-300 font-medium">Starting Price</label>
+                  <input
+                    type="text"
+                    value={createFormData.starting_price}
+                    onChange={(e) => setCreateFormData({ ...createFormData, starting_price: e.target.value })}
+                    placeholder="₹1,200"
+                    className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white focus:outline-none focus:border-amber-500/75"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-neutral-300 font-medium">Latitude</label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    value={createFormData.lat}
+                    onChange={(e) => setCreateFormData({ ...createFormData, lat: parseFloat(e.target.value) || 0 })}
+                    className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white font-mono focus:outline-none focus:border-amber-500/75"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-neutral-300 font-medium">Longitude</label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    value={createFormData.lon}
+                    onChange={(e) => setCreateFormData({ ...createFormData, lon: parseFloat(e.target.value) || 0 })}
+                    className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white font-mono focus:outline-none focus:border-amber-500/75"
+                  />
+                </div>
+
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-neutral-300 font-medium">Website URL (optional)</label>
+                  <input
+                    type="url"
+                    value={createFormData.website_url}
+                    onChange={(e) => setCreateFormData({ ...createFormData, website_url: e.target.value })}
+                    placeholder="https://..."
+                    className="w-full min-h-[42px] px-3 rounded-xl bg-[#09090b] border border-neutral-800 text-white focus:outline-none focus:border-amber-500/75"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-2 border-t border-neutral-800">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="min-h-[42px] px-4 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-300 font-medium text-xs transition-colors"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="min-h-[42px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center gap-2 transition-colors disabled:opacity-50"
+                >
+                  {creating ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-neutral-950 border-t-transparent rounded-full animate-spin" />
+                      <span>Creating…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Onboard Storefront</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5. DELETE CONFIRMATION MODAL */}
+      {deleteTarget && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Confirm Deletion"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in"
+        >
+          <div className="max-w-md w-full bg-[#121215] border border-red-500/40 rounded-2xl p-6 space-y-4">
+            <div className="flex items-center gap-3 text-red-400">
+              <div className="w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Delete Business Profile</h3>
+                <p className="text-xs text-neutral-400">This action cannot be undone.</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-neutral-300 leading-relaxed">
+              Are you sure you want to permanently delete <strong className="text-white">{deleteTarget.name}</strong> from Spotlight Bazaar?
+              All 3D plot data, street broadcasts, and lead events will be erased.
+            </p>
+
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setDeleteTarget(null)}
+                className="min-h-[42px] px-4 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-300 font-medium text-xs transition-colors"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={handleDeleteBusiness}
+                className="min-h-[42px] px-5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center gap-2 transition-colors disabled:opacity-50"
+              >
+                {deleting ? (
                   <>
-                    <Check className="w-4 h-4 text-emerald-400" />
-                    <span>Copied Script</span>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Deleting…</span>
                   </>
                 ) : (
                   <>
-                    <Copy className="w-4 h-4" />
-                    <span>Copy 2-Message Script</span>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Confirm Permanent Delete</span>
                   </>
                 )}
               </button>
-
-              {activeLead.cleanPhone.length === 10 ? (
-                <a
-                  href={activeLead.whatsAppClickUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full sm:flex-1 min-h-[46px] px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-lg shadow-emerald-950/50"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>Open WhatsApp Direct</span>
-                </a>
-              ) : activeLead.instagram ? (
-                <a
-                  href={activeLead.instagramDirectUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full sm:flex-1 min-h-[46px] px-4 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-lg"
-                >
-                  <InstagramIcon className="w-4 h-4" />
-                  <span>Open Instagram DM</span>
-                </a>
-              ) : null}
             </div>
           </div>
         </div>
