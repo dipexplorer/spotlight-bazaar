@@ -9,6 +9,7 @@ import {
   Building2,
   Check,
   CheckCircle2,
+  Clock,
   Copy,
   ExternalLink,
   Eye,
@@ -22,6 +23,7 @@ import {
   PlayCircle,
   Plus,
   Save,
+  ShieldCheck,
   Star,
   Store,
   Trash2,
@@ -34,6 +36,8 @@ import { CoinAuditResult, computeEarnedBazaarCoins } from "@/lib/constants/plotU
 import { CategoryDropdown } from "@/components/register/CategoryDropdown";
 import { BroadcastManager } from "@/components/dashboard/BroadcastManager";
 import { PlotCustomizer } from "@/components/dashboard/PlotCustomizer";
+import { VerificationManager } from "@/components/dashboard/VerificationManager";
+import { ClaimPlotModal } from "@/components/dashboard/ClaimPlotModal";
 import { compressImage } from "@/lib/utils/compressImage";
 
 interface OwnedBusiness extends BusinessStorefront {
@@ -46,7 +50,7 @@ interface OwnedBusiness extends BusinessStorefront {
   coin_audit?: CoinAuditResult;
 }
 
-type DashboardTab = "details" | "plot" | "broadcasts" | "photos" | "settings";
+type DashboardTab = "details" | "verification" | "plot" | "broadcasts" | "photos" | "settings";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -58,6 +62,7 @@ export default function DashboardPage() {
   const [businesses, setBusinesses] = useState<OwnedBusiness[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DashboardTab>("details");
+  const [showClaimModal, setShowClaimModal] = useState(false);
 
   // Feedback states
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -469,15 +474,23 @@ export default function DashboardPage() {
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <span className="hidden md:inline text-xs text-neutral-400 truncate max-w-[200px]">
+            <span className="hidden md:inline text-xs text-neutral-400 truncate max-w-[180px]">
               {userEmail}
             </span>
+            <button
+              type="button"
+              onClick={() => setShowClaimModal(true)}
+              className="inline-flex items-center gap-1.5 min-h-[38px] px-3 rounded-xl bg-[#121215] hover:bg-neutral-800 border border-neutral-800 text-xs font-medium text-neutral-200 hover:text-white transition-colors shrink-0"
+            >
+              <Store className="w-3.5 h-3.5 text-amber-400" />
+              <span>Claim Plot</span>
+            </button>
             <Link
               href="/register"
               className="inline-flex items-center gap-1.5 min-h-[38px] px-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold text-xs transition-colors shrink-0"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Add Plot</span>
+              <span className="hidden sm:inline">Add Plot</span>
             </Link>
             <button
               type="button"
@@ -523,16 +536,26 @@ export default function DashboardPage() {
             <div className="space-y-1.5 max-w-md mx-auto">
               <h1 className="text-xl font-bold text-white">No 3D business plots linked yet</h1>
               <p className="text-sm text-neutral-400 leading-relaxed">
-                Signed in as <span className="text-neutral-200">{userEmail}</span>. Claim your first 3D storefront on India&apos;s map and manage it directly from here.
+                Signed in as <span className="text-neutral-200">{userEmail}</span>. If you registered previously without logging in, you can claim your plot instantly using your WhatsApp number.
               </p>
             </div>
-            <Link
-              href="/register"
-              className="inline-flex items-center justify-center gap-2 min-h-[46px] px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold text-sm transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Claim Your First 3D Plot</span>
-            </Link>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowClaimModal(true)}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-[46px] px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-sm transition-colors"
+              >
+                <Store className="w-4 h-4" />
+                <span>Claim Existing Registered Plot</span>
+              </button>
+              <Link
+                href="/register"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-[46px] px-5 rounded-xl bg-[#18181c] hover:bg-neutral-800 border border-neutral-700 text-white font-medium text-sm transition-colors"
+              >
+                <Plus className="w-4 h-4 text-amber-400" />
+                <span>Register a New 3D Plot</span>
+              </Link>
+            </div>
           </section>
         ) : (
           <>
@@ -592,6 +615,17 @@ export default function DashboardPage() {
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/12 border border-amber-500/35 text-amber-300 tabular-nums">
                     Lv.{selectedBiz.plot_level || 1}
                   </span>
+                  {selectedBiz.is_verified ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-cyan-500/15 border border-cyan-500/35 text-cyan-300">
+                      <ShieldCheck className="w-3 h-3" />
+                      <span>Verified</span>
+                    </span>
+                  ) : selectedBiz.verification_status === "pending" ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 border border-amber-500/35 text-amber-300">
+                      <Clock className="w-3 h-3 animate-pulse" />
+                      <span>Verification Pending</span>
+                    </span>
+                  ) : null}
                 </div>
                 <p className="text-xs text-neutral-400 flex flex-wrap items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-amber-400" />
@@ -710,6 +744,7 @@ export default function DashboardPage() {
               {(
                 [
                   { id: "details", label: "Details" },
+                  { id: "verification", label: "Verification" },
                   { id: "plot", label: "3D Plot" },
                   { id: "broadcasts", label: "Broadcasts" },
                   { id: "photos", label: `Photos (${photos.length}/6)` },
@@ -723,6 +758,10 @@ export default function DashboardPage() {
                     selectedBiz.coin_audit &&
                       selectedBiz.coin_audit.eligibleLevel > (selectedBiz.plot_level || 1)
                   );
+                const verificationAlert =
+                  t.id === "verification" &&
+                  (selectedBiz.verification_status === "rejected" ||
+                    (!selectedBiz.is_verified && selectedBiz.verification_status !== "pending"));
                 return (
                   <button
                     key={t.id}
@@ -973,6 +1012,39 @@ export default function DashboardPage() {
               </form>
             )}
 
+            {/* TAB 2: VERIFICATION & BADGE CLAIM */}
+            {activeTab === "verification" && accessToken && (
+              <VerificationManager
+                businessId={selectedBiz.id}
+                businessName={selectedBiz.name}
+                businessSlug={selectedBiz.slug}
+                isVerified={Boolean(selectedBiz.is_verified)}
+                verificationStatus={
+                  (selectedBiz.verification_status as "none" | "pending" | "verified" | "rejected") ||
+                  (selectedBiz.is_verified ? "verified" : "none")
+                }
+                verificationNotes={selectedBiz.verification_notes}
+                verificationDocumentUrl={selectedBiz.verification_document_url}
+                verificationRequestedAt={selectedBiz.verification_requested_at}
+                accessToken={accessToken}
+                onVerificationSubmitted={(nextStatus, notes) => {
+                  setBusinesses((prev) =>
+                    prev.map((b) =>
+                      b.id === selectedBiz.id
+                        ? {
+                            ...b,
+                            verification_status: nextStatus,
+                            verification_notes: notes,
+                            verification_requested_at: new Date().toISOString(),
+                          }
+                        : b
+                    )
+                  );
+                  showSuccess("Verification request submitted! Our review team has been notified.");
+                }}
+              />
+            )}
+
             {/* TAB 2: 3D PLOT CUSTOMIZER & BAZAAR COINS */}
             {activeTab === "plot" && accessToken && (
               <PlotCustomizer
@@ -1192,6 +1264,19 @@ export default function DashboardPage() {
           </>
         )}
       </main>
+
+      {/* Claim Plot Modal */}
+      {showClaimModal && accessToken && (
+        <ClaimPlotModal
+          accessToken={accessToken}
+          onClose={() => setShowClaimModal(false)}
+          onPlotClaimed={(claimedBiz) => {
+            fetchOwnedBusinesses(accessToken);
+            setSelectedId(claimedBiz.id as string);
+            showSuccess(`Successfully linked ${claimedBiz.name} to your owner console!`);
+          }}
+        />
+      )}
     </div>
   );
 }

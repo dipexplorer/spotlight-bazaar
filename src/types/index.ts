@@ -88,6 +88,10 @@ export interface BusinessStorefront {
   logo_url?: string;
   is_verified: boolean;
   is_featured: boolean;
+  verification_status?: "none" | "pending" | "verified" | "rejected";
+  verification_notes?: string | null;
+  verification_document_url?: string | null;
+  verification_requested_at?: string | null;
   status?: "active" | "pending" | "suspended";
   owner_id?: string | null;
   total_views: number;

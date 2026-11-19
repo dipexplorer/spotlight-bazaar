@@ -59,7 +59,7 @@ interface AdminMetrics {
   totalLeads: number;
 }
 
-type FilterTab = "all" | "hot_needs" | "missing_website" | "unverified" | "verified" | "featured";
+type FilterTab = "all" | "verification_pending" | "hot_needs" | "missing_website" | "unverified" | "verified" | "featured";
 type DrawerTab = "edit" | "broadcasts" | "outreach" | "danger";
 
 interface EditFormState {
@@ -437,6 +437,45 @@ export default function AdminLeadsPage() {
     }
   };
 
+  // Review & Approve / Reject Owner Verification Application
+  const handleReviewVerification = async (lead: EvaluatedLead, approve: boolean) => {
+    setUpdatingId(lead.businessId);
+
+    try {
+      const res = await fetch(`/api/admin/leads/${lead.businessId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey,
+        },
+        body: JSON.stringify({
+          is_verified: approve,
+          verification_status: approve ? "verified" : "rejected",
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to process verification decision.");
+
+      showToast(approve ? `Verified badge approved and granted to ${lead.name}!` : `Verification application rejected for ${lead.name}.`);
+      fetchLeads(adminKey);
+      if (selectedLead?.businessId === lead.businessId) {
+        setSelectedLead((prev) =>
+          prev
+            ? {
+                ...prev,
+                isVerified: approve,
+                verificationStatus: approve ? "verified" : "rejected",
+              }
+            : null
+        );
+      }
+    } catch {
+      showToast("Verification action failed.");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   // Save Full Edit Form
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -577,6 +616,7 @@ export default function AdminLeadsPage() {
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
       // Tab filter
+      if (activeTab === "verification_pending" && lead.verificationStatus !== "pending") return false;
       if (activeTab === "hot_needs" && lead.activeNeedsService.length === 0) return false;
       if (activeTab === "missing_website" && lead.hasWebsite) return false;
       if (activeTab === "unverified" && lead.isVerified) return false;
@@ -906,6 +946,10 @@ export default function AdminLeadsPage() {
             {(
               [
                 { id: "all", label: `All (${leads.length})` },
+                {
+                  id: "verification_pending",
+                  label: `Shield Requests (${leads.filter((l) => l.verificationStatus === "pending").length})`,
+                },
                 { id: "hot_needs", label: `Hot Needs (${metrics.hotNeedsCount})` },
                 { id: "missing_website", label: `No Website (${metrics.missingWebsiteCount})` },
                 { id: "unverified", label: `Pending Review (${leads.filter((l) => !l.isVerified).length})` },
@@ -1442,6 +1486,66 @@ export default function AdminLeadsPage() {
 
             {/* Drawer Body */}
             <div className="p-6 flex-1 overflow-y-auto space-y-6">
+              {/* PENDING VERIFICATION APPLICATION REVIEW BOX */}
+              {selectedLead.verificationStatus === "pending" && (
+                <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/40 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-300">
+                      <ShieldCheck className="w-4 h-4 text-cyan-400" />
+                      <span>OWNER VERIFICATION APPLICATION PENDING</span>
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-950 border border-cyan-500/40 text-cyan-300 font-mono">
+                      Action Required
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-neutral-200 space-y-1.5 bg-[#09090b]/80 p-3 rounded-xl border border-neutral-800">
+                    <div>
+                      <span className="text-neutral-400 font-medium">Submitted Proof / Registration:</span>
+                      <p className="text-white font-mono mt-0.5">{selectedLead.verificationNotes || "None provided"}</p>
+                    </div>
+                    {selectedLead.verificationRequestedAt && (
+                      <div className="text-[11px] text-neutral-500">
+                        Requested on: {new Date(selectedLead.verificationRequestedAt).toLocaleString()}
+                      </div>
+                    )}
+                    {selectedLead.verificationDocumentUrl && (
+                      <div className="pt-1">
+                        <a
+                          href={selectedLead.verificationDocumentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1 font-semibold"
+                        >
+                          <span>Inspect Storefront Signage / Certificate Photo</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      disabled={updatingId === selectedLead.businessId}
+                      onClick={() => handleReviewVerification(selectedLead, true)}
+                      className="min-h-[38px] px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-lg"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Approve &amp; Grant Verified Checkmark</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={updatingId === selectedLead.businessId}
+                      onClick={() => handleReviewVerification(selectedLead, false)}
+                      className="min-h-[38px] px-3.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-red-300 border border-neutral-800 text-xs transition-colors"
+                    >
+                      <span>Reject Application</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* TAB 1: EDIT PROFILE */}
               {drawerTab === "edit" && (
                 <form id="edit-lead-form" onSubmit={handleSaveEdit} className="space-y-5">

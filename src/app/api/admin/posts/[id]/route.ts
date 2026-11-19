@@ -47,3 +47,4 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
+

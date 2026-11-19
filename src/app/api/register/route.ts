@@ -116,6 +116,7 @@ export async function POST(req: NextRequest) {
           logo_url: storedImageUrls[0] || null,
           is_verified: false,
           is_featured: false,
+          verification_status: "none",
           status: "active",
         })
         .select("id")

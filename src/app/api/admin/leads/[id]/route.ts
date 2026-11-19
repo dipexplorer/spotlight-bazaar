@@ -106,6 +106,23 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     // Badges & Status
     if (typeof body.is_verified === "boolean") {
       updates.is_verified = body.is_verified;
+      updates.verification_status = body.is_verified ? "verified" : "none";
+    }
+    if (
+      body.verification_status === "none" ||
+      body.verification_status === "pending" ||
+      body.verification_status === "verified" ||
+      body.verification_status === "rejected"
+    ) {
+      updates.verification_status = body.verification_status;
+      if (body.verification_status === "verified") {
+        updates.is_verified = true;
+      } else if (body.verification_status === "rejected" || body.verification_status === "none") {
+        updates.is_verified = false;
+      }
+    }
+    if (typeof body.verification_notes === "string") {
+      updates.verification_notes = body.verification_notes.trim() || null;
     }
     if (typeof body.is_featured === "boolean") {
       updates.is_featured = body.is_featured;
@@ -132,6 +149,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         id, slug, name, tagline, description, category_id, city_name, state_name, pincode,
         lat, lon, whatsapp_phone, instagram_handle, website_url, google_maps_url,
         starting_price, logo_url, is_verified, is_featured, status,
+        verification_status, verification_notes, verification_document_url, verification_requested_at,
         total_views, total_leads, plot_level, bazaar_coins, plot_config, updated_at
       `)
       .single();

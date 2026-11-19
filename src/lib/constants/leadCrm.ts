@@ -36,6 +36,10 @@ export interface EvaluatedLead {
   wavesCount: number;
   isVerified: boolean;
   isFeatured: boolean;
+  verificationStatus: "none" | "pending" | "verified" | "rejected";
+  verificationNotes: string | null;
+  verificationDocumentUrl: string | null;
+  verificationRequestedAt: string | null;
   status: "active" | "pending" | "suspended";
   createdAt: string;
 
@@ -221,6 +225,10 @@ export function evaluateNerqivaLead(
     wavesCount,
     isVerified: Boolean(business.is_verified),
     isFeatured: Boolean(business.is_featured),
+    verificationStatus: (business.verification_status as "none" | "pending" | "verified" | "rejected") || (business.is_verified ? "verified" : "none"),
+    verificationNotes: business.verification_notes || null,
+    verificationDocumentUrl: business.verification_document_url || null,
+    verificationRequestedAt: business.verification_requested_at || null,
     status: (business.status as "active" | "pending" | "suspended") || "active",
     createdAt: business.created_at || new Date().toISOString(),
 

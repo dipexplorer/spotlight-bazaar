@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
       lat, lon, facing_bearing, road_anchor_lat, road_anchor_lon, connector_type,
       whatsapp_phone, instagram_handle, website_url, google_maps_url,
       starting_price, logo_url, is_verified, is_featured, status,
+      verification_status, verification_notes, verification_document_url, verification_requested_at,
       total_views, total_leads, owner_id, created_at, updated_at,
       plot_level, bazaar_coins, plot_config,
       portfolio:portfolio_items(id, business_id, image_url, caption, sort_order)

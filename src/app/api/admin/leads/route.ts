@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
             id, slug, name, tagline, description, category_id, city_name, state_name, pincode,
             lat, lon, whatsapp_phone, instagram_handle, website_url, google_maps_url,
             starting_price, logo_url, is_verified, is_featured, status,
+            verification_status, verification_notes, verification_document_url, verification_requested_at,
             total_views, total_leads, plot_level, bazaar_coins, plot_config, owner_id, created_at, updated_at
           `)
           .order("created_at", { ascending: false }),
