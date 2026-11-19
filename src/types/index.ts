@@ -28,11 +28,25 @@ export interface City {
 export type BroadcastType = "deal" | "need" | "hiring" | "event";
 
 export type FacadeTheme = "default" | "obsidian" | "limestone" | "terracotta";
+export type GardenStyle = "none" | "minimal" | "zen" | "palms" | "planters";
+export type DrivewayVehicle = "none" | "scooter" | "sedan" | "cyber" | "bikestand";
+export type LightingStyle = "neon" | "warm_festoon" | "uplights" | "pathlights";
+export type BannerStyle = "none" | "pennant" | "totem" | "arch";
+export type WallAccent = "standard" | "wood_louvres" | "glass_curtain" | "metal_ribs";
 
 export interface PlotConfig {
   accentColor?: string;
   facadeTheme?: FacadeTheme;
   roofSignText?: string;
+  gardenStyle?: GardenStyle;
+  drivewayVehicle?: DrivewayVehicle;
+  lightingStyle?: LightingStyle;
+  bannerStyle?: BannerStyle;
+  wallAccent?: WallAccent;
+  lastDailyBonusAt?: string;
+  dailyStreak?: number;
+  sharedStorefront?: boolean;
+  communityFollow?: boolean;
 }
 
 export interface BusinessPost {

@@ -1,4 +1,12 @@
-import { FacadeTheme, PlotConfig } from "@/types";
+import {
+  BannerStyle,
+  DrivewayVehicle,
+  FacadeTheme,
+  GardenStyle,
+  LightingStyle,
+  PlotConfig,
+  WallAccent,
+} from "@/types";
 
 export interface AccentColorPreset {
   id: string;
@@ -68,6 +76,80 @@ export const ALLOWED_FACADE_THEMES = new Set<FacadeTheme>(
   FACADE_THEME_PRESETS.map((t) => t.id)
 );
 
+// Advanced Architectural Customization Presets
+export interface GardenStylePreset {
+  id: GardenStyle;
+  name: string;
+  description: string;
+}
+
+export const GARDEN_STYLE_PRESETS: GardenStylePreset[] = [
+  { id: "none", name: "Paved Apron", description: "Clean minimalist paved concrete plaza" },
+  { id: "minimal", name: "Manicured Lawn", description: "Vibrant green turf with geometric curb edging" },
+  { id: "zen", name: "Zen Slate & Bamboo", description: "Raked slate gravel with stepping stones & bamboo" },
+  { id: "palms", name: "Tropical Palms", description: "Lush fan palms with ground accent lighting" },
+  { id: "planters", name: "Floral Planters", description: "Stone flower boxes with rich blooming greenery" },
+];
+
+export interface DrivewayVehiclePreset {
+  id: DrivewayVehicle;
+  name: string;
+  description: string;
+}
+
+export const DRIVEWAY_VEHICLE_PRESETS: DrivewayVehiclePreset[] = [
+  { id: "none", name: "Open Arrival Court", description: "Clear driveway for seamless pedestrian flow" },
+  { id: "scooter", name: "Delivery Scooter", description: "Rapid delivery moped parked at front curb" },
+  { id: "sedan", name: "Executive Sedan", description: "Luxury metallic sedan parked in dedicated bay" },
+  { id: "cyber", name: "Cyber Coupe EV", description: "Sculpted electric sports coupe with solar canopy" },
+  { id: "bikestand", name: "Customer Bike Stand", description: "Stainless steel bicycle rack with commuter bikes" },
+];
+
+export interface LightingStylePreset {
+  id: LightingStyle;
+  name: string;
+  description: string;
+}
+
+export const LIGHTING_STYLE_PRESETS: LightingStylePreset[] = [
+  { id: "neon", name: "Cyber Glow Neon", description: "Linear LED runway strips with vivid brand glow" },
+  { id: "warm_festoon", name: "Warm Bistro Festoons", description: "Overhead hanging warm filament light bulbs" },
+  { id: "uplights", name: "Architectural Uplights", description: "Recessed vertical ground beams illuminating facade" },
+  { id: "pathlights", name: "Modern Path Bollards", description: "Sleek low-profile perimeter bollard luminaires" },
+];
+
+export interface BannerStylePreset {
+  id: BannerStyle;
+  name: string;
+  description: string;
+}
+
+export const BANNER_STYLE_PRESETS: BannerStylePreset[] = [
+  { id: "none", name: "Clean Facade", description: "No exterior banners, highlighting pure architecture" },
+  { id: "pennant", name: "Vertical Pennant", description: "Tall fluttering fabric flag with brand color" },
+  { id: "totem", name: "Sidewalk A-Frame", description: "Double-sided pavement totem for announcements" },
+  { id: "arch", name: "Grand Entry Portal", description: "Illuminated geometric gateway over arrival walkway" },
+];
+
+export interface WallAccentPreset {
+  id: WallAccent;
+  name: string;
+  description: string;
+}
+
+export const WALL_ACCENT_PRESETS: WallAccentPreset[] = [
+  { id: "standard", name: "Solid Monolith", description: "Classic architectural category massing" },
+  { id: "wood_louvres", name: "Teak Wood Louvres", description: "Natural warm timber vertical sun-shading slats" },
+  { id: "glass_curtain", name: "Cyan Glass Curtain", description: "Full-height solar glazing with high reflectivity" },
+  { id: "metal_ribs", name: "Brushed Aluminum Ribs", description: "Industrial anodized alloy fins & cooling louvres" },
+];
+
+export const ALLOWED_GARDEN_STYLES = new Set<GardenStyle>(["none", "minimal", "zen", "palms", "planters"]);
+export const ALLOWED_VEHICLES = new Set<DrivewayVehicle>(["none", "scooter", "sedan", "cyber", "bikestand"]);
+export const ALLOWED_LIGHTING = new Set<LightingStyle>(["neon", "warm_festoon", "uplights", "pathlights"]);
+export const ALLOWED_BANNERS = new Set<BannerStyle>(["none", "pennant", "totem", "arch"]);
+export const ALLOWED_WALL_ACCENTS = new Set<WallAccent>(["standard", "wood_louvres", "glass_curtain", "metal_ribs"]);
+
 export interface PlotLevelSpec {
   level: 1 | 2 | 3;
   name: string;
@@ -119,14 +201,20 @@ export interface CoinAuditResult {
 
 /**
  * Deterministic, anti-cheat Bazaar Coins & Plot Level calculator.
- * Every coin is earned from real storefront completeness, broadcasts, or genuine visitor engagement.
+ * Tracks genuine daily check-ins, storefront social shares, official community follows,
+ * live broadcasts, and real visitor traffic engagement.
  */
 export function computeEarnedBazaarCoins(input: {
-  photosCount: number;
   hasWebsite: boolean;
   hasGoogleMaps: boolean;
   hasDescription: boolean;
   hasInstagram: boolean;
+  hasWhatsapp?: boolean;
+  hasClaimedDailyToday?: boolean;
+  dailyStreak?: number;
+  hasShared?: boolean;
+  hasFollowed?: boolean;
+  photosCount?: number;
   totalViews: number;
   totalLeads: number;
   wavesCount: number;
@@ -138,67 +226,93 @@ export function computeEarnedBazaarCoins(input: {
       label: "Claim 3D Business Plot",
       coins: 50,
       earned: true,
-      hint: "Awarded automatically on registration",
+      hint: "Registration plot bonus",
     },
     {
-      id: "photos_1",
-      label: "Upload Storefront Cover Photo",
-      coins: 40,
-      earned: input.photosCount >= 1,
-      hint: "Add at least 1 photo in Photos tab",
+      id: "daily_checkin",
+      label: "Daily Street Check-in",
+      coins: 15,
+      earned: Boolean(input.hasClaimedDailyToday),
+      hint: "Daily login bonus (+streak multiplier)",
     },
     {
-      id: "photos_3",
-      label: "Upload 3+ Portfolio Photos",
-      coins: 40,
-      earned: input.photosCount >= 3,
-      hint: "Showcase your shop or best work",
+      id: "share_plot",
+      label: "Share 3D Storefront",
+      coins: 30,
+      earned: Boolean(input.hasShared),
+      hint: "WhatsApp, Instagram & X link",
+    },
+    {
+      id: "follow_network",
+      label: "Spotlight Business Network",
+      coins: 25,
+      earned: Boolean(input.hasFollowed),
+      hint: "Official merchant updates channel",
+    },
+    {
+      id: "whatsapp_line",
+      label: "WhatsApp Business Line",
+      coins: 30,
+      earned: Boolean(input.hasWhatsapp),
+      hint: "Direct 1-tap customer chat",
     },
     {
       id: "website",
-      label: "Link Official Website",
+      label: "Official Website",
       coins: 50,
       earned: input.hasWebsite,
-      hint: "Add your website in Details tab",
+      hint: "Verified company domain",
     },
     {
       id: "gmaps",
-      label: "Link Official Google Maps",
+      label: "Google Maps Location",
       coins: 50,
       earned: input.hasGoogleMaps,
-      hint: "Add your Google Maps link in Details tab",
+      hint: "Turn-by-turn customer navigation",
     },
     {
       id: "description",
-      label: "Write About Your Business",
+      label: "Business Story",
       coins: 30,
       earned: input.hasDescription,
-      hint: "Add 30+ characters in Details tab",
+      hint: "30+ chars overview & services",
     },
     {
       id: "instagram",
-      label: "Connect Instagram Handle",
+      label: "Instagram Profile",
       coins: 20,
       earned: input.hasInstagram,
-      hint: "Add @handle in Details tab",
+      hint: "Official @handle connected",
     },
     {
       id: "broadcast",
-      label: "Publish a Live Street Broadcast",
+      label: "Live Street Broadcast",
       coins: 35,
       earned: input.broadcastsCount >= 1,
-      hint: "Post a Deal, Coupon, Hiring, or Need in Broadcasts tab (+35 per post)",
+      hint: "Active deal, hiring, or coupon (+35/post)",
     },
   ];
 
+  // Optional photo bonus if photos exist (does NOT block core milestones)
+  if ((input.photosCount || 0) >= 1) {
+    checklist.push({
+      id: "portfolio_photos",
+      label: "Storefront Showcase",
+      coins: 30,
+      earned: true,
+      hint: "Workspace or product photos",
+    });
+  }
+
   const milestoneCoins = checklist.reduce((sum, c) => sum + (c.earned ? c.coins : 0), 0);
   const extraBroadcastCoins = Math.max(0, input.broadcastsCount - 1) * 35;
+  const streakBonusCoins = Math.min(60, Math.max(0, (input.dailyStreak || 1) - 1) * 10);
   const activityCoins =
     Math.max(0, input.totalViews) * 2 +
     Math.max(0, input.totalLeads) * 15 +
     Math.max(0, input.wavesCount) * 5;
 
-  const totalCoins = milestoneCoins + extraBroadcastCoins + activityCoins;
+  const totalCoins = milestoneCoins + extraBroadcastCoins + streakBonusCoins + activityCoins;
 
   const eligibleLevel: 1 | 2 | 3 = totalCoins >= 750 ? 3 : totalCoins >= 250 ? 2 : 1;
   const nextLevel =
@@ -242,6 +356,33 @@ export function sanitizePlotConfig(raw: unknown): PlotConfig {
   if (typeof obj.roofSignText === "string") {
     const clean = obj.roofSignText.trim().slice(0, 18);
     if (clean) out.roofSignText = clean;
+  }
+  if (typeof obj.gardenStyle === "string" && ALLOWED_GARDEN_STYLES.has(obj.gardenStyle as GardenStyle)) {
+    out.gardenStyle = obj.gardenStyle as GardenStyle;
+  }
+  if (typeof obj.drivewayVehicle === "string" && ALLOWED_VEHICLES.has(obj.drivewayVehicle as DrivewayVehicle)) {
+    out.drivewayVehicle = obj.drivewayVehicle as DrivewayVehicle;
+  }
+  if (typeof obj.lightingStyle === "string" && ALLOWED_LIGHTING.has(obj.lightingStyle as LightingStyle)) {
+    out.lightingStyle = obj.lightingStyle as LightingStyle;
+  }
+  if (typeof obj.bannerStyle === "string" && ALLOWED_BANNERS.has(obj.bannerStyle as BannerStyle)) {
+    out.bannerStyle = obj.bannerStyle as BannerStyle;
+  }
+  if (typeof obj.wallAccent === "string" && ALLOWED_WALL_ACCENTS.has(obj.wallAccent as WallAccent)) {
+    out.wallAccent = obj.wallAccent as WallAccent;
+  }
+  if (typeof obj.lastDailyBonusAt === "string") {
+    out.lastDailyBonusAt = obj.lastDailyBonusAt;
+  }
+  if (typeof obj.dailyStreak === "number" && obj.dailyStreak >= 0) {
+    out.dailyStreak = Math.min(365, Math.floor(obj.dailyStreak));
+  }
+  if (typeof obj.sharedStorefront === "boolean") {
+    out.sharedStorefront = obj.sharedStorefront;
+  }
+  if (typeof obj.communityFollow === "boolean") {
+    out.communityFollow = obj.communityFollow;
   }
   return out;
 }

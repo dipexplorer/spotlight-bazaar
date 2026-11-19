@@ -1130,7 +1130,12 @@ export function LiveOsmMap({
                 const pLevel = (s.plot_level === 3 ? 3 : s.plot_level === 2 ? 2 : 1) as 1 | 2 | 3;
                 const pTheme = s.plot_config?.facadeTheme || "default";
                 const pAccent = s.plot_config?.accentColor || "";
-                const visualKey = `${s.category_id}|${pLevel}|${pTheme}|${pAccent}`;
+                const pGarden = s.plot_config?.gardenStyle || "none";
+                const pVehicle = s.plot_config?.drivewayVehicle || "none";
+                const pLighting = s.plot_config?.lightingStyle || "neon";
+                const pBanner = s.plot_config?.bannerStyle || "none";
+                const pWall = s.plot_config?.wallAccent || "standard";
+                const visualKey = `${s.category_id}|${pLevel}|${pTheme}|${pAccent}|${pGarden}|${pVehicle}|${pLighting}|${pBanner}|${pWall}`;
 
                 let entry = plotCache.get(s.slug);
                 if (!entry || entry.visualKey !== visualKey) {
@@ -1145,6 +1150,11 @@ export function LiveOsmMap({
                     plotLevel: pLevel,
                     facadeTheme: pTheme,
                     accentColor: pAccent || undefined,
+                    gardenStyle: pGarden,
+                    drivewayVehicle: pVehicle,
+                    lightingStyle: pLighting,
+                    bannerStyle: pBanner,
+                    wallAccent: pWall,
                   });
                   plotMesh.traverse((o) => {
                     if ((o as any).isMesh) o.frustumCulled = false;

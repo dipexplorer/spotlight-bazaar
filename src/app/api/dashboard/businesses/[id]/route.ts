@@ -35,7 +35,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       const { data, error: fetchErr } = await supabase
         .from("businesses")
         .select(
-          "id, slug, owner_id, plot_level, bazaar_coins, description, website_url, google_maps_url, instagram_handle, logo_url, total_views, total_leads, plot_config"
+          "id, slug, owner_id, plot_level, bazaar_coins, whatsapp_phone, description, website_url, google_maps_url, instagram_handle, logo_url, total_views, total_leads, plot_config"
         )
         .eq("id", id)
         .single();
@@ -58,6 +58,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         owner_id: user.id,
         plot_level: local.plot_level || 1,
         bazaar_coins: local.bazaar_coins || 85,
+        whatsapp_phone: local.whatsapp_phone,
         description: local.description,
         website_url: local.website_url,
         google_maps_url: local.google_maps_url,
@@ -149,9 +150,50 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       updates.status = body.status;
     }
 
-    // 3D Plot Architectural Customization (strictly whitelisted colors, finishes & roof tag)
+    const currentPlotConfig = sanitizePlotConfig(existing.plot_config || {});
+
+    // Claim Daily Street Presence Bonus (+15 coins + streak)
+    if (body.claim_daily_bonus === true) {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const lastDailyStr = typeof currentPlotConfig.lastDailyBonusAt === "string" ? currentPlotConfig.lastDailyBonusAt.slice(0, 10) : null;
+      if (lastDailyStr === todayStr) {
+        return NextResponse.json(
+          { error: "Daily street check-in already claimed today. Come back tomorrow!" },
+          { status: 400 }
+        );
+      }
+      let newStreak = 1;
+      if (lastDailyStr) {
+        const yesterday = new Date();
+        yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+        const yesterdayStr = yesterday.toISOString().slice(0, 10);
+        if (lastDailyStr === yesterdayStr) {
+          newStreak = Math.min(365, ((currentPlotConfig.dailyStreak as number) || 1) + 1);
+        }
+      }
+      currentPlotConfig.lastDailyBonusAt = new Date().toISOString();
+      currentPlotConfig.dailyStreak = newStreak;
+      updates.plot_config = currentPlotConfig;
+    }
+
+    // Claim Storefront Share Bonus (+30 coins)
+    if (body.claim_share_bonus === true) {
+      currentPlotConfig.sharedStorefront = true;
+      updates.plot_config = currentPlotConfig;
+    }
+
+    // Claim Official Community Follow Bonus (+25 coins)
+    if (body.claim_follow_bonus === true) {
+      currentPlotConfig.communityFollow = true;
+      updates.plot_config = currentPlotConfig;
+    }
+
+    // 3D Plot Architectural Customization (strictly whitelisted finishes, walls, gardens, cars, lighting & banners)
     if (body.plot_config && typeof body.plot_config === "object") {
-      updates.plot_config = sanitizePlotConfig(body.plot_config);
+      updates.plot_config = sanitizePlotConfig({
+        ...currentPlotConfig,
+        ...body.plot_config,
+      });
     }
 
     // Optional portfolio images update (uploads new base64 photos to Supabase Storage CDN)
@@ -236,12 +278,23 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           ? uploadedUrls.length
           : portfolioCount || (existing.logo_url ? 1 : 0);
 
+      const nextCfg = ((updates.plot_config || existing.plot_config || {}) as Record<string, unknown>);
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const lastDailyStr = typeof nextCfg.lastDailyBonusAt === "string" ? nextCfg.lastDailyBonusAt.slice(0, 10) : null;
+      const hasClaimedDailyToday = lastDailyStr === todayStr;
+      const nextPhone = "whatsapp_phone" in updates ? (updates.whatsapp_phone as string) : (existing.whatsapp_phone as string);
+
       const serverAudit = computeEarnedBazaarCoins({
         photosCount,
         hasWebsite: Boolean(nextWebsite && String(nextWebsite).trim().length > 0),
         hasGoogleMaps: Boolean(nextGmaps && String(nextGmaps).trim().length > 0),
         hasDescription: Boolean(nextDesc && nextDesc.trim().length >= 30),
         hasInstagram: Boolean(nextInsta && String(nextInsta).trim().length > 0),
+        hasWhatsapp: Boolean(nextPhone && String(nextPhone).trim().length >= 10),
+        hasClaimedDailyToday,
+        dailyStreak: typeof nextCfg.dailyStreak === "number" ? nextCfg.dailyStreak : 1,
+        hasShared: Boolean(nextCfg.sharedStorefront),
+        hasFollowed: Boolean(nextCfg.communityFollow),
         totalViews: Number(existing.total_views) || 0,
         totalLeads: Number(existing.total_leads) || 0,
         wavesCount: waveCount,
@@ -361,6 +414,11 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       const sortedPortfolio = Array.isArray(refreshed.portfolio)
         ? [...refreshed.portfolio].sort((a: Record<string, unknown>, c: Record<string, unknown>) => ((a.sort_order as number) || 0) - ((c.sort_order as number) || 0))
         : [];
+      const refCfg = ((refreshed.plot_config as Record<string, unknown>) || {}) as Record<string, unknown>;
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const lastDailyStr = typeof refCfg.lastDailyBonusAt === "string" ? refCfg.lastDailyBonusAt.slice(0, 10) : null;
+      const hasClaimedDailyToday = lastDailyStr === todayStr;
+
       const rawAudit = computeEarnedBazaarCoins({
         photosCount: sortedPortfolio.length || (refreshed.logo_url ? 1 : 0),
         hasWebsite: Boolean(refreshed.website_url && String(refreshed.website_url).trim().length > 0),
@@ -371,6 +429,11 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         hasInstagram: Boolean(
           refreshed.instagram_handle && String(refreshed.instagram_handle).trim().length > 0
         ),
+        hasWhatsapp: Boolean(refreshed.whatsapp_phone && String(refreshed.whatsapp_phone).trim().length >= 10),
+        hasClaimedDailyToday,
+        dailyStreak: typeof refCfg.dailyStreak === "number" ? refCfg.dailyStreak : 1,
+        hasShared: Boolean(refCfg.sharedStorefront),
+        hasFollowed: Boolean(refCfg.communityFollow),
         totalViews: (refreshed.total_views as number) || 0,
         totalLeads: (refreshed.total_leads as number) || 0,
         wavesCount: waveCount,

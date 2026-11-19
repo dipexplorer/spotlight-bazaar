@@ -131,6 +131,10 @@ export async function GET(req: NextRequest) {
       events_7d: 0,
     };
     const broadcastsCount = broadcastsByBiz.get(bId) || 0;
+    const cfg = ((b.plot_config as Record<string, unknown>) || {}) as Record<string, unknown>;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const lastDailyStr = typeof cfg.lastDailyBonusAt === "string" ? cfg.lastDailyBonusAt.slice(0, 10) : null;
+    const hasClaimedDailyToday = lastDailyStr === todayStr;
 
     const rawAudit = computeEarnedBazaarCoins({
       photosCount: sortedPortfolio.length || (b.logo_url ? 1 : 0),
@@ -138,6 +142,11 @@ export async function GET(req: NextRequest) {
       hasGoogleMaps: Boolean(b.google_maps_url && String(b.google_maps_url).trim().length > 0),
       hasDescription: Boolean(b.description && String(b.description).trim().length >= 30),
       hasInstagram: Boolean(b.instagram_handle && String(b.instagram_handle).trim().length > 0),
+      hasWhatsapp: Boolean(b.whatsapp_phone && String(b.whatsapp_phone).trim().length >= 10),
+      hasClaimedDailyToday,
+      dailyStreak: typeof cfg.dailyStreak === "number" ? cfg.dailyStreak : 1,
+      hasShared: Boolean(cfg.sharedStorefront),
+      hasFollowed: Boolean(cfg.communityFollow),
       totalViews: Number(b.total_views) || 0,
       totalLeads: Number(b.total_leads) || 0,
       wavesCount: evStats.waves,

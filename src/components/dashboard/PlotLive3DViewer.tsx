@@ -13,7 +13,15 @@ import {
   Sun,
   Video,
 } from "lucide-react";
-import { CategoryId, FacadeTheme } from "@/types";
+import {
+  BannerStyle,
+  CategoryId,
+  DrivewayVehicle,
+  FacadeTheme,
+  GardenStyle,
+  LightingStyle,
+  WallAccent,
+} from "@/types";
 import { createCategoryPlotMesh } from "@/components/map/osm3dBuildings";
 
 interface PlotLive3DViewerProps {
@@ -22,6 +30,11 @@ interface PlotLive3DViewerProps {
   facadeTheme: FacadeTheme;
   accentColor: string;
   signText?: string;
+  gardenStyle?: GardenStyle;
+  drivewayVehicle?: DrivewayVehicle;
+  lightingStyle?: LightingStyle;
+  bannerStyle?: BannerStyle;
+  wallAccent?: WallAccent;
   businessName: string;
   className?: string;
 }
@@ -32,6 +45,11 @@ export function PlotLive3DViewer({
   facadeTheme,
   accentColor,
   signText,
+  gardenStyle = "none",
+  drivewayVehicle = "none",
+  lightingStyle = "neon",
+  bannerStyle = "none",
+  wallAccent = "standard",
   businessName,
   className = "",
 }: PlotLive3DViewerProps) {
@@ -282,11 +300,16 @@ export function PlotLive3DViewer({
       inst.buildingGroup = null;
     }
 
-    // Build fresh procedural 3D category building with level upgrades
+    // Build fresh procedural 3D category building with level upgrades and custom styles
     const newGroup = createCategoryPlotMesh(categoryId, {
       plotLevel,
       facadeTheme,
       accentColor,
+      gardenStyle,
+      drivewayVehicle,
+      lightingStyle,
+      bannerStyle,
+      wallAccent,
     });
 
     newGroup.traverse((obj) => {
@@ -307,7 +330,17 @@ export function PlotLive3DViewer({
       inst.signMesh.position.y = topY + (plotLevel >= 3 ? 1.6 : 0);
       inst.signMesh.position.z = Math.min(box.max.z + 0.3, 8.2);
     }
-  }, [categoryId, plotLevel, facadeTheme, accentColor]);
+  }, [
+    categoryId,
+    plotLevel,
+    facadeTheme,
+    accentColor,
+    gardenStyle,
+    drivewayVehicle,
+    lightingStyle,
+    bannerStyle,
+    wallAccent,
+  ]);
 
   // Update 3D Signboard Texture on text/accent changes
   useEffect(() => {

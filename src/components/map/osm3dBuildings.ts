@@ -1,5 +1,13 @@
 import * as THREE from "three";
-import { CategoryId, FacadeTheme } from "@/types";
+import {
+  BannerStyle,
+  CategoryId,
+  DrivewayVehicle,
+  FacadeTheme,
+  GardenStyle,
+  LightingStyle,
+  WallAccent,
+} from "@/types";
 import { FACADE_THEME_PRESETS } from "@/lib/constants/plotUpgrades";
 
 /**
@@ -2568,6 +2576,460 @@ export interface CategoryPlotVisualOptions {
   accentColor?: string;
   facadeTheme?: FacadeTheme;
   plotLevel?: 1 | 2 | 3;
+  gardenStyle?: GardenStyle;
+  drivewayVehicle?: DrivewayVehicle;
+  lightingStyle?: LightingStyle;
+  bannerStyle?: BannerStyle;
+  wallAccent?: WallAccent;
+  signText?: string;
+}
+
+/**
+ * Procedural Courtyard & Landscaping Customization
+ */
+function addCustomGardenLandscaping(group: THREE.Group, garden: GardenStyle = "none") {
+  if (!garden || garden === "none") return;
+
+  const gardenGroup = new THREE.Group();
+  gardenGroup.name = "custom_garden_layer";
+
+  if (garden === "minimal") {
+    const turfMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.88 });
+    const curbMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.6 });
+
+    for (const gx of [-6.8, 6.8]) {
+      const lawn = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.08, 4.8), turfMat);
+      lawn.position.set(gx, 0.40, 5.2);
+      gardenGroup.add(lawn);
+
+      const curb = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.12, 5.0), curbMat);
+      curb.position.set(gx, 0.38, 5.2);
+      gardenGroup.add(curb);
+    }
+  } else if (garden === "zen") {
+    const gravelMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.95 });
+    const slateMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 });
+    const bambooMat = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.6 });
+
+    // Gravel bed
+    const bed = new THREE.Mesh(new THREE.BoxGeometry(5.8, 0.06, 4.6), gravelMat);
+    bed.position.set(-6.6, 0.39, 5.2);
+    gardenGroup.add(bed);
+
+    // Slate stepping stones
+    for (let s = -1; s <= 1; s++) {
+      const stone = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.6, 0.08, 8), slateMat);
+      stone.position.set(-6.6, 0.44, 5.2 + s * 1.3);
+      gardenGroup.add(stone);
+    }
+
+    // Cluster of vertical bamboo stalks
+    for (const [bx, bz, bh] of [[-8.2, 3.8, 3.2], [-8.6, 4.2, 3.6], [-8.0, 4.4, 2.8]]) {
+      const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, bh, 8), bambooMat);
+      stalk.position.set(bx, 0.40 + bh / 2, bz);
+      gardenGroup.add(stalk);
+    }
+  } else if (garden === "palms") {
+    const canisterMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.6 });
+    for (const px of [-7.6, 7.6]) {
+      const palm = createTreeMesh("round");
+      palm.position.set(px, 0.38, 5.2);
+      palm.scale.set(0.95, 1.25, 0.95);
+      gardenGroup.add(palm);
+
+      // Warm ground uplight canister
+      const canister = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.16, 12), canisterMat);
+      canister.position.set(px, 0.44, 6.2);
+      gardenGroup.add(canister);
+    }
+  } else if (garden === "planters") {
+    const planterMat = new THREE.MeshStandardMaterial({ color: 0x27272a, roughness: 0.7 });
+    for (const px of [-4.8, 4.8]) {
+      const box = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.65, 3.4), planterMat);
+      box.position.set(px, 0.65, 5.4);
+      gardenGroup.add(box);
+
+      const flowers = createTreeMesh("flowering");
+      flowers.position.set(px, 0.95, 5.4);
+      flowers.scale.set(0.45, 0.55, 0.45);
+      gardenGroup.add(flowers);
+    }
+  }
+
+  group.add(gardenGroup);
+}
+
+/**
+ * Procedural Driveway & Vehicle Amenity Customization
+ */
+function addCustomDrivewayVehicle(group: THREE.Group, vehicle: DrivewayVehicle = "none", accentNum = 0xf59e0b) {
+  if (!vehicle || vehicle === "none") return;
+
+  const vehicleGroup = new THREE.Group();
+  vehicleGroup.name = "custom_vehicle_layer";
+
+  const tireMat = new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.9 });
+  const rimMat = new THREE.MeshStandardMaterial({ color: 0xd4d4d8, roughness: 0.3, metalness: 0.8 });
+  const darkGlassMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.2, metalness: 0.8 });
+  const accentPaintMat = new THREE.MeshStandardMaterial({ color: accentNum, roughness: 0.35, metalness: 0.5 });
+  const lightGlowMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 2.5 });
+
+  if (vehicle === "scooter") {
+    // Modern Delivery Scooter parked on right driveway apron
+    const sc = new THREE.Group();
+    sc.position.set(7.4, 0.40, 5.6);
+    sc.rotation.y = -0.22;
+
+    // Chassis & front cowl
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.45, 1.6), accentPaintMat);
+    body.position.set(0, 0.42, 0);
+    sc.add(body);
+
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.14, 0.85), tireMat);
+    seat.position.set(0, 0.68, -0.15);
+    sc.add(seat);
+
+    // Wheels
+    for (const wz of [-0.65, 0.65]) {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.14, 12), tireMat);
+      wheel.rotation.z = Math.PI / 2;
+      wheel.position.set(0, 0.24, wz);
+      sc.add(wheel);
+    }
+
+    // Handlebars & Headlight
+    const bars = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.08, 0.08), rimMat);
+    bars.position.set(0, 0.88, 0.55);
+    sc.add(bars);
+
+    const headlight = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.12, 0.06), lightGlowMat);
+    headlight.position.set(0, 0.72, 0.82);
+    sc.add(headlight);
+
+    // Rear cargo box
+    const box = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.42, 0.48), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 }));
+    box.position.set(0, 0.88, -0.62);
+    sc.add(box);
+
+    vehicleGroup.add(sc);
+  } else if (vehicle === "sedan") {
+    // Executive Luxury Metallic Sedan parked in bay
+    const sedan = new THREE.Group();
+    sedan.position.set(8.2, 0.40, 3.8);
+
+    const lowerBody = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.48, 4.4), new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.7 }));
+    lowerBody.position.set(0, 0.38, 0);
+    sedan.add(lowerBody);
+
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.52, 2.3), darkGlassMat);
+    cabin.position.set(0, 0.84, -0.2);
+    sedan.add(cabin);
+
+    // 4 Wheels
+    for (const wx of [-1.02, 1.02]) {
+      for (const wz of [-1.3, 1.3]) {
+        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.18, 12), tireMat);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(wx, 0.32, wz);
+        sedan.add(wheel);
+      }
+    }
+
+    // Headlights
+    for (const hx of [-0.65, 0.65]) {
+      const hl = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.14, 0.06), lightGlowMat);
+      hl.position.set(hx, 0.42, 2.22);
+      sedan.add(hl);
+    }
+
+    vehicleGroup.add(sedan);
+  } else if (vehicle === "cyber") {
+    // Futuristic Cyber Coupe EV
+    const cyber = new THREE.Group();
+    cyber.position.set(8.2, 0.40, 3.8);
+
+    const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.05, 0.35, 4.5), new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.2, metalness: 0.9 }));
+    chassis.position.set(0, 0.32, 0);
+    cyber.add(chassis);
+
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.68, 0.44, 2.4), darkGlassMat);
+    roof.position.set(0, 0.70, -0.15);
+    cyber.add(roof);
+
+    // Cyan Cyber Lightbar
+    const frontLightbar = new THREE.Mesh(
+      new THREE.BoxGeometry(1.85, 0.08, 0.06),
+      new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x38bdf8, emissiveIntensity: 2.8 })
+    );
+    frontLightbar.position.set(0, 0.42, 2.26);
+    cyber.add(frontLightbar);
+
+    for (const wx of [-1.04, 1.04]) {
+      for (const wz of [-1.35, 1.35]) {
+        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.20, 14), tireMat);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(wx, 0.34, wz);
+        cyber.add(wheel);
+      }
+    }
+
+    vehicleGroup.add(cyber);
+  } else if (vehicle === "bikestand") {
+    // Stainless Steel Customer Bike Stand with 2 parked commuter bicycles
+    const rack = new THREE.Group();
+    rack.position.set(7.2, 0.40, 5.8);
+
+    const barMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.3, metalness: 0.8 });
+    for (let r = -1; r <= 1; r++) {
+      const hoop = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.95, 8), barMat);
+      hoop.position.set(r * 0.75, 0.48, 0);
+      rack.add(hoop);
+    }
+    const topBar = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.06, 0.06), barMat);
+    topBar.position.set(0, 0.92, 0);
+    rack.add(topBar);
+
+    // 2 Parked Bicycles
+    for (const bx of [-0.45, 0.45]) {
+      const bike = new THREE.Group();
+      bike.position.set(bx, 0, 0.12);
+
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.45, 1.2), accentPaintMat);
+      frame.position.set(0, 0.45, 0);
+      bike.add(frame);
+
+      for (const bz of [-0.55, 0.55]) {
+        const bw = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.02, 8, 16), tireMat);
+        bw.rotation.y = Math.PI / 2;
+        bw.position.set(0, 0.28, bz);
+        bike.add(bw);
+      }
+      rack.add(bike);
+    }
+
+    vehicleGroup.add(rack);
+  }
+
+  group.add(vehicleGroup);
+}
+
+/**
+ * Procedural Exterior Lighting Atmosphere Customization
+ */
+function addCustomExteriorLighting(group: THREE.Group, lighting: LightingStyle = "neon", accentNum = 0xf59e0b) {
+  const lightGroup = new THREE.Group();
+  lightGroup.name = "custom_lighting_layer";
+
+  if (lighting === "neon") {
+    // Cyber Glow Runway LED Strips along arrival avenue
+    const neonMat = new THREE.MeshStandardMaterial({
+      color: accentNum,
+      emissive: new THREE.Color(accentNum),
+      emissiveIntensity: 3.0,
+    });
+    for (const lx of [-4.4, 4.4]) {
+      const runway = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 7.8), neonMat);
+      runway.position.set(lx, 0.42, 5.2);
+      lightGroup.add(runway);
+    }
+  } else if (lighting === "warm_festoon") {
+    // Hanging Edison Filament Festoon String
+    const poleMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.8 });
+    const bulbMat = new THREE.MeshStandardMaterial({
+      color: 0xfef08a,
+      emissive: new THREE.Color(0xf59e0b),
+      emissiveIntensity: 2.6,
+    });
+
+    for (const px of [-6.4, 6.4]) {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 3.8, 8), poleMat);
+      pole.position.set(px, 1.9, 7.6);
+      lightGroup.add(pole);
+    }
+
+    // 6 Warm Glowing Bulbs strung across the entry court
+    for (let i = 0; i < 6; i++) {
+      const t = i / 5;
+      const bx = -5.4 + t * 10.8;
+      const sag = Math.sin(t * Math.PI) * 0.45;
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), bulbMat);
+      bulb.position.set(bx, 3.6 - sag, 7.6);
+      lightGroup.add(bulb);
+    }
+  } else if (lighting === "uplights") {
+    // 4 Architectural Ground Uplights projecting light up facade
+    const fixtureMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4, metalness: 0.7 });
+    const beamMat = new THREE.MeshStandardMaterial({
+      color: accentNum,
+      emissive: new THREE.Color(accentNum),
+      emissiveIntensity: 3.2,
+      transparent: true,
+      opacity: 0.85,
+    });
+
+    for (const ux of [-6.2, -2.4, 2.4, 6.2]) {
+      const canister = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.14, 12), fixtureMat);
+      canister.position.set(ux, 0.42, 2.2);
+      lightGroup.add(canister);
+
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.35, 4.8, 8), beamMat);
+      beam.position.set(ux, 2.8, 1.8);
+      beam.rotation.x = -0.08;
+      lightGroup.add(beam);
+    }
+  } else if (lighting === "pathlights") {
+    // Modern Pathway Cylindrical Bollard Lights
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.5 });
+    const glowCap = new THREE.MeshStandardMaterial({
+      color: accentNum,
+      emissive: new THREE.Color(accentNum),
+      emissiveIntensity: 2.8,
+    });
+
+    for (const bx of [-3.8, 3.8]) {
+      for (const bz of [3.6, 5.6, 7.6]) {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.95, 8), bodyMat);
+        post.position.set(bx, 0.86, bz);
+        lightGroup.add(post);
+
+        const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.16, 8), glowCap);
+        cap.position.set(bx, 1.38, bz);
+        lightGroup.add(cap);
+      }
+    }
+  }
+
+  group.add(lightGroup);
+}
+
+/**
+ * Procedural Sidewalk Banner & Advertising Customization
+ */
+function addCustomStreetBanner(group: THREE.Group, banner: BannerStyle = "none", accentNum = 0xf59e0b) {
+  if (!banner || banner === "none") return;
+
+  const bannerGroup = new THREE.Group();
+  bannerGroup.name = "custom_banner_layer";
+
+  const fabricMat = new THREE.MeshStandardMaterial({
+    color: accentNum,
+    roughness: 0.65,
+    side: THREE.DoubleSide,
+  });
+  const metalMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.3, metalness: 0.8 });
+
+  if (banner === "pennant") {
+    // 5.2m Tall Stainless Steel Flagpole with Fluttering Brand Pennant
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 5.2, 10), metalMat);
+    pole.position.set(-8.8, 2.6, 8.2);
+    bannerGroup.add(pole);
+
+    const flag = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.2, 1.4), fabricMat);
+    flag.position.set(-8.8, 4.0, 7.4);
+    bannerGroup.add(flag);
+  } else if (banner === "totem") {
+    // Sidewalk Advertising A-Frame Board
+    const totemFrame = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.4, 0.18), metalMat);
+    totemFrame.position.set(-5.6, 1.25, 8.4);
+    bannerGroup.add(totemFrame);
+
+    const poster = new THREE.Mesh(
+      new THREE.BoxGeometry(1.35, 2.05, 0.22),
+      new THREE.MeshStandardMaterial({ color: 0x09090b, emissive: new THREE.Color(accentNum), emissiveIntensity: 0.5 })
+    );
+    poster.position.set(-5.6, 1.25, 8.4);
+    bannerGroup.add(poster);
+  } else if (banner === "arch") {
+    // Grand Glowing Arrival Portal Gateway
+    const archMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4, metalness: 0.7 });
+    const archLed = new THREE.MeshStandardMaterial({
+      color: accentNum,
+      emissive: new THREE.Color(accentNum),
+      emissiveIntensity: 2.8,
+    });
+
+    for (const ax of [-3.8, 3.8]) {
+      const col = new THREE.Mesh(new THREE.BoxGeometry(0.42, 4.2, 0.42), archMat);
+      col.position.set(ax, 2.1, 7.8);
+      bannerGroup.add(col);
+
+      const colLed = new THREE.Mesh(new THREE.BoxGeometry(0.08, 3.8, 0.08), archLed);
+      colLed.position.set(ax > 0 ? ax - 0.22 : ax + 0.22, 2.1, 7.8);
+      bannerGroup.add(colLed);
+    }
+
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(8.2, 0.52, 0.48), archMat);
+    lintel.position.set(0, 4.3, 7.8);
+    bannerGroup.add(lintel);
+
+    const lintelLed = new THREE.Mesh(new THREE.BoxGeometry(8.0, 0.12, 0.52), archLed);
+    lintelLed.position.set(0, 4.3, 7.8);
+    bannerGroup.add(lintelLed);
+  }
+
+  group.add(bannerGroup);
+}
+
+/**
+ * Procedural Wall Material & Architectural Siding Accent Customization
+ */
+function addCustomWallAccent(group: THREE.Group, wall: WallAccent = "standard", accentNum = 0xf59e0b) {
+  if (!wall || wall === "standard") return;
+
+  const wallGroup = new THREE.Group();
+  wallGroup.name = "custom_wall_accent_layer";
+
+  if (wall === "wood_louvres") {
+    // Teak Wood Vertical Sun-Shading Louvres
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.75 });
+    for (let i = 0; i < 8; i++) {
+      const wx = -4.2 + i * 1.2;
+      const slat = new THREE.Mesh(new THREE.BoxGeometry(0.14, 4.2, 0.24), woodMat);
+      slat.position.set(wx, 3.2, 0.85);
+      wallGroup.add(slat);
+    }
+  } else if (wall === "glass_curtain") {
+    // Reflective Cyan Glass Curtain Wall Panels
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: 0x0284c7,
+      roughness: 0.1,
+      metalness: 0.85,
+      transparent: true,
+      opacity: 0.82,
+    });
+    const mullionMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4, metalness: 0.8 });
+
+    const glassWall = new THREE.Mesh(new THREE.BoxGeometry(10.2, 4.4, 0.08), glassMat);
+    glassWall.position.set(0, 3.4, 0.95);
+    wallGroup.add(glassWall);
+
+    for (let i = -2; i <= 2; i++) {
+      const mullion = new THREE.Mesh(new THREE.BoxGeometry(0.12, 4.5, 0.14), mullionMat);
+      mullion.position.set(i * 2.4, 3.4, 0.95);
+      wallGroup.add(mullion);
+    }
+  } else if (wall === "metal_ribs") {
+    // Industrial Brushed Aluminum Ribs with Brand Emissive Accent Inlays
+    const ribMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.3, metalness: 0.85 });
+    const accentMat = new THREE.MeshStandardMaterial({
+      color: accentNum,
+      emissive: new THREE.Color(accentNum),
+      emissiveIntensity: 2.2,
+    });
+
+    for (let i = 0; i < 6; i++) {
+      const rx = -3.8 + i * 1.5;
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.12, 4.6, 0.45), ribMat);
+      fin.position.set(rx, 3.4, 0.8);
+      wallGroup.add(fin);
+
+      const ribGlow = new THREE.Mesh(new THREE.BoxGeometry(0.04, 4.2, 0.08), accentMat);
+      ribGlow.position.set(rx, 3.4, 1.04);
+      wallGroup.add(ribGlow);
+    }
+  }
+
+  group.add(wallGroup);
 }
 
 /**
@@ -2765,6 +3227,23 @@ export function createCategoryPlotMesh(
   }
   if (level >= 3) {
     addLevel3LandmarkCrown(group, safeAccentNum);
+  }
+
+  // Apply Owner Custom Wall Accent, Landscaping, Driveway Vehicle, Lighting & Street Banner
+  if (options?.wallAccent) {
+    addCustomWallAccent(group, options.wallAccent, safeAccentNum);
+  }
+  if (options?.gardenStyle) {
+    addCustomGardenLandscaping(group, options.gardenStyle);
+  }
+  if (options?.drivewayVehicle) {
+    addCustomDrivewayVehicle(group, options.drivewayVehicle, safeAccentNum);
+  }
+  if (options?.lightingStyle) {
+    addCustomExteriorLighting(group, options.lightingStyle, safeAccentNum);
+  }
+  if (options?.bannerStyle) {
+    addCustomStreetBanner(group, options.bannerStyle, safeAccentNum);
   }
 
   return group;
