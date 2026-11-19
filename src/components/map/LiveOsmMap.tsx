@@ -46,6 +46,7 @@ import {
   LiveBroadcastsDrawer,
 } from "@/components/map/LiveBroadcastsDrawer";
 import { searchLocalIndiaPlaces, IndiaPlaceEntry } from "@/lib/geo/indiaPlaces";
+import { INITIAL_CITIES } from "@/lib/constants/initialCities";
 import { getLocalStorefronts } from "@/lib/utils/localStorefront";
 import {
   bearingToThreeRotationY,
@@ -819,8 +820,13 @@ export function LiveOsmMap({
           (s) => s.slug.toLowerCase() === urlShopSlug
         )
       : undefined;
-    const hasNerqivaDeepLink =
-      urlShopSlug === "nerqiva-studio" || urlCityParam === "guwahati";
+    const matchedCity = urlCityParam
+      ? INITIAL_CITIES.find(
+          (c) =>
+            c.slug.toLowerCase() === urlCityParam ||
+            c.name.toLowerCase() === urlCityParam
+        )
+      : undefined;
     const urlPlace = params?.get("place") || params?.get("pin");
     const urlLat = params?.get("lat") ? parseFloat(params.get("lat")!) : NaN;
     const urlLon = params?.get("lon") ? parseFloat(params.get("lon")!) : NaN;
@@ -840,11 +846,25 @@ export function LiveOsmMap({
       setFocusedStorefront(matchedDeepLinkShop);
       setMapZoom(initialZoom);
       setMapCenter(initialCenter);
-    } else if (hasNerqivaDeepLink) {
+    } else if (urlShopSlug === "nerqiva-studio") {
       initialCenter = NERQIVA_COORDS;
       initialZoom = 18.2;
       initialPitch = 56;
       initialBearing = 35;
+    } else if (matchedCity) {
+      initialCenter = [matchedCity.lon, matchedCity.lat];
+      initialZoom = 12;
+      initialPitch = 48;
+      initialBearing = 0;
+      setFocusedRegion({
+        name: matchedCity.name,
+        subtitle: "India",
+        kind: "city",
+        lat: matchedCity.lat,
+        lon: matchedCity.lon,
+      });
+      setMapZoom(initialZoom);
+      setMapCenter(initialCenter);
     } else if (hasPlaceDeepLink) {
       initialCenter = [urlLon, urlLat];
       initialZoom = Number.isFinite(urlZoom) ? Math.max(INDIA_MIN_ZOOM, Math.min(20, urlZoom)) : 12.5;
@@ -2694,6 +2714,71 @@ export function LiveOsmMap({
   const viewLevel: "india" | "region" | "street" =
     mapZoom >= 15.2 ? "street" : mapZoom >= 9.2 || Boolean(focusedRegion) ? "region" : "india";
 
+  // Dynamic Recenter & Reset: Resets view to active storefront, focused region, nearest plot, or National India Overview
+  const handleDynamicResetView = useCallback(() => {
+    if (!mapRef.current) return;
+
+    // 1. If currently viewing / focused on a business, re-center on this active business
+    const currentShop = activeStreetBusiness || focusedStorefront;
+    if (currentShop) {
+      flyToStorefront(currentShop);
+      showToast(`📍 Recenter: ${currentShop.name}`);
+      return;
+    }
+
+    // 2. If currently focused on a region/city/PIN, re-center on this region
+    if (focusedRegion) {
+      flyToPlace({
+        name: focusedRegion.name,
+        subtitle: focusedRegion.subtitle,
+        kind: focusedRegion.kind,
+        lat: focusedRegion.lat,
+        lon: focusedRegion.lon,
+        zoom: mapZoom >= 13 ? 14 : 11.5,
+      });
+      return;
+    }
+
+    // 3. If there is a live registered storefront nearby in current camera view
+    if (nearestToCenter && nearestToCenter.distKm < 60) {
+      flyToStorefront(nearestToCenter.storefront);
+      showToast(`📍 Nearest Plot: ${nearestToCenter.storefront.name}`);
+      return;
+    }
+
+    // 4. Otherwise, reset to National All-India Overview
+    clearSearchPin();
+    handleStopMove();
+    setIsWalkMode(false);
+    isWalkModeRef.current = false;
+    setFocusedStorefront(null);
+    setFocusedRegion(null);
+    setIs3DMode(true);
+    isFlightActiveRef.current = true;
+    mapRef.current.flyTo({
+      center: INDIA_CENTER,
+      zoom: 4.3,
+      pitch: 42,
+      bearing: -6,
+      duration: 1200,
+    });
+    mapRef.current.once("moveend", () => {
+      isFlightActiveRef.current = false;
+    });
+    showToast("🇮🇳 India Overview");
+  }, [
+    activeStreetBusiness,
+    focusedStorefront,
+    focusedRegion,
+    nearestToCenter,
+    mapZoom,
+    flyToStorefront,
+    flyToPlace,
+    clearSearchPin,
+    handleStopMove,
+    showToast,
+  ]);
+
   // Automatically clear search target pin when returning to All-India or clearing region
   useEffect(() => {
     if (!focusedRegion) {
@@ -3030,10 +3115,19 @@ export function LiveOsmMap({
               {isNightMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-cyan-400" />}
             </button>
 
-            {/* Recenter on Flagship Plot */}
+            {/* Dynamic Recenter & Reset */}
             <button
-              onClick={() => flyToStorefront(nerqivaBusiness)}
-              title="Focus on Nearest Live Plot"
+              onClick={handleDynamicResetView}
+              title={
+                activeStreetBusiness || focusedStorefront
+                  ? `Recenter on ${(activeStreetBusiness || focusedStorefront)?.name}`
+                  : focusedRegion
+                  ? `Recenter on ${focusedRegion.name}`
+                  : nearestToCenter && nearestToCenter.distKm < 60
+                  ? `Focus on nearest plot (${nearestToCenter.storefront.name})`
+                  : "Reset to India Overview"
+              }
+              aria-label="Reset or recenter map view"
               className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors"
             >
               <RotateCcw className="w-4 h-4 text-neutral-300" />

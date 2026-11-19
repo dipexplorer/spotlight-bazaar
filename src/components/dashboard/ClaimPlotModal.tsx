@@ -359,3 +359,4 @@ export function ClaimPlotModal({ accessToken, onClose, onPlotClaimed }: ClaimPlo
     </div>
   );
 }
+
