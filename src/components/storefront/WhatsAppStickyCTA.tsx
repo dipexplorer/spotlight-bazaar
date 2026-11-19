@@ -38,12 +38,12 @@ export function WhatsAppStickyCTA({
   };
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/b/${slug}`;
+    const url = `${window.location.origin}/?shop=${slug}`;
     if (navigator.share) {
       try {
         await navigator.share({
           title: `${businessName} on Spotlight Bazaar`,
-          text: `Check out ${businessName}'s rates and portfolio:`,
+          text: `Check out ${businessName} on India's 3D Business Map:`,
           url,
         });
         return;

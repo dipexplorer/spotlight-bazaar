@@ -141,7 +141,7 @@ export const WALL_ACCENT_PRESETS: WallAccentPreset[] = [
   { id: "standard", name: "Solid Monolith", description: "Classic architectural category massing" },
   { id: "wood_louvres", name: "Teak Wood Louvres", description: "Natural warm timber vertical sun-shading slats" },
   { id: "glass_curtain", name: "Cyan Glass Curtain", description: "Full-height solar glazing with high reflectivity" },
-  { id: "metal_ribs", name: "Brushed Aluminum Ribs", description: "Industrial anodized alloy fins & cooling louvres" },
+  { id: "metal_ribs", name: "Brushed Fins", description: "Industrial anodized alloy fins & cooling louvres" },
 ];
 
 export const ALLOWED_GARDEN_STYLES = new Set<GardenStyle>(["none", "minimal", "zen", "palms", "planters"]);
@@ -292,17 +292,6 @@ export function computeEarnedBazaarCoins(input: {
       hint: "Active deal, hiring, or coupon (+35/post)",
     },
   ];
-
-  // Optional photo bonus if photos exist (does NOT block core milestones)
-  if ((input.photosCount || 0) >= 1) {
-    checklist.push({
-      id: "portfolio_photos",
-      label: "Storefront Showcase",
-      coins: 30,
-      earned: true,
-      hint: "Workspace or product photos",
-    });
-  }
 
   const milestoneCoins = checklist.reduce((sum, c) => sum + (c.earned ? c.coins : 0), 0);
   const extraBroadcastCoins = Math.max(0, input.broadcastsCount - 1) * 35;

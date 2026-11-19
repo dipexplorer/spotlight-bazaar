@@ -217,10 +217,10 @@ export function PlotLive3DViewer({
       emissive: new THREE.Color(accentColor),
       emissiveIntensity: 0.22,
     });
-    const signGeo = new THREE.BoxGeometry(8.5, 2.1, 0.25);
+    const signGeo = new THREE.BoxGeometry(6.4, 1.35, 0.18);
     const signMesh = new THREE.Mesh(signGeo, signMat);
     signMesh.name = "dashboard_3d_sign";
-    signMesh.position.set(0, 9.2, 7.8);
+    signMesh.position.set(0, 5.8, 3.4);
     signMesh.castShadow = true;
     scene.add(signMesh);
 
@@ -322,13 +322,26 @@ export function PlotLive3DViewer({
     inst.scene.add(newGroup);
     inst.buildingGroup = newGroup;
 
-    // Adjust 3D sign vertical position based on category building height & plot level
+    // Position 3D storefront signboard flush on upper facade fascia (no floating)
     if (inst.signMesh) {
-      const box = new THREE.Box3().setFromObject(newGroup);
-      const sizeY = box.max.y - box.min.y;
-      const topY = Math.max(sizeY * 0.78, 8.5);
-      inst.signMesh.position.y = topY + (plotLevel >= 3 ? 1.6 : 0);
-      inst.signMesh.position.z = Math.min(box.max.z + 0.3, 8.2);
+      const box = new THREE.Box3();
+      newGroup.traverse((obj) => {
+        if (
+          (obj as THREE.Mesh).isMesh &&
+          obj.position.y >= 1.5 &&
+          obj.name !== "plot_base_plinth" &&
+          obj.name !== "plot_apron" &&
+          !obj.name.startsWith("custom_") &&
+          !obj.name.includes("planter") &&
+          !obj.name.includes("tree")
+        ) {
+          box.expandByObject(obj);
+        }
+      });
+      const roofY = Number.isFinite(box.max.y) ? box.max.y : 6.8;
+      const frontZ = Number.isFinite(box.max.z) ? box.max.z : 3.6;
+      inst.signMesh.position.set(0, Math.max(4.6, Math.min(6.2, roofY - 0.72)), frontZ + 0.12);
+      inst.signMesh.rotation.set(0, 0, 0);
     }
   }, [
     categoryId,

@@ -50,7 +50,7 @@ interface OwnedBusiness extends BusinessStorefront {
   coin_audit?: CoinAuditResult;
 }
 
-type DashboardTab = "details" | "verification" | "plot" | "broadcasts" | "photos" | "settings";
+type DashboardTab = "details" | "verification" | "plot" | "broadcasts" | "settings";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -748,7 +748,6 @@ export default function DashboardPage() {
                   { id: "verification", label: "Verification" },
                   { id: "plot", label: "3D Plot" },
                   { id: "broadcasts", label: "Broadcasts" },
-                  { id: "photos", label: `Photos (${photos.length}/6)` },
                   { id: "settings", label: "Settings" },
                 ] as const
               ).map((t) => {
@@ -1099,97 +1098,7 @@ export default function DashboardPage() {
               />
             )}
 
-            {/* TAB 3: PHOTOS */}
-            {activeTab === "photos" && (
-              <div className="space-y-5">
-                <label
-                  htmlFor="dash-photo-upload"
-                  className="flex flex-col items-center justify-center w-full min-h-[140px] px-4 py-5 rounded-2xl border border-dashed border-neutral-700 hover:border-amber-500/60 bg-[#121215]/70 hover:bg-[#121215] cursor-pointer transition-colors"
-                >
-                  {uploadingPhoto || saving ? (
-                    <div className="flex items-center gap-2 text-sm text-amber-400 font-medium">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Uploading to CDN storage…</span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-1.5 text-center">
-                      <ImagePlus className="w-5 h-5 text-neutral-300" />
-                      <span className="text-sm font-semibold text-neutral-100">
-                        Upload new storefront photos
-                      </span>
-                      <span className="text-xs text-neutral-400">
-                        JPG, PNG, or WebP · Stored on Supabase CDN ({photos.length}/6 used)
-                      </span>
-                    </div>
-                  )}
-                  <input
-                    id="dash-photo-upload"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    disabled={uploadingPhoto || saving || photos.length >= 6}
-                    onChange={handlePhotoUpload}
-                    className="sr-only"
-                  />
-                </label>
-
-                {photos.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                    {photos.map((url, idx) => (
-                      <div
-                        key={`${url.slice(0, 32)}-${idx}`}
-                        className="rounded-2xl overflow-hidden bg-[#121215] border border-neutral-800 flex flex-col"
-                      >
-                        <div className="relative aspect-[4/3] bg-neutral-900">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={url}
-                            alt={`${selectedBiz.name} photo ${idx + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                          {idx === 0 && (
-                            <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-md bg-black/80 text-[11px] font-semibold text-amber-400">
-                              Cover
-                            </span>
-                          )}
-                        </div>
-                        <div className="p-2.5 flex items-center justify-between gap-2">
-                          {idx > 0 ? (
-                            <button
-                              type="button"
-                              disabled={saving}
-                              onClick={() => handleSetCover(idx)}
-                              className="min-h-[36px] px-2.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-medium text-neutral-200 flex items-center gap-1.5 transition-colors"
-                            >
-                              <Star className="w-3.5 h-3.5 text-amber-400" />
-                              <span>Set Cover</span>
-                            </button>
-                          ) : (
-                            <span className="text-xs text-neutral-400 pl-1">Primary cover</span>
-                          )}
-
-                          <button
-                            type="button"
-                            disabled={saving}
-                            onClick={() => handleRemovePhoto(idx)}
-                            aria-label={`Remove photo ${idx + 1}`}
-                            className="min-h-[36px] min-w-[36px] rounded-lg bg-neutral-900 hover:bg-red-500/20 border border-neutral-800 hover:border-red-500/40 text-neutral-400 hover:text-red-300 flex items-center justify-center transition-colors"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-neutral-400 text-center py-6">
-                    No photos uploaded yet. Add at least 1 photo to make your storefront stand out.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* TAB 3: SETTINGS & DANGER ZONE */}
+            {/* TAB 4: SETTINGS & DANGER ZONE */}
             {activeTab === "settings" && (
               <div className="space-y-5">
                 <div className="p-5 rounded-2xl bg-[#121215] border border-neutral-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

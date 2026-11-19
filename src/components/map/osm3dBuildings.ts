@@ -1855,17 +1855,30 @@ function addArchitecturalPlanter(
   potColor = 0x1e293b,
   foliageColor = 0x15803d
 ) {
-  const potMat = new THREE.MeshStandardMaterial({ color: potColor, roughness: 0.75 });
-  const leafMat = new THREE.MeshStandardMaterial({ color: foliageColor, roughness: 0.82 });
+  const planterGroup = new THREE.Group();
+  planterGroup.name = "default_architectural_planter";
 
-  const pot = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.75, 1.4), potMat);
+  const potMat = new THREE.MeshStandardMaterial({ color: potColor, roughness: 0.65, metalness: 0.2 });
+  const soilMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.95 });
+  const leafMat = new THREE.MeshStandardMaterial({ color: foliageColor, roughness: 0.85 });
+
+  // Sleek tapered architectural urn / trough
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.52, 0.82, 16), potMat);
   pot.position.set(x, 0.74, z);
-  group.add(pot);
+  planterGroup.add(pot);
 
-  const bush = new THREE.Mesh(new THREE.SphereGeometry(0.68, 12, 10), leafMat);
-  bush.scale.set(1.0, 1.15, 1.0);
-  bush.position.set(x, 1.52, z);
-  group.add(bush);
+  // Top soil layer
+  const soil = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.68, 0.06, 16), soilMat);
+  soil.position.set(x, 1.14, z);
+  planterGroup.add(soil);
+
+  // Sculpted architectural topiary dome
+  const bush = new THREE.Mesh(new THREE.DodecahedronGeometry(0.62, 1), leafMat);
+  bush.scale.set(1.05, 0.92, 1.05);
+  bush.position.set(x, 1.55, z);
+  planterGroup.add(bush);
+
+  group.add(planterGroup);
 }
 
 /**
@@ -2240,11 +2253,17 @@ function buildTechStudioPlot(): THREE.Group {
   col.position.set(7.8, 2.06, 3.2);
   g.add(col);
 
-  // Rooftop Angled Solar Array
+  // Rooftop Angled Solar Array with physical mounting stands (flush on roof surface, no floating)
+  const panelStandMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
   for (const sx of [-4.2, 0.6, 5.4]) {
-    const panel = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.12, 2.8), solarMat);
-    panel.position.set(sx, 7.75, -1.6);
-    panel.rotation.x = 0.24;
+    for (const bz of [-2.4, -0.8]) {
+      const stand = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.22, 0.14), panelStandMat);
+      stand.position.set(sx, 7.02, bz);
+      g.add(stand);
+    }
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.08, 2.4), solarMat);
+    panel.position.set(sx, 7.14, -1.6);
+    panel.rotation.x = 0.18;
     g.add(panel);
   }
 
@@ -3234,6 +3253,15 @@ export function createCategoryPlotMesh(
     addCustomWallAccent(group, options.wallAccent, safeAccentNum);
   }
   if (options?.gardenStyle) {
+    if (options.gardenStyle !== "none") {
+      const toRemove: THREE.Object3D[] = [];
+      group.traverse((obj) => {
+        if (obj.name === "default_architectural_planter") toRemove.push(obj);
+      });
+      for (const r of toRemove) {
+        if (r.parent) r.parent.remove(r);
+      }
+    }
     addCustomGardenLandscaping(group, options.gardenStyle);
   }
   if (options?.drivewayVehicle) {

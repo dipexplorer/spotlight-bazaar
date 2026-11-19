@@ -170,20 +170,32 @@ export function StorefrontDialogueModal({
             </a>
           )}
 
-          {/* Full Profile & Portfolio */}
-          <Link
-            href={`/b/${storefront.slug}`}
-            onClick={() => {
-              onClose();
-              if (onOpenFullProfile) {
-                onOpenFullProfile(storefront);
-              }
-            }}
-            className="w-full py-2.5 px-4 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 font-medium text-xs text-amber-300 hover:text-amber-200 flex items-center justify-center gap-2 transition-all shadow-md group"
-          >
-            <span>View Full Services & Portfolio</span>
-            <ChevronRight className="w-3.5 h-3.5 text-amber-400 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
+          {/* Instagram Profile */}
+          {storefront.instagram_handle && (
+            <a
+              href={`https://instagram.com/${storefront.instagram_handle.replace(/^@/, "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/80 font-medium text-xs text-rose-300 hover:text-rose-200 flex items-center justify-center gap-2 transition-all shadow-md group"
+            >
+              <span>Follow @{storefront.instagram_handle.replace(/^@/, "")} on Instagram</span>
+              <ExternalLink className="w-3.5 h-3.5 text-rose-400 group-hover:translate-x-0.5 transition-transform" />
+            </a>
+          )}
+
+          {/* Google Maps Directions */}
+          {storefront.google_maps_url && (
+            <a
+              href={storefront.google_maps_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-2.5 px-4 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 font-medium text-xs text-sky-300 hover:text-sky-200 flex items-center justify-center gap-2 transition-all shadow-md group"
+            >
+              <MapPin className="w-3.5 h-3.5 text-sky-400" />
+              <span>Get Directions on Google Maps</span>
+              <ExternalLink className="w-3.5 h-3.5 text-sky-400/80 group-hover:translate-x-0.5 transition-transform" />
+            </a>
+          )}
         </div>
 
         {/* Microcopy note */}

@@ -58,7 +58,7 @@ interface PlotCustomizerProps {
   coinAudit: CoinAuditResult;
   accessToken: string;
   onBusinessUpdated: (updated: Record<string, unknown>) => void;
-  onNavigateTab: (tab: "details" | "broadcasts" | "photos") => void;
+  onNavigateTab: (tab: "details" | "broadcasts") => void;
 }
 
 type CustomizerTab =
@@ -348,7 +348,7 @@ export function PlotCustomizer({
 
   const getChecklistAction = (
     itemId: string
-  ): { label: string; tab: "details" | "broadcasts" | "photos" } | null => {
+  ): { label: string; tab: "details" | "broadcasts" } | null => {
     if (itemId === "broadcast") {
       return { label: "Post", tab: "broadcasts" };
     }
@@ -360,9 +360,6 @@ export function PlotCustomizer({
       itemId === "whatsapp_line"
     ) {
       return { label: "Edit", tab: "details" };
-    }
-    if (itemId === "portfolio_photos") {
-      return { label: "Upload", tab: "photos" };
     }
     return null;
   };
@@ -437,7 +434,7 @@ export function PlotCustomizer({
                   <span className="text-neutral-400 tabular-nums">
                     {coinAudit.coinsToNextLevel > 0
                       ? `${coinAudit.coinsToNextLevel} coins needed`
-                      : "Unlocked"}
+                      : "Threshold reached"}
                   </span>
                 </>
               ) : (
@@ -582,10 +579,10 @@ export function PlotCustomizer({
           </div>
         </div>
 
-        {/* Right: Architectural Customizer Tabs & Visual Controls */}
+        {/* Right: Architectural Customizer Visual Controls */}
         <div className="lg:col-span-5 space-y-3">
-          {/* Sub-Category Nav Pills */}
-          <div className="grid grid-cols-6 gap-1 p-1 bg-[#121215] border border-neutral-800/90 rounded-xl">
+          {/* Sub-Category Pills (Balanced 3x2 Grid - All 6 Visible, Zero Scrolling) */}
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-[#121215] border border-neutral-800/90 rounded-xl">
             {customizerTabs.map((tab) => {
               const active = activeTab === tab.id;
               const Icon = tab.icon;
@@ -594,15 +591,14 @@ export function PlotCustomizer({
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  title={tab.label}
-                  className={`min-h-[34px] rounded-lg text-[11px] font-semibold inline-flex flex-col sm:flex-row items-center justify-center gap-1 transition-colors ${
+                  className={`py-2 px-2 rounded-lg text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all ${
                     active
-                      ? "bg-amber-500 text-neutral-950 font-bold shadow-sm"
-                      : "text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50"
+                      ? "bg-amber-500 text-neutral-950 font-bold shadow-md shadow-amber-950/20"
+                      : "text-neutral-400 hover:text-white hover:bg-neutral-800/60"
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate hidden sm:inline">{tab.label}</span>
+                  <span>{tab.label}</span>
                 </button>
               );
             })}
@@ -610,11 +606,10 @@ export function PlotCustomizer({
 
           {/* TAB 1: FINISHES & GLOW */}
           {activeTab === "finishes" && (
-            <div className="space-y-3.5 rounded-2xl bg-[#121215] border border-neutral-800/90 p-4">
-              {/* Facade Material Finish */}
+            <div className="space-y-3 rounded-2xl bg-[#121215] border border-neutral-800/90 p-3.5">
               <fieldset className="space-y-2">
-                <legend className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                  Facade &amp; Plinth Finish
+                <legend className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
+                  Facade &amp; Plinth Materials
                 </legend>
                 <div className="grid grid-cols-2 gap-2">
                   {FACADE_THEME_PRESETS.map((theme) => {
@@ -625,27 +620,28 @@ export function PlotCustomizer({
                         type="button"
                         aria-pressed={selected}
                         onClick={() => setFacadeTheme(theme.id)}
-                        className={`min-h-[52px] p-2.5 rounded-xl border text-left transition-colors flex items-center gap-2.5 ${
+                        className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-2 ${
                           selected
-                            ? "bg-amber-500/10 border-amber-500/60"
+                            ? "bg-amber-500/10 border-amber-500/70 ring-1 ring-amber-500/30"
                             : "bg-[#09090b] border-neutral-800 hover:border-neutral-700"
                         }`}
                       >
-                        <div className="flex flex-col gap-1 shrink-0">
-                          <span
-                            className="w-4 h-3 rounded-sm border border-white/15"
+                        {/* Visual 3D-effect Material Swatch */}
+                        <div className="h-10 w-full rounded-lg overflow-hidden border border-white/10 flex flex-col shadow-inner">
+                          <div
+                            className="flex-1 w-full"
                             style={{ backgroundColor: theme.swatches[0] }}
                           />
-                          <span
-                            className="w-4 h-1.5 rounded-sm border border-white/15"
+                          <div
+                            className="h-3.5 w-full border-t border-black/30"
                             style={{ backgroundColor: theme.swatches[1] }}
                           />
                         </div>
-                        <div className="min-w-0">
-                          <div className="text-xs font-semibold text-white flex items-center gap-1 truncate">
-                            <span>{theme.name}</span>
-                            {selected && <Check className="w-3 h-3 text-amber-400 shrink-0" />}
-                          </div>
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-xs font-bold text-white truncate">
+                            {theme.name}
+                          </span>
+                          {selected && <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
                         </div>
                       </button>
                     );
@@ -654,9 +650,9 @@ export function PlotCustomizer({
               </fieldset>
 
               {/* Brand Accent LED Color */}
-              <fieldset className="space-y-2">
-                <legend className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                  Brand Accent LED
+              <fieldset className="space-y-2 pt-1">
+                <legend className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
+                  Brand LED Glow &amp; Beacons
                 </legend>
                 <div className="grid grid-cols-3 gap-1.5">
                   {ACCENT_COLOR_PRESETS.map((preset) => {
@@ -667,36 +663,32 @@ export function PlotCustomizer({
                         type="button"
                         aria-pressed={selected}
                         onClick={() => setAccentColor(preset.hex)}
-                        className={`min-h-[36px] px-2 rounded-lg border flex items-center gap-1.5 text-[11px] font-medium transition-colors ${
+                        className={`min-h-[38px] px-2.5 rounded-xl border flex items-center gap-2 text-xs font-medium transition-all ${
                           selected
-                            ? "bg-neutral-900 border-amber-500/70 text-white"
+                            ? "bg-neutral-900 border-amber-500/80 text-white shadow-sm ring-1 ring-amber-500/40"
                             : "bg-[#09090b] border-neutral-800 text-neutral-300 hover:border-neutral-700"
                         }`}
                       >
                         <span
-                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          className="w-3.5 h-3.5 rounded-full shrink-0 ring-1 ring-white/20 transition-transform"
                           style={{
                             backgroundColor: preset.hex,
-                            boxShadow: `0 0 6px ${preset.hex}`,
+                            boxShadow: `0 0 10px ${preset.hex}`,
+                            transform: selected ? "scale(1.15)" : "scale(1)",
                           }}
                         />
-                        <span className="truncate">{preset.name}</span>
+                        <span className="truncate text-[11px] font-semibold">{preset.name}</span>
                       </button>
                     );
                   })}
                 </div>
               </fieldset>
 
-              {/* Rooftop Marquee Tag */}
-              <div className="space-y-1 pt-1">
-                <div className="flex items-center justify-between">
-                  <label
-                    htmlFor="plot-roof-tag"
-                    className="block text-xs font-semibold uppercase tracking-wider text-neutral-400"
-                  >
-                    Roof Marquee Tag
-                  </label>
-                  <span className="text-[11px] text-neutral-500 tabular-nums">
+              {/* Rooftop Marquee Tag Input */}
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center justify-between text-xs font-bold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="plot-roof-tag">Rooftop Marquee Tag</label>
+                  <span className="text-[11px] font-normal text-neutral-500 tabular-nums">
                     {roofSignText.length}/18
                   </span>
                 </div>
@@ -713,13 +705,13 @@ export function PlotCustomizer({
             </div>
           )}
 
-          {/* TAB 2: WALLS */}
+          {/* TAB 2: WALLS & FACADE ACCENTS (Visual Preview Cards) */}
           {activeTab === "walls" && (
-            <div className="space-y-2 rounded-2xl bg-[#121215] border border-neutral-800/90 p-4">
-              <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 pb-1">
-                Wall Architectural Accents
+            <div className="space-y-2 rounded-2xl bg-[#121215] border border-neutral-800/90 p-3.5">
+              <div className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
+                Wall Architectural Treatments
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 pt-1">
                 {WALL_ACCENT_PRESETS.map((preset) => {
                   const selected = wallAccent === preset.id;
                   return (
@@ -728,21 +720,57 @@ export function PlotCustomizer({
                       type="button"
                       aria-pressed={selected}
                       onClick={() => setWallAccent(preset.id)}
-                      className={`min-h-[56px] p-2.5 rounded-xl border text-left transition-colors flex items-center justify-between gap-2 ${
+                      className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-2 ${
                         selected
-                          ? "bg-amber-500/10 border-amber-500/60"
+                          ? "bg-amber-500/10 border-amber-500/70 ring-1 ring-amber-500/30"
                           : "bg-[#09090b] border-neutral-800 hover:border-neutral-700"
                       }`}
                     >
-                      <div className="min-w-0">
-                        <div className="text-xs font-semibold text-white truncate">
-                          {preset.name}
-                        </div>
-                        <div className="text-[10px] text-neutral-400 truncate mt-0.5">
-                          {preset.description}
-                        </div>
+                      {/* Visual Graphic Representation */}
+                      <div className="h-12 w-full rounded-lg bg-[#0e1017] border border-white/10 flex items-center justify-center p-1.5 relative overflow-hidden">
+                        {preset.id === "standard" && (
+                          <div className="w-full h-full rounded bg-gradient-to-r from-neutral-800 to-neutral-700 border border-white/10 flex items-center justify-center">
+                            <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400">
+                              MONOLITH
+                            </span>
+                          </div>
+                        )}
+                        {preset.id === "wood_louvres" && (
+                          <div className="w-full h-full flex justify-between items-stretch gap-1 px-1">
+                            {[1, 2, 3, 4, 5, 6].map((i) => (
+                              <div
+                                key={i}
+                                className="flex-1 rounded-sm bg-gradient-to-b from-[#b45309] to-[#78350f] shadow-sm"
+                              />
+                            ))}
+                          </div>
+                        )}
+                        {preset.id === "glass_curtain" && (
+                          <div className="w-full h-full rounded bg-gradient-to-tr from-[#0284c7] via-[#38bdf8]/60 to-[#e0f2fe]/40 border border-cyan-400/30 flex items-center justify-center relative overflow-hidden">
+                            <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)]" />
+                            <div className="w-full h-full grid grid-cols-3 divide-x divide-cyan-900/40" />
+                          </div>
+                        )}
+                        {preset.id === "metal_ribs" && (
+                          <div className="w-full h-full flex justify-around items-stretch px-1">
+                            {[1, 2, 3, 4].map((i) => (
+                              <div
+                                key={i}
+                                className="w-1.5 rounded-sm bg-gradient-to-b from-slate-400 to-slate-600 relative flex items-center justify-center shadow"
+                              >
+                                <span className="w-0.5 h-3/4 rounded-full bg-amber-400 shadow-[0_0_4px_#f59e0b]" />
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      {selected && <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-xs font-bold text-white truncate">
+                          {preset.name}
+                        </span>
+                        {selected && <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+                      </div>
                     </button>
                   );
                 })}
@@ -750,13 +778,13 @@ export function PlotCustomizer({
             </div>
           )}
 
-          {/* TAB 3: GARDEN */}
+          {/* TAB 3: COURTYARD GARDEN (Visual Preview Cards) */}
           {activeTab === "garden" && (
-            <div className="space-y-2 rounded-2xl bg-[#121215] border border-neutral-800/90 p-4">
-              <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 pb-1">
-                Courtyard Landscaping
+            <div className="space-y-2 rounded-2xl bg-[#121215] border border-neutral-800/90 p-3.5">
+              <div className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
+                Courtyard &amp; Landscaping
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 pt-1">
                 {GARDEN_STYLE_PRESETS.map((preset) => {
                   const selected = gardenStyle === preset.id;
                   return (
@@ -765,21 +793,60 @@ export function PlotCustomizer({
                       type="button"
                       aria-pressed={selected}
                       onClick={() => setGardenStyle(preset.id)}
-                      className={`min-h-[56px] p-2.5 rounded-xl border text-left transition-colors flex items-center justify-between gap-2 ${
+                      className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-2 ${
                         selected
-                          ? "bg-amber-500/10 border-amber-500/60"
+                          ? "bg-amber-500/10 border-amber-500/70 ring-1 ring-amber-500/30"
                           : "bg-[#09090b] border-neutral-800 hover:border-neutral-700"
                       }`}
                     >
-                      <div className="min-w-0">
-                        <div className="text-xs font-semibold text-white truncate">
-                          {preset.name}
-                        </div>
-                        <div className="text-[10px] text-neutral-400 truncate mt-0.5">
-                          {preset.description}
-                        </div>
+                      {/* Visual Graphic Representation */}
+                      <div className="h-12 w-full rounded-lg bg-[#0e1017] border border-white/10 flex items-center justify-center p-1.5 relative overflow-hidden">
+                        {preset.id === "none" && (
+                          <div className="w-full h-full rounded bg-neutral-800 border border-neutral-700 grid grid-cols-4 grid-rows-2 gap-0.5 p-0.5">
+                            {Array.from({ length: 8 }).map((_, i) => (
+                              <div key={i} className="bg-neutral-700 rounded-xs" />
+                            ))}
+                          </div>
+                        )}
+                        {preset.id === "minimal" && (
+                          <div className="w-full h-full rounded bg-[#15803d] border border-emerald-400/30 flex items-center justify-center shadow-inner relative">
+                            <div className="w-full h-2 bg-[#166534] absolute bottom-0 border-t border-black/20" />
+                            <span className="text-[11px] font-bold text-emerald-100">TURF LAWN</span>
+                          </div>
+                        )}
+                        {preset.id === "zen" && (
+                          <div className="w-full h-full rounded bg-[#1e293b] border border-slate-700 flex items-center justify-center gap-2 px-2">
+                            <span className="w-3.5 h-3.5 rounded-full bg-slate-900 border border-slate-600 shrink-0" />
+                            <span className="w-3 h-3 rounded-full bg-slate-900 border border-slate-600 shrink-0" />
+                            <div className="flex gap-0.5 h-full items-end pb-1">
+                              <span className="w-1 h-7 rounded-t bg-emerald-600" />
+                              <span className="w-1 h-5 rounded-t bg-emerald-500" />
+                            </div>
+                          </div>
+                        )}
+                        {preset.id === "palms" && (
+                          <div className="w-full h-full rounded bg-gradient-to-b from-[#064e3b] to-[#022c22] border border-emerald-500/30 flex items-center justify-center gap-2">
+                            <span className="text-xl">🌴</span>
+                            <span className="text-[10px] font-bold text-emerald-200">PALMS</span>
+                          </div>
+                        )}
+                        {preset.id === "planters" && (
+                          <div className="w-full h-full rounded bg-neutral-900 border border-neutral-700 flex items-center justify-center gap-2 px-1">
+                            <div className="w-full h-6 rounded bg-stone-800 border border-stone-600 flex items-center justify-center gap-1.5 shadow">
+                              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm" />
+                              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm" />
+                              <span className="w-2.5 h-2.5 rounded-full bg-violet-400 shadow-sm" />
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      {selected && <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-xs font-bold text-white truncate">
+                          {preset.name}
+                        </span>
+                        {selected && <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+                      </div>
                     </button>
                   );
                 })}
@@ -787,13 +854,13 @@ export function PlotCustomizer({
             </div>
           )}
 
-          {/* TAB 4: VEHICLES */}
+          {/* TAB 4: VEHICLES (Visual Preview Cards) */}
           {activeTab === "vehicles" && (
-            <div className="space-y-2 rounded-2xl bg-[#121215] border border-neutral-800/90 p-4">
-              <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 pb-1">
+            <div className="space-y-2 rounded-2xl bg-[#121215] border border-neutral-800/90 p-3.5">
+              <div className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
                 Driveway Vehicles &amp; Arrivals
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 pt-1">
                 {DRIVEWAY_VEHICLE_PRESETS.map((preset) => {
                   const selected = drivewayVehicle === preset.id;
                   return (
@@ -802,21 +869,51 @@ export function PlotCustomizer({
                       type="button"
                       aria-pressed={selected}
                       onClick={() => setDrivewayVehicle(preset.id)}
-                      className={`min-h-[56px] p-2.5 rounded-xl border text-left transition-colors flex items-center justify-between gap-2 ${
+                      className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-2 ${
                         selected
-                          ? "bg-amber-500/10 border-amber-500/60"
+                          ? "bg-amber-500/10 border-amber-500/70 ring-1 ring-amber-500/30"
                           : "bg-[#09090b] border-neutral-800 hover:border-neutral-700"
                       }`}
                     >
-                      <div className="min-w-0">
-                        <div className="text-xs font-semibold text-white truncate">
-                          {preset.name}
-                        </div>
-                        <div className="text-[10px] text-neutral-400 truncate mt-0.5">
-                          {preset.description}
-                        </div>
+                      {/* Visual Graphic Representation */}
+                      <div className="h-12 w-full rounded-lg bg-[#0e1017] border border-white/10 flex items-center justify-center p-1.5 relative overflow-hidden">
+                        {preset.id === "none" && (
+                          <div className="w-full h-full rounded border border-dashed border-neutral-700 flex items-center justify-center">
+                            <span className="text-[10px] font-mono text-neutral-400">OPEN COURT</span>
+                          </div>
+                        )}
+                        {preset.id === "scooter" && (
+                          <div className="w-full h-full flex items-center justify-center gap-2">
+                            <span className="text-2xl">🛵</span>
+                            <span className="text-[10px] font-bold text-amber-300">EXPRESS</span>
+                          </div>
+                        )}
+                        {preset.id === "sedan" && (
+                          <div className="w-full h-full flex items-center justify-center gap-2">
+                            <span className="text-2xl">🚗</span>
+                            <span className="text-[10px] font-bold text-slate-300">EXECUTIVE</span>
+                          </div>
+                        )}
+                        {preset.id === "cyber" && (
+                          <div className="w-full h-full rounded bg-gradient-to-r from-neutral-900 via-cyan-950/40 to-neutral-900 border border-cyan-500/40 flex items-center justify-center gap-2 shadow-inner">
+                            <span className="text-xl">🏎️</span>
+                            <span className="text-[10px] font-mono font-bold text-cyan-300">CYBER EV</span>
+                          </div>
+                        )}
+                        {preset.id === "bikestand" && (
+                          <div className="w-full h-full flex items-center justify-center gap-2">
+                            <span className="text-2xl">🚲</span>
+                            <span className="text-[10px] font-bold text-emerald-300">BIKE RACK</span>
+                          </div>
+                        )}
                       </div>
-                      {selected && <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-xs font-bold text-white truncate">
+                          {preset.name}
+                        </span>
+                        {selected && <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+                      </div>
                     </button>
                   );
                 })}
@@ -824,13 +921,13 @@ export function PlotCustomizer({
             </div>
           )}
 
-          {/* TAB 5: LIGHTING */}
+          {/* TAB 5: LIGHTING (Visual Preview Cards) */}
           {activeTab === "lighting" && (
-            <div className="space-y-2 rounded-2xl bg-[#121215] border border-neutral-800/90 p-4">
-              <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 pb-1">
-                Exterior Lighting
+            <div className="space-y-2 rounded-2xl bg-[#121215] border border-neutral-800/90 p-3.5">
+              <div className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
+                Exterior Lighting Atmosphere
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 pt-1">
                 {LIGHTING_STYLE_PRESETS.map((preset) => {
                   const selected = lightingStyle === preset.id;
                   return (
@@ -839,21 +936,59 @@ export function PlotCustomizer({
                       type="button"
                       aria-pressed={selected}
                       onClick={() => setLightingStyle(preset.id)}
-                      className={`min-h-[56px] p-2.5 rounded-xl border text-left transition-colors flex items-center justify-between gap-2 ${
+                      className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-2 ${
                         selected
-                          ? "bg-amber-500/10 border-amber-500/60"
+                          ? "bg-amber-500/10 border-amber-500/70 ring-1 ring-amber-500/30"
                           : "bg-[#09090b] border-neutral-800 hover:border-neutral-700"
                       }`}
                     >
-                      <div className="min-w-0">
-                        <div className="text-xs font-semibold text-white truncate">
-                          {preset.name}
-                        </div>
-                        <div className="text-[10px] text-neutral-400 truncate mt-0.5">
-                          {preset.description}
-                        </div>
+                      {/* Visual Graphic Representation */}
+                      <div className="h-12 w-full rounded-lg bg-[#0e1017] border border-white/10 flex items-center justify-center p-1.5 relative overflow-hidden">
+                        {preset.id === "neon" && (
+                          <div className="w-full h-full flex justify-between items-center px-4">
+                            <div className="w-1.5 h-full rounded-full bg-amber-400 shadow-[0_0_12px_#f59e0b]" />
+                            <span className="text-[10px] font-bold text-amber-300 tracking-wider">RUNWAY</span>
+                            <div className="w-1.5 h-full rounded-full bg-amber-400 shadow-[0_0_12px_#f59e0b]" />
+                          </div>
+                        )}
+                        {preset.id === "warm_festoon" && (
+                          <div className="w-full h-full flex items-center justify-around px-2 relative">
+                            <div className="absolute top-2 left-2 right-2 h-0.5 bg-neutral-700" />
+                            {[1, 2, 3, 4].map((i) => (
+                              <div
+                                key={i}
+                                className="w-2.5 h-2.5 rounded-full bg-amber-300 shadow-[0_0_8px_#f59e0b] relative z-10"
+                              />
+                            ))}
+                          </div>
+                        )}
+                        {preset.id === "uplights" && (
+                          <div className="w-full h-full flex justify-around items-end pb-1">
+                            {[1, 2, 3].map((i) => (
+                              <div key={i} className="flex flex-col items-center">
+                                <div className="w-3 h-5 bg-gradient-to-t from-cyan-400/80 to-transparent clip-triangle" />
+                                <div className="w-2.5 h-1 rounded bg-slate-700 border border-cyan-400" />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {preset.id === "pathlights" && (
+                          <div className="w-full h-full flex justify-around items-end pb-1">
+                            {[1, 2, 3].map((i) => (
+                              <div key={i} className="w-2 h-7 rounded-t bg-neutral-700 flex flex-col justify-start items-center">
+                                <span className="w-2.5 h-1 rounded-xs bg-amber-400 shadow-[0_0_6px_#f59e0b]" />
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      {selected && <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-xs font-bold text-white truncate">
+                          {preset.name}
+                        </span>
+                        {selected && <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+                      </div>
                     </button>
                   );
                 })}
@@ -861,13 +996,13 @@ export function PlotCustomizer({
             </div>
           )}
 
-          {/* TAB 6: SIGNAGE */}
+          {/* TAB 6: SIGNAGE (Visual Preview Cards) */}
           {activeTab === "banners" && (
-            <div className="space-y-2 rounded-2xl bg-[#121215] border border-neutral-800/90 p-4">
-              <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 pb-1">
+            <div className="space-y-2 rounded-2xl bg-[#121215] border border-neutral-800/90 p-3.5">
+              <div className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
                 Sidewalk Signage &amp; Banners
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 pt-1">
                 {BANNER_STYLE_PRESETS.map((preset) => {
                   const selected = bannerStyle === preset.id;
                   return (
@@ -876,21 +1011,51 @@ export function PlotCustomizer({
                       type="button"
                       aria-pressed={selected}
                       onClick={() => setBannerStyle(preset.id)}
-                      className={`min-h-[56px] p-2.5 rounded-xl border text-left transition-colors flex items-center justify-between gap-2 ${
+                      className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-2 ${
                         selected
-                          ? "bg-amber-500/10 border-amber-500/60"
+                          ? "bg-amber-500/10 border-amber-500/70 ring-1 ring-amber-500/30"
                           : "bg-[#09090b] border-neutral-800 hover:border-neutral-700"
                       }`}
                     >
-                      <div className="min-w-0">
-                        <div className="text-xs font-semibold text-white truncate">
-                          {preset.name}
-                        </div>
-                        <div className="text-[10px] text-neutral-400 truncate mt-0.5">
-                          {preset.description}
-                        </div>
+                      {/* Visual Graphic Representation */}
+                      <div className="h-12 w-full rounded-lg bg-[#0e1017] border border-white/10 flex items-center justify-center p-1.5 relative overflow-hidden">
+                        {preset.id === "none" && (
+                          <div className="w-full h-full rounded border border-dashed border-neutral-700 flex items-center justify-center">
+                            <span className="text-[10px] font-mono text-neutral-400">CLEAN FACADE</span>
+                          </div>
+                        )}
+                        {preset.id === "pennant" && (
+                          <div className="w-full h-full flex items-center justify-center gap-1.5">
+                            <div className="w-0.5 h-8 bg-slate-400" />
+                            <div className="w-4 h-6 bg-gradient-to-b from-amber-500 to-amber-600 rounded-r shadow" />
+                            <span className="text-[10px] font-bold text-amber-300">PENNANT</span>
+                          </div>
+                        )}
+                        {preset.id === "totem" && (
+                          <div className="w-full h-full flex items-center justify-center gap-2">
+                            <div className="w-4 h-7 rounded-sm bg-neutral-900 border border-amber-400/80 flex flex-col p-0.5 shadow">
+                              <div className="w-full h-1 bg-amber-400 rounded-2xs mb-0.5" />
+                              <div className="w-full h-0.5 bg-neutral-700 rounded-2xs mb-0.5" />
+                              <div className="w-full h-0.5 bg-neutral-700 rounded-2xs" />
+                            </div>
+                            <span className="text-[10px] font-bold text-white">TOTEM</span>
+                          </div>
+                        )}
+                        {preset.id === "arch" && (
+                          <div className="w-full h-full flex items-center justify-center gap-2">
+                            <div className="w-9 h-7 rounded-t border-2 border-amber-400 border-b-0 shadow-[0_0_8px_#f59e0b] flex items-center justify-center">
+                              <span className="text-[8px] font-bold text-amber-300">ENTRY</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      {selected && <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-xs font-bold text-white truncate">
+                          {preset.name}
+                        </span>
+                        {selected && <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+                      </div>
                     </button>
                   );
                 })}
@@ -900,13 +1065,13 @@ export function PlotCustomizer({
 
           {/* Dedicated Publish Action Bar */}
           <div className="p-3 rounded-2xl bg-[#121215] border border-neutral-800/90 flex items-center justify-between gap-2 shadow-lg">
-            <span className="text-[11px] text-neutral-400">
+            <span className="text-[11px] font-medium text-neutral-400">
               {hasUnsavedChanges ? "Changes ready" : "Saved"}
             </span>
             <button
               type="submit"
               disabled={savingStyle || !hasUnsavedChanges}
-              className="min-h-[40px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:bg-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+              className="min-h-[40px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:bg-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm"
             >
               {savingStyle ? (
                 <>
