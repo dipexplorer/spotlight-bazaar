@@ -94,6 +94,7 @@ export interface BusinessStorefront {
   verification_requested_at?: string | null;
   status?: "active" | "pending" | "suspended";
   owner_id?: string | null;
+  owner_email?: string | null;
   total_views: number;
   total_leads: number;
   plot_level?: 1 | 2 | 3;

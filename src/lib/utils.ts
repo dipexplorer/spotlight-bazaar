@@ -69,3 +69,18 @@ export function getGoogleMapsUrl(storefront: {
   return null;
 }
 
+/**
+ * Returns a clean Instagram profile URL from handle or link
+ */
+export function getInstagramUrl(handle?: string | null): string | null {
+  if (!handle || typeof handle !== "string") return null;
+  const trimmed = handle.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\/(www\.)?instagram\.com\//i.test(trimmed)) {
+    return normalizeExternalUrl(trimmed);
+  }
+  const clean = trimmed.replace(/^@+/, "").replace(/[^a-zA-Z0-9._]/g, "");
+  if (!clean) return null;
+  return `https://instagram.com/${clean}`;
+}
+

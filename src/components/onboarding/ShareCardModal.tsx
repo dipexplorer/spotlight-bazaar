@@ -2,7 +2,7 @@
 
 import React, { useRef } from "react";
 import Link from "next/link";
-import { Store, MapPin, Share2, ArrowRight, X, Sparkles, CheckCircle2 } from "lucide-react";
+import { Store, MapPin, Share2, X, Sparkles, CheckCircle2 } from "lucide-react";
 import { BusinessStorefront } from "@/types";
 import { CATEGORY_MAP } from "@/lib/constants/categories";
 
@@ -18,12 +18,15 @@ export function ShareCardModal({ storefront, isOpen, onClose }: ShareCardModalPr
   if (!isOpen) return null;
 
   const category = CATEGORY_MAP.get(storefront.category_id);
+  const citySlug = storefront.city_name
+    ? storefront.city_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")
+    : "";
   const shareUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/b/${storefront.slug}`
-    : `https://spotlightbazaar.com/b/${storefront.slug}`;
+    ? `${window.location.origin}/?${citySlug ? `city=${citySlug}&` : ""}shop=${storefront.slug}`
+    : `https://spotlightbazaar.com/?shop=${storefront.slug}`;
 
   const handleWhatsAppShare = () => {
-    const text = `🎉 We just claimed our official digital storefront on Spotlight Bazaar! Check out our portfolio & rates here: ${shareUrl}`;
+    const text = `🎉 We just claimed our official 3D digital storefront on Spotlight Bazaar! View our 3D plot & rates here: ${shareUrl}`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank");
   };
 
@@ -133,14 +136,6 @@ export function ShareCardModal({ storefront, isOpen, onClose }: ShareCardModalPr
           >
             <Store className="w-3.5 h-3.5" />
             <span>Manage Plot in Owner Dashboard</span>
-          </Link>
-
-          <Link
-            href={`/b/${storefront.slug}?new=true`}
-            className="w-full py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white font-medium text-xs flex items-center justify-center gap-2 transition-all"
-          >
-            <span>View Full Portfolio Page</span>
-            <ArrowRight className="w-3.5 h-3.5" />
           </Link>
 
           <button

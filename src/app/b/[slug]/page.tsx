@@ -1,9 +1,8 @@
 import { Metadata } from "next";
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { getStorefronts } from "@/lib/data/seedStorefronts";
 import { createServerClient } from "@/lib/supabase/server";
 import { BusinessStorefront } from "@/types";
-import { StorefrontView } from "@/components/storefront/StorefrontView";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -95,43 +94,13 @@ export default async function StorefrontPage({ params }: PageProps) {
   const { slug } = await params;
   const storefront = await getStorefront(slug);
 
-  // LocalBusiness Schema.org JSON-LD
-  const jsonLd = storefront
-    ? {
-        "@context": "https://schema.org",
-        "@type": "LocalBusiness",
-        name: storefront.name,
-        description: storefront.description || storefront.tagline,
-        address: {
-          "@type": "PostalAddress",
-          addressLocality: storefront.city_name,
-          addressRegion: storefront.state_name,
-          postalCode: storefront.pincode,
-          addressCountry: "IN",
-        },
-        geo: {
-          "@type": "GeoCoordinates",
-          latitude: storefront.lat,
-          longitude: storefront.lon,
-        },
-        telephone: `+91${storefront.whatsapp_phone}`,
-        priceRange: storefront.starting_price,
-        image: storefront.logo_url || storefront.portfolio?.[0]?.image_url,
-      }
+  const citySlug = storefront?.city_name
+    ? storefront.city_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")
     : null;
 
-  return (
-    <>
-      {jsonLd && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
-      )}
-      <Suspense fallback={<div className="min-h-screen bg-[#09090b] flex items-center justify-center text-xs text-neutral-500">Loading storefront...</div>}>
-        <StorefrontView initialStorefront={storefront} slug={slug} />
-      </Suspense>
-    </>
-  );
+  if (citySlug && citySlug !== "all") {
+    redirect(`/?city=${citySlug}&shop=${encodeURIComponent(slug)}`);
+  }
+  redirect(`/?shop=${encodeURIComponent(slug)}`);
 }
 

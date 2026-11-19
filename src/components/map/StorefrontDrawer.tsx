@@ -7,7 +7,6 @@ import {
   Store,
   MapPin,
   ShieldCheck,
-  ArrowRight,
   MessageCircle,
   X,
   Heart,
@@ -19,6 +18,25 @@ import {
   Copy,
   Clock,
 } from "lucide-react";
+
+function InstagramIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+    </svg>
+  );
+}
 import { BusinessStorefront } from "@/types";
 import { CATEGORY_MAP } from "@/lib/constants/categories";
 import {
@@ -30,6 +48,7 @@ import {
 import {
   formatWebsiteDisplay,
   getGoogleMapsUrl,
+  getInstagramUrl,
   getWhatsAppUrl,
   normalizeExternalUrl,
 } from "@/lib/utils";
@@ -303,19 +322,34 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
             </button>
           </div>
 
-          {/* Official Website & Google Maps Links */}
-          {(normalizeExternalUrl(storefront.website_url) || getGoogleMapsUrl(storefront)) && (
+          {/* Direct Verified Business Channels (Official Site, Instagram, Directions) */}
+          {(normalizeExternalUrl(storefront.website_url) ||
+            getInstagramUrl(storefront.instagram_handle) ||
+            getGoogleMapsUrl(storefront)) && (
             <div className="flex flex-wrap items-center gap-2">
               {normalizeExternalUrl(storefront.website_url) && (
                 <a
                   href={normalizeExternalUrl(storefront.website_url)!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 min-w-[160px] py-2.5 px-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-md shadow-amber-950/30"
+                  className="flex-1 min-w-[140px] py-2 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 hover:text-amber-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm"
                 >
-                  <Globe className="w-3.5 h-3.5 shrink-0" />
+                  <Globe className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                   <span className="truncate">{formatWebsiteDisplay(storefront.website_url)}</span>
-                  <ExternalLink className="w-3 h-3 shrink-0" />
+                  <ExternalLink className="w-3 h-3 text-amber-400/80 shrink-0" />
+                </a>
+              )}
+
+              {getInstagramUrl(storefront.instagram_handle) && (
+                <a
+                  href={getInstagramUrl(storefront.instagram_handle)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 min-w-[120px] py-2 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-neutral-200 hover:text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <InstagramIcon className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                  <span className="truncate">@{storefront.instagram_handle?.replace(/^@/, "")}</span>
+                  <ExternalLink className="w-3 h-3 text-neutral-400 shrink-0" />
                 </a>
               )}
 
@@ -324,33 +358,25 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
                   href={getGoogleMapsUrl(storefront)!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 min-w-[130px] py-2.5 px-3.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-100 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                  className="flex-1 min-w-[110px] py-2 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-neutral-200 hover:text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
                 >
                   <Navigation className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-                  <span>{storefront.google_maps_url ? "Google Maps" : "Directions"}</span>
+                  <span>Directions</span>
                   <ExternalLink className="w-3 h-3 text-neutral-400 shrink-0" />
                 </a>
               )}
             </div>
           )}
 
-          {/* Action CTAs */}
-          <div className="flex items-center gap-2 pt-1">
-            <Link
-              href={`/b/${storefront.slug}`}
-              className="flex-1 py-3 px-4 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-100 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-amber-500"
-            >
-              <span>Full Portfolio</span>
-              <ArrowRight className="w-3.5 h-3.5 text-neutral-400" />
-            </Link>
-
+          {/* Primary High-Intent CTA */}
+          <div className="pt-1">
             <button
               type="button"
               onClick={handleWhatsApp}
-              className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-emerald-950/40 focus-visible:ring-2 focus-visible:ring-emerald-400"
+              className="w-full min-h-[46px] py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-950/50 focus-visible:ring-2 focus-visible:ring-emerald-400"
             >
               <MessageCircle className="w-4 h-4 fill-white/20" />
-              <span>Chat on WhatsApp</span>
+              <span>Chat on WhatsApp · Direct Inquiry</span>
             </button>
           </div>
         </div>

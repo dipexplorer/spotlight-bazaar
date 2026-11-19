@@ -9,25 +9,41 @@ import {
   ArrowRight,
   Building2,
   Check,
-  ImagePlus,
+  Globe,
   Loader2,
-  Lock,
+  Mail,
   MapPin,
+  Navigation,
   Phone,
   ShieldCheck,
   Store,
-  Upload,
   UserCheck,
-  X,
 } from "lucide-react";
+
+function InstagramIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+    </svg>
+  );
+}
 import { CATEGORIES } from "@/lib/constants/categories";
 import { CATEGORY_PLOT_SPECS } from "@/lib/constants/categoryPlots";
 import { INITIAL_CITIES } from "@/lib/constants/initialCities";
 import { BusinessStorefront, CategoryId } from "@/types";
-import { compressImage } from "@/lib/utils/compressImage";
 import { saveLocalStorefront } from "@/lib/utils/localStorefront";
 import { supabase } from "@/lib/supabase/client";
-import { OwnerAuthCard } from "@/components/auth/OwnerAuthCard";
 import { ShareCardModal } from "@/components/onboarding/ShareCardModal";
 import { CategoryDropdown } from "@/components/register/CategoryDropdown";
 import {
@@ -38,8 +54,7 @@ import {
 const STEPS = [
   { id: 1, label: "Plot & Location" },
   { id: 2, label: "Rates & Contact" },
-  { id: 3, label: "Photos" },
-  { id: 4, label: "Publish" },
+  { id: 3, label: "Review & Claim" },
 ] as const;
 
 export default function RegisterPage() {
@@ -71,43 +86,40 @@ export default function RegisterPage() {
     key: number;
   } | null>(null);
 
-  // Step 2 — Pricing & Direct Contact
+  // Step 2 — Pricing, Direct Channels & Owner Email
   const [whatsapp, setWhatsapp] = useState("");
   const [instagram, setInstagram] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [googleMapsUrl, setGoogleMapsUrl] = useState("");
   const [startingPrice, setStartingPrice] = useState("");
+  const [ownerEmailInput, setOwnerEmailInput] = useState("");
 
-  // Step 3 — Portfolio Photos
-  const [portfolio, setPortfolio] = useState<string[]>([]);
-  const [compressing, setCompressing] = useState(false);
-
-  // Step 4 — Consent, Owner Session & Confirmation
+  // Step 3 — Consent, Owner Session & Confirmation
   const [consent, setConsent] = useState(false);
-  const [ownerEmail, setOwnerEmail] = useState<string | null>(null);
+  const [ownerSessionEmail, setOwnerSessionEmail] = useState<string | null>(null);
   const [ownerToken, setOwnerToken] = useState<string | null>(null);
-  const [showInlineAuth, setShowInlineAuth] = useState(false);
   const [createdStorefront, setCreatedStorefront] =
     useState<BusinessStorefront | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
-  // Sync current Supabase owner session so registered plots automatically attach to owner_id
+  // Check if current user is already logged in to pre-fill owner email
   useEffect(() => {
     if (!supabase) return;
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.access_token) {
+      if (data.session?.user?.email) {
         setOwnerToken(data.session.access_token);
-        setOwnerEmail(data.session.user.email || null);
+        setOwnerSessionEmail(data.session.user.email);
+        setOwnerEmailInput((prev) => (prev ? prev : data.session?.user.email || ""));
       }
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_ev, sess) => {
-      if (sess?.access_token) {
+      if (sess?.user?.email) {
         setOwnerToken(sess.access_token);
-        setOwnerEmail(sess.user.email || null);
-        setShowInlineAuth(false);
+        setOwnerSessionEmail(sess.user.email);
+        setOwnerEmailInput((prev) => (prev ? prev : sess.user.email || ""));
       } else {
         setOwnerToken(null);
-        setOwnerEmail(null);
+        setOwnerSessionEmail(null);
       }
     });
     return () => listener.subscription.unsubscribe();
@@ -197,15 +209,17 @@ export default function RegisterPage() {
 
   const cleanPhone = whatsapp.replace(/[^0-9]/g, "").slice(-10);
   const isValidPhone = /^[6-9]\d{9}$/.test(cleanPhone);
-  const canProceedStep2 = isValidPhone && startingPrice.trim().length > 0;
-
-  const canProceedStep3 = portfolio.length >= 1;
+  const isValidEmail = (em: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em.trim());
+  const canProceedStep2 =
+    isValidPhone &&
+    startingPrice.trim().length > 0 &&
+    isValidEmail(ownerEmailInput);
 
   const selectedCategoryObj =
     CATEGORIES.find((c) => c.id === category) || CATEGORIES[0];
   const selectedPlotSpec = CATEGORY_PLOT_SPECS[category];
 
-  // Step 1 missing-item hint so users are never left guessing why Continue is disabled
+  // Step 1 missing-item hint
   const step1MissingHint = !name.trim() || name.trim().length < 2
     ? "Enter your business name to continue."
     : tagline.trim().length < 5
@@ -216,46 +230,15 @@ export default function RegisterPage() {
           ? "Enter your city or town name."
           : null;
 
-  // Image Upload Handler with client-side compression
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    if (portfolio.length + files.length > 6) {
-      setErrorMsg("You can upload up to 6 photos per storefront.");
-      return;
-    }
-
-    setCompressing(true);
-    setErrorMsg(null);
-
-    try {
-      const newImages: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const compressed = await compressImage(files[i]);
-        newImages.push(compressed);
-      }
-      setPortfolio((prev) => [...prev, ...newImages]);
-    } catch {
-      setErrorMsg("Could not process one of those images. Please try JPG or PNG files.");
-    } finally {
-      setCompressing(false);
-      e.target.value = "";
-    }
-  };
-
-  const removeImage = (idx: number) => {
-    setPortfolio((prev) => prev.filter((_, i) => i !== idx));
-  };
-
   // Submission Handler
   const handleSubmit = async () => {
     if (!consent) {
       setErrorMsg("Please confirm directory listing consent to publish your plot.");
       return;
     }
-    if (!ownerEmail || !ownerToken) {
-      setErrorMsg("Owner account required. Please create or sign in to your owner account below to publish this 3D plot. No unowned plots are permitted.");
+    const cleanEmail = ownerEmailInput.trim().toLowerCase();
+    if (!isValidEmail(cleanEmail)) {
+      setErrorMsg("A valid owner email address is required to claim this plot.");
       return;
     }
     if (!hasPinnedCoords) {
@@ -297,7 +280,7 @@ export default function RegisterPage() {
       road_anchor_lat: roadAnchorLat,
       road_anchor_lon: roadAnchorLon,
       connector_type: connectorType,
-      portfolio_images: portfolio,
+      owner_email: cleanEmail,
     };
 
     try {
@@ -316,11 +299,6 @@ export default function RegisterPage() {
         throw new Error(data.error || "Registration failed. Please try again.");
       }
 
-      const finalPortfolioUrls: string[] =
-        Array.isArray(data.portfolio_urls) && data.portfolio_urls.length > 0
-          ? data.portfolio_urls
-          : portfolio;
-
       const newStorefront: BusinessStorefront = {
         id: data.id || `sb-${Date.now()}`,
         slug: data.slug,
@@ -330,8 +308,8 @@ export default function RegisterPage() {
         city_name: payload.city_name,
         state_name: payload.state_name,
         pincode: payload.pincode,
-        lat: payload.lat,
-        lon: payload.lon,
+        lat: payload.lat!,
+        lon: payload.lon!,
         facing_bearing: payload.facing_bearing,
         road_anchor_lat: payload.road_anchor_lat,
         road_anchor_lon: payload.road_anchor_lon,
@@ -341,42 +319,36 @@ export default function RegisterPage() {
         website_url: payload.website_url,
         google_maps_url: payload.google_maps_url,
         starting_price: payload.starting_price,
-        logo_url: data.logo_url || finalPortfolioUrls[0] || "",
         is_verified: false,
         is_featured: false,
         total_views: 1,
         total_leads: 0,
-        portfolio: finalPortfolioUrls.map((url, i) => ({
-          id: `p-${i}`,
-          business_id: data.id,
-          image_url: url,
-          sort_order: i + 1,
-        })),
+        owner_email: cleanEmail,
+        portfolio: [],
         created_at: new Date().toISOString(),
       };
 
       saveLocalStorefront(newStorefront);
       setCreatedStorefront(newStorefront);
-      setIsShareModalOpen(true);
 
       confetti({
-        particleCount: 90,
-        spread: 68,
+        particleCount: 80,
+        spread: 90,
         origin: { y: 0.6 },
-        colors: ["#f59e0b", "#fbbf24", "#10b981", "#ffffff"],
       });
+
+      setIsShareModalOpen(true);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Something went wrong.";
-      setErrorMsg(msg);
+      setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-neutral-100 flex flex-col">
-      {/* Top Navigation & Progress Header */}
-      <header className="sticky top-0 z-30 bg-[#09090b]/92 backdrop-blur-md border-b border-neutral-800/80">
+    <div className="min-h-screen bg-[#09090b] text-neutral-100 flex flex-col antialiased">
+      {/* Top Navigation & Stepper Header */}
+      <header className="sticky top-0 z-20 border-b border-neutral-800/80 bg-[#09090b]/92 backdrop-blur-md">
         <div className="max-w-2xl mx-auto px-4 sm:px-6">
           <div className="h-14 flex items-center justify-between gap-4">
             <Link
@@ -392,9 +364,9 @@ export default function RegisterPage() {
             </span>
           </div>
 
-          {/* 4-Step Segmented Progress Bar */}
+          {/* 3-Step Segmented Progress Bar */}
           <nav aria-label="Registration steps" className="pb-3.5">
-            <ol className="grid grid-cols-4 gap-2">
+            <ol className="grid grid-cols-3 gap-2">
               {STEPS.map((s) => {
                 const isCompleted = s.id < step;
                 const isCurrent = s.id === step;
@@ -465,36 +437,6 @@ export default function RegisterPage() {
               </p>
             </div>
 
-            {/* Owner Auth Awareness Banner */}
-            {!ownerEmail ? (
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex flex-wrap items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <Store className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span className="text-neutral-200">
-                    An owner account is required to place your 3D plot. You can sign in now or create your account before publishing.
-                  </span>
-                </div>
-                <Link
-                  href="/login?next=/register"
-                  className="min-h-[32px] px-3 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-semibold text-xs flex items-center shrink-0 transition-colors"
-                >
-                  Sign In
-                </Link>
-              </div>
-            ) : (
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2 min-w-0">
-                  <UserCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span className="text-neutral-300 truncate">
-                    Signed in as <strong className="text-white">{ownerEmail}</strong>. This 3D plot will be permanently linked to your owner console.
-                  </span>
-                </div>
-                <span className="text-[11px] text-emerald-400 font-semibold uppercase tracking-wider shrink-0">
-                  Owner Ready
-                </span>
-              </div>
-            )}
-
             <div className="space-y-5 pt-1">
               {/* Business Name */}
               <div className="space-y-1.5">
@@ -511,8 +453,8 @@ export default function RegisterPage() {
                   aria-required="true"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Kashi Roasters, Studio Aarav"
-                  maxLength={70}
+                  placeholder="e.g. Brahmaputra Artisanal Bakes"
+                  maxLength={60}
                   className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
                 />
               </div>
@@ -537,19 +479,19 @@ export default function RegisterPage() {
                   aria-required="true"
                   value={tagline}
                   onChange={(e) => setTagline(e.target.value)}
-                  placeholder="e.g. Specialty pour-over coffee & artisanal bakes"
+                  placeholder="e.g. Specialty pour-over coffee & artisanal sourdough bakes"
                   maxLength={120}
                   className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
                 />
               </div>
 
-              {/* Category (Open Elective) Dropdown */}
+              {/* Category Dropdown */}
               <div className="space-y-1.5">
                 <label
                   htmlFor="business-category"
                   className="block text-sm font-medium text-neutral-100"
                 >
-                  Category (Open Elective) <span className="text-amber-400">*</span>
+                  Category (3D Building Archetype) <span className="text-amber-400">*</span>
                 </label>
                 <CategoryDropdown
                   id="business-category"
@@ -561,7 +503,7 @@ export default function RegisterPage() {
               {/* Divider separating identity from location */}
               <hr className="border-neutral-800/80" />
 
-              {/* Interactive All-India Mini-Map Picker */}
+              {/* Interactive Location & Mini-Map Picker */}
               <LocationMapPicker
                 lat={lat}
                 lon={lon}
@@ -586,43 +528,48 @@ export default function RegisterPage() {
                     aria-required="true"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    placeholder="Auto-fills from map or type city/town"
-                    maxLength={60}
+                    placeholder="e.g. Guwahati"
+                    maxLength={40}
                     className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label
-                      htmlFor="business-pincode"
-                      className="block text-sm font-medium text-neutral-100"
-                    >
-                      Pin Code{" "}
-                      <span className="text-xs font-normal text-neutral-400">
-                        (Optional)
-                      </span>
-                    </label>
+                  <label
+                    htmlFor="business-pincode"
+                    className="block text-sm font-medium text-neutral-100"
+                  >
+                    PIN Code{" "}
+                    <span className="text-xs font-normal text-neutral-400">
+                      (Optional)
+                    </span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="business-pincode"
+                      type="text"
+                      inputMode="numeric"
+                      value={pincode}
+                      onChange={(e) => handlePincodeChange(e.target.value)}
+                      placeholder="e.g. 781001"
+                      maxLength={6}
+                      className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white font-mono tabular-nums placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+                    />
                     {pinLookupLoading && (
-                      <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+                      <Loader2 className="w-4 h-4 text-amber-400 animate-spin absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     )}
                   </div>
-                  <input
-                    id="business-pincode"
-                    type="text"
-                    inputMode="numeric"
-                    value={pincode}
-                    onChange={(e) => handlePincodeChange(e.target.value)}
-                    placeholder="e.g. 400050"
-                    maxLength={6}
-                    className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white font-mono tabular-nums placeholder:font-sans placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
-                  />
                 </div>
               </div>
             </div>
 
-            {/* Primary Step Action */}
-            <div className="pt-2 space-y-2">
+            {/* Step 1 Completion Footer */}
+            <div className="pt-2 space-y-3">
+              {step1MissingHint && (
+                <p className="text-xs text-amber-400/90 leading-relaxed">
+                  {step1MissingHint}
+                </p>
+              )}
               <button
                 type="button"
                 disabled={!canProceedStep1}
@@ -630,21 +577,16 @@ export default function RegisterPage() {
                   setErrorMsg(null);
                   setStep(2);
                 }}
-                className="w-full min-h-[48px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:bg-neutral-800 disabled:text-neutral-400 disabled:cursor-not-allowed text-neutral-950 font-semibold text-sm flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                className="w-full min-h-[48px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:bg-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed text-neutral-950 font-semibold text-sm flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
               >
                 <span>Continue to Rates &amp; Contact</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
-              {!canProceedStep1 && step1MissingHint && (
-                <p className="text-xs text-neutral-400 text-center">
-                  {step1MissingHint}
-                </p>
-              )}
             </div>
           </section>
         )}
 
-        {/* ==================== STEP 2: RATES & DIRECT CONTACT ==================== */}
+        {/* ==================== STEP 2: RATES, DIRECT CHANNELS & OWNER EMAIL ==================== */}
         {step === 2 && (
           <section aria-labelledby="step2-heading" className="space-y-6">
             <div className="space-y-1.5">
@@ -652,10 +594,10 @@ export default function RegisterPage() {
                 id="step2-heading"
                 className="text-2xl sm:text-[28px] font-bold tracking-tight text-white leading-tight"
               >
-                Rates &amp; direct customer contact
+                Rates, direct contact &amp; owner claim
               </h1>
               <p className="text-sm text-neutral-400 leading-relaxed max-w-[60ch]">
-                Zero commission, zero middlemen. Visitors reach your business directly on WhatsApp.
+                Direct customer inquiries without middleman commissions. Enter your business channels and owner email to claim this plot.
               </p>
             </div>
 
@@ -675,7 +617,7 @@ export default function RegisterPage() {
                   aria-required="true"
                   value={startingPrice}
                   onChange={(e) => setStartingPrice(e.target.value)}
-                  placeholder="e.g. Starts ₹499, ₹15,000 / day, Consultation ₹300"
+                  placeholder="e.g. Starts ₹499, ₹15,000 / day, ₹180 per loaf"
                   maxLength={40}
                   className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
                 />
@@ -721,7 +663,7 @@ export default function RegisterPage() {
                     htmlFor="instagram-handle"
                     className="block text-sm font-medium text-neutral-100"
                   >
-                    Instagram{" "}
+                    Instagram Profile{" "}
                     <span className="text-xs font-normal text-neutral-400">
                       (Optional)
                     </span>
@@ -784,10 +726,48 @@ export default function RegisterPage() {
                   inputMode="url"
                   value={googleMapsUrl}
                   onChange={(e) => setGoogleMapsUrl(e.target.value)}
-                  placeholder="https://maps.app.goo.gl/... (for direct Google Maps & reviews)"
+                  placeholder="https://maps.app.goo.gl/... (for direct directions & reviews)"
                   maxLength={300}
                   className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
                 />
+              </div>
+
+              {/* Business Owner Email (Required for plot claim & passwordless login) */}
+              <div className="space-y-1.5 pt-3 border-t border-neutral-800/80">
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="owner-email"
+                    className="block text-sm font-medium text-neutral-100"
+                  >
+                    Business Owner Email <span className="text-amber-400">*</span>
+                  </label>
+                  {ownerSessionEmail && (
+                    <span className="text-[11px] text-emerald-400 font-medium">
+                      Signed in
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    id="owner-email"
+                    type="email"
+                    required
+                    aria-required="true"
+                    value={ownerEmailInput}
+                    onChange={(e) => setOwnerEmailInput(e.target.value)}
+                    placeholder="owner@yourbusiness.com"
+                    className="w-full min-h-[46px] pl-10 pr-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+                  />
+                </div>
+                <p className="text-xs text-neutral-400 leading-relaxed">
+                  Ownership of this 3D plot is linked directly to this email. You can log into your Owner Dashboard anytime via passwordless Email OTP or password.
+                </p>
+                {ownerEmailInput.length > 0 && !isValidEmail(ownerEmailInput) && (
+                  <p className="text-xs text-amber-400">
+                    Please enter a valid email address.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -809,16 +789,16 @@ export default function RegisterPage() {
                   setErrorMsg(null);
                   setStep(3);
                 }}
-                className="flex-1 min-h-[48px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:bg-neutral-800 disabled:text-neutral-400 disabled:cursor-not-allowed text-neutral-950 font-semibold text-sm flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                className="flex-1 min-h-[48px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:bg-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed text-neutral-950 font-semibold text-sm flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
               >
-                <span>Continue to Photos</span>
+                <span>Continue to Review &amp; Claim</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </section>
         )}
 
-        {/* ==================== STEP 3: PORTFOLIO PHOTOS ==================== */}
+        {/* ==================== STEP 3: REVIEW & CLAIM PLOT ==================== */}
         {step === 3 && (
           <section aria-labelledby="step3-heading" className="space-y-6">
             <div className="space-y-1.5">
@@ -826,118 +806,10 @@ export default function RegisterPage() {
                 id="step3-heading"
                 className="text-2xl sm:text-[28px] font-bold tracking-tight text-white leading-tight"
               >
-                Add storefront photos
+                Review &amp; claim your 3D plot
               </h1>
               <p className="text-sm text-neutral-400 leading-relaxed max-w-[60ch]">
-                Upload 1 to 6 photos of your shop, workspace, or work samples. The first photo becomes your storefront cover.
-              </p>
-            </div>
-
-            {/* Upload Dropzone */}
-            <label
-              htmlFor="portfolio-upload"
-              className="flex flex-col items-center justify-center w-full min-h-[168px] px-4 py-6 rounded-2xl border border-dashed border-neutral-700 hover:border-amber-500/60 bg-[#121215]/70 hover:bg-[#121215] cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-amber-400"
-            >
-              {compressing ? (
-                <div className="flex flex-col items-center gap-2 text-amber-400">
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  <span className="text-sm font-medium">Optimizing images…</span>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-2 text-center">
-                  <div className="w-11 h-11 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-300">
-                    <ImagePlus className="w-5 h-5" />
-                  </div>
-                  <div className="text-sm font-semibold text-neutral-100">
-                    Choose photos from your device
-                  </div>
-                  <p className="text-xs text-neutral-400">
-                    JPG, PNG, or WebP · Automatically optimized ({portfolio.length}/6 uploaded)
-                  </p>
-                </div>
-              )}
-              <input
-                id="portfolio-upload"
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageUpload}
-                disabled={compressing || portfolio.length >= 6}
-                className="sr-only"
-              />
-            </label>
-
-            {/* Preview Grid */}
-            {portfolio.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {portfolio.map((img, i) => (
-                  <div
-                    key={i}
-                    className="relative aspect-[4/3] rounded-xl overflow-hidden bg-neutral-900 border border-neutral-800"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={img}
-                      alt={`${name || "Business"} preview ${i + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(i)}
-                      aria-label={`Remove photo ${i + 1}`}
-                      className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/80 hover:bg-red-600 text-white flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                    {i === 0 && (
-                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/80 text-[11px] font-semibold text-amber-400">
-                        Cover
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="pt-2 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setErrorMsg(null);
-                  setStep(2);
-                }}
-                className="min-h-[48px] px-5 rounded-xl bg-[#121215] hover:bg-neutral-800 border border-neutral-800 text-sm font-medium text-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                disabled={!canProceedStep3}
-                onClick={() => {
-                  setErrorMsg(null);
-                  setStep(4);
-                }}
-                className="flex-1 min-h-[48px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:bg-neutral-800 disabled:text-neutral-400 disabled:cursor-not-allowed text-neutral-950 font-semibold text-sm flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
-              >
-                <span>Review Plot</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </section>
-        )}
-
-        {/* ==================== STEP 4: REVIEW & PUBLISH ==================== */}
-        {step === 4 && (
-          <section aria-labelledby="step4-heading" className="space-y-6">
-            <div className="space-y-1.5">
-              <h1
-                id="step4-heading"
-                className="text-2xl sm:text-[28px] font-bold tracking-tight text-white leading-tight"
-              >
-                Review &amp; spawn your 3D plot
-              </h1>
-              <p className="text-sm text-neutral-400 leading-relaxed max-w-[60ch]">
-                Double-check your storefront details before placing your base 3D building on the live India map.
+                Double-check your storefront details before placing your 3D building on India&apos;s open business map.
               </p>
             </div>
 
@@ -945,19 +817,8 @@ export default function RegisterPage() {
             <div className="rounded-2xl bg-[#121215] border border-neutral-800 divide-y divide-neutral-800/80 overflow-hidden">
               {/* Top Identity Row */}
               <div className="p-4 sm:p-5 flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-neutral-900 border border-neutral-800 overflow-hidden shrink-0">
-                  {portfolio[0] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={portfolio[0]}
-                      alt={name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-neutral-500">
-                      <Upload className="w-5 h-5" />
-                    </div>
-                  )}
+                <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 shadow-sm">
+                  <Store className="w-6 h-6" />
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-base font-bold text-white truncate">{name}</h2>
@@ -1013,7 +874,7 @@ export default function RegisterPage() {
                 <div className="space-y-1">
                   <dt className="text-neutral-400 flex items-center gap-1.5">
                     <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                    Direct Contact &amp; Rate
+                    Direct WhatsApp &amp; Rate
                   </dt>
                   <dd className="text-neutral-100 font-medium tabular-nums">
                     +91 {cleanPhone}
@@ -1021,60 +882,55 @@ export default function RegisterPage() {
                   <dd className="text-emerald-400 font-medium">{startingPrice}</dd>
                 </div>
               </dl>
+
+              {/* External Channels (Website, Instagram, Google Maps) */}
+              {(websiteUrl || instagram || googleMapsUrl) && (
+                <div className="p-4 sm:px-5 flex flex-wrap gap-2 text-xs">
+                  {websiteUrl && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300">
+                      <Globe className="w-3 h-3 text-amber-400" />
+                      Website linked
+                    </span>
+                  )}
+                  {instagram && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300">
+                      <InstagramIcon className="w-3 h-3 text-rose-400" />
+                      @{instagram.replace(/^@/, "")}
+                    </span>
+                  )}
+                  {googleMapsUrl && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300">
+                      <Navigation className="w-3 h-3 text-sky-400" />
+                      Google Maps linked
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Owner Account Verification (Mandatory: Every 3D plot requires an authenticated owner) */}
-            {ownerEmail ? (
-              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0">
-                    <UserCheck className="w-4 h-4 text-emerald-400" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-white">Owner Account Linked</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30">
-                        Verified
-                      </span>
-                    </div>
-                    <p className="text-neutral-300 truncate mt-0.5">
-                      Publishing as <strong className="text-white">{ownerEmail}</strong>. You can manage this plot anytime in your Owner Dashboard.
-                    </p>
-                  </div>
+            {/* Owner Account Claim Card */}
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start justify-between gap-3 text-xs">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0 mt-0.5">
+                  <UserCheck className="w-4 h-4 text-amber-400" />
                 </div>
-                <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
-              </div>
-            ) : (
-              <div className="rounded-2xl bg-[#121215] border border-amber-500/35 p-5 space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
-                    <Store className="w-4 h-4 text-amber-400" />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-white">Plot Ownership Claim</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30">
+                      Claim Ready
+                    </span>
                   </div>
-                  <div>
-                    <div className="text-sm font-bold text-white flex items-center gap-2">
-                      <span>Owner Account Required</span>
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-wider">
-                        Mandatory
-                      </span>
-                    </div>
-                    <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
-                      Every business plot on India&apos;s 3D street map must have an authenticated owner. Sign in or enter your email &amp; password below to create your owner account and claim this plot.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-neutral-800">
-                  <OwnerAuthCard
-                    compact
-                    redirectNext="/register"
-                    onAuthenticated={(u) => {
-                      setOwnerToken(u.accessToken);
-                      setOwnerEmail(u.email);
-                    }}
-                  />
+                  <p className="text-neutral-300 truncate mt-0.5">
+                    Claiming under <strong className="text-white">{ownerEmailInput.trim()}</strong>.
+                  </p>
+                  <p className="text-[11px] text-neutral-400 mt-1 leading-relaxed">
+                    Every plot on Spotlight Bazaar is owned and managed. You can log into your Owner Dashboard anytime via passwordless Email OTP or password.
+                  </p>
                 </div>
               </div>
-            )}
+              <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+            </div>
 
             {/* Directory Listing Consent */}
             <label className="flex items-start gap-3 p-4 rounded-xl bg-[#121215]/70 border border-neutral-800 cursor-pointer hover:border-neutral-700 transition-colors">
@@ -1085,18 +941,9 @@ export default function RegisterPage() {
                 className="mt-0.5 w-4 h-4 rounded border-neutral-600 bg-neutral-900 accent-amber-500 cursor-pointer shrink-0"
               />
               <span className="text-xs text-neutral-300 leading-relaxed">
-                I confirm I am authorized to list this business on Spotlight Bazaar&apos;s public All-India directory and display this WhatsApp contact for direct customer inquiries.
+                I confirm I am authorized to list this business on Spotlight Bazaar&apos;s open 3D map and display this WhatsApp contact for direct customer inquiries.
               </span>
             </label>
-
-            {!ownerEmail && (
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center gap-2.5 text-xs text-amber-200">
-                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>
-                  Please create or sign in to your owner account above to unlock publishing. No unowned plots are permitted on the map.
-                </span>
-              </div>
-            )}
 
             <div className="pt-1 flex items-center gap-3">
               <button
@@ -1104,7 +951,7 @@ export default function RegisterPage() {
                 disabled={submitting}
                 onClick={() => {
                   setErrorMsg(null);
-                  setStep(3);
+                  setStep(2);
                 }}
                 className="min-h-[48px] px-5 rounded-xl bg-[#121215] hover:bg-neutral-800 border border-neutral-800 text-sm font-medium text-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
               >
@@ -1112,24 +959,19 @@ export default function RegisterPage() {
               </button>
               <button
                 type="button"
-                disabled={!consent || submitting || !ownerEmail || !ownerToken}
+                disabled={!consent || submitting || !canProceedStep2}
                 onClick={handleSubmit}
                 className="flex-1 min-h-[48px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:bg-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed text-neutral-950 font-semibold text-sm flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
               >
-                {!ownerEmail ? (
-                  <>
-                    <Lock className="w-4 h-4" />
-                    <span>Owner Account Required to Publish</span>
-                  </>
-                ) : submitting ? (
+                {submitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Spawning 3D Plot…</span>
+                    <span>Spawning 3D Plot &amp; Claiming…</span>
                   </>
                 ) : (
                   <>
                     <Check className="w-4 h-4" />
-                    <span>Claim &amp; Place 3D Plot</span>
+                    <span>Spawn 3D Plot &amp; Claim Ownership</span>
                   </>
                 )}
               </button>

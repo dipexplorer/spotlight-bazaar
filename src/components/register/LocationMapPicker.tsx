@@ -30,26 +30,69 @@ if (typeof window !== "undefined") {
 const CARTO_VOYAGER_STYLE =
   "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
 
-const OSM_RASTER_FALLBACK = {
-  version: 8 as const,
-  sources: {
-    "osm-tiles": {
-      type: "raster" as const,
-      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      tileSize: 256,
-      attribution: "© OpenStreetMap contributors",
+const MAP_THEMES: Record<
+  "streets" | "satellite",
+  { id: "streets" | "satellite"; label: string; style: maplibregl.StyleSpecification }
+> = {
+  streets: {
+    id: "streets",
+    label: "Streets",
+    style: {
+      version: 8,
+      sources: {
+        "osm-tiles": {
+          type: "raster",
+          tiles: [
+            "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          ],
+          tileSize: 256,
+          attribution: "© OpenStreetMap contributors",
+        },
+      },
+      layers: [
+        {
+          id: "osm-tiles-layer",
+          type: "raster",
+          source: "osm-tiles",
+          minzoom: 0,
+          maxzoom: 19,
+        },
+      ],
     },
   },
-  layers: [
-    {
-      id: "osm-tiles-layer",
-      type: "raster" as const,
-      source: "osm-tiles",
-      minzoom: 0,
-      maxzoom: 19,
+  satellite: {
+    id: "satellite",
+    label: "Satellite",
+    style: {
+      version: 8,
+      sources: {
+        "esri-satellite": {
+          type: "raster",
+          tiles: [
+            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          ],
+          tileSize: 256,
+          attribution: "© Esri",
+        },
+      },
+      layers: [
+        {
+          id: "esri-satellite-layer",
+          type: "raster",
+          source: "esri-satellite",
+          minzoom: 0,
+          maxzoom: 19,
+        },
+      ],
     },
-  ],
+  },
 };
+
+type MapThemeKey = keyof typeof MAP_THEMES;
+
+const OSM_RASTER_FALLBACK = MAP_THEMES.streets.style;
 
 const INDIA_CENTER: [number, number] = [80.8, 22.0];
 const INDIA_MAX_BOUNDS: [[number, number], [number, number]] = [
@@ -94,30 +137,30 @@ function createPinElement(): HTMLDivElement {
   el.className = "flex flex-col items-center cursor-grab active:cursor-grabbing select-none";
   el.innerHTML = `
     <div style="
-      width: 30px;
-      height: 30px;
+      width: 32px;
+      height: 32px;
       border-radius: 9999px;
       background: #f59e0b;
       border: 3px solid #09090b;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.45), 0 10px 25px rgba(0, 0, 0, 0.75);
       display: flex;
       align-items: center;
       justify-content: center;
     ">
-      <div style="width: 8px; height: 8px; border-radius: 9999px; background: #09090b;"></div>
+      <div style="width: 10px; height: 10px; border-radius: 9999px; background: #09090b;"></div>
     </div>
     <div style="
-      width: 2px;
-      height: 9px;
+      width: 3px;
+      height: 10px;
       background: #09090b;
       border-radius: 2px;
       margin-top: -1px;
     "></div>
     <div style="
-      width: 10px;
+      width: 12px;
       height: 4px;
       border-radius: 9999px;
-      background: rgba(9, 9, 11, 0.45);
+      background: rgba(9, 9, 11, 0.6);
       margin-top: -1px;
     "></div>
   `;
@@ -181,9 +224,11 @@ export function LocationMapPicker({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
+  const lastPlacementRef = useRef<SnappedPlotPlacement | null>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
+  const [activeTheme, setActiveTheme] = useState<MapThemeKey>("streets");
   const [mapReady, setMapReady] = useState(false);
   const [locatingGps, setLocatingGps] = useState(false);
   const [reverseLoading, setReverseLoading] = useState(false);
@@ -356,6 +401,7 @@ export function LocationMapPicker({
         existingPlots: existingStorefronts,
       });
 
+      lastPlacementRef.current = snapped;
       placeMarker(snapped.lon, snapped.lat);
       renderPlotPreviewOverlay(snapped);
 
@@ -456,6 +502,23 @@ export function LocationMapPicker({
     }
   }, []);
 
+  // Switch map view style (High-contrast streets vs. satellite)
+  const handleSwitchTheme = useCallback(
+    (nextTheme: MapThemeKey) => {
+      setActiveTheme(nextTheme);
+      const map = mapRef.current;
+      if (!map) return;
+      map.setStyle(MAP_THEMES[nextTheme].style);
+      map.once("styledata", () => {
+        ensurePreviewLayers(map);
+        if (lastPlacementRef.current) {
+          renderPlotPreviewOverlay(lastPlacementRef.current);
+        }
+      });
+    },
+    [ensurePreviewLayers, renderPlotPreviewOverlay]
+  );
+
   // Initialize MapLibre mini-map once
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -463,7 +526,7 @@ export function LocationMapPicker({
     const hasInitial = typeof lat === "number" && typeof lon === "number";
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: CARTO_VOYAGER_STYLE,
+      style: MAP_THEMES.streets.style,
       center: hasInitial ? [lon, lat] : INDIA_CENTER,
       zoom: hasInitial ? 16 : 3.05,
       minZoom: 2.7,
@@ -823,32 +886,60 @@ export function LocationMapPicker({
       </div>
 
       {/* Interactive MapLibre Mini-Map Viewport */}
-      <div className="relative rounded-2xl overflow-hidden border border-neutral-800 bg-[#0d1117]">
+      <div className="relative rounded-2xl overflow-hidden border border-neutral-800 bg-[#0d1117] shadow-xl">
         <div
           ref={mapContainerRef}
-          style={{ height: 256 }}
-          className="w-full h-64"
+          style={{ height: 380 }}
+          className="w-full h-[360px] sm:h-[400px] min-h-[360px]"
           aria-label="Interactive India map for selecting business coordinates"
         />
 
-        {/* Zoom Controls */}
-        <div className="absolute top-3 right-3 z-10 flex flex-col rounded-xl overflow-hidden border border-neutral-800/90 bg-[#09090b]/90 backdrop-blur-md shadow-lg">
-          <button
-            type="button"
-            onClick={() => handleZoom(1.4)}
-            aria-label="Zoom in map"
-            className="w-9 h-9 flex items-center justify-center text-neutral-200 hover:bg-neutral-800 hover:text-white transition-colors border-b border-neutral-800/90"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => handleZoom(-1.4)}
-            aria-label="Zoom out map"
-            className="w-9 h-9 flex items-center justify-center text-neutral-200 hover:bg-neutral-800 hover:text-white transition-colors"
-          >
-            <Minus className="w-4 h-4" />
-          </button>
+        {/* Style Switcher & Zoom Controls */}
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+          {/* Layer switcher: Streets vs. Satellite */}
+          <div className="flex items-center rounded-xl overflow-hidden border border-neutral-800/90 bg-[#09090b]/92 backdrop-blur-md p-0.5 shadow-lg">
+            <button
+              type="button"
+              onClick={() => handleSwitchTheme("streets")}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                activeTheme === "streets"
+                  ? "bg-amber-500 text-neutral-950 shadow-sm"
+                  : "text-neutral-300 hover:text-white"
+              }`}
+            >
+              Streets
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchTheme("satellite")}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                activeTheme === "satellite"
+                  ? "bg-amber-500 text-neutral-950 shadow-sm"
+                  : "text-neutral-300 hover:text-white"
+              }`}
+            >
+              Satellite
+            </button>
+          </div>
+
+          <div className="flex flex-col rounded-xl overflow-hidden border border-neutral-800/90 bg-[#09090b]/90 backdrop-blur-md shadow-lg">
+            <button
+              type="button"
+              onClick={() => handleZoom(1.4)}
+              aria-label="Zoom in map"
+              className="w-8 h-8 flex items-center justify-center text-neutral-200 hover:bg-neutral-800 hover:text-white transition-colors border-b border-neutral-800/90"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleZoom(-1.4)}
+              aria-label="Zoom out map"
+              className="w-8 h-8 flex items-center justify-center text-neutral-200 hover:bg-neutral-800 hover:text-white transition-colors"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Live Snap Status Pill inside map */}

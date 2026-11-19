@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { getAuthenticatedUserFromRequest } from "@/lib/supabase/auth";
-import { uploadStorefrontImage } from "@/lib/supabase/storage";
 import { addLocalStorefront } from "@/lib/data/seedStorefronts";
 import { normalizeExternalUrl } from "@/lib/utils";
 import { BusinessStorefront } from "@/types";
@@ -28,7 +27,7 @@ export async function POST(req: NextRequest) {
       road_anchor_lat,
       road_anchor_lon,
       connector_type,
-      portfolio_images,
+      owner_email,
     } = body;
 
     // 1. Validation
@@ -52,6 +51,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Owner email is required so no plot is ever an unowned ghost plot
+    const normalizedOwnerEmail =
+      typeof owner_email === "string" ? owner_email.trim().toLowerCase() : "";
+    if (!normalizedOwnerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedOwnerEmail)) {
+      return NextResponse.json(
+        { error: "A valid business owner email address is required to claim this 3D plot." },
+        { status: 400 }
+      );
+    }
+
     const validConnectorType =
       connector_type === "osm_road" ||
       connector_type === "colony_branch" ||
@@ -70,20 +79,8 @@ export async function POST(req: NextRequest) {
     const randomSuffix = Math.random().toString(36).substring(2, 6);
     const slug = `${baseSlug}-${randomSuffix}`;
 
-    // 3. Database & Authentication Verification
+    // 3. Database & Authentication Setup
     const supabase = createServerClient();
-    const authUser = await getAuthenticatedUserFromRequest(req);
-
-    if (!authUser || !authUser.id) {
-      return NextResponse.json(
-        {
-          error:
-            "Owner account required. You must create or sign in to an owner account to register a 3D business plot. No unowned plots are permitted.",
-        },
-        { status: 401 }
-      );
-    }
-
     if (!supabase) {
       return NextResponse.json(
         { error: "Database service is temporarily unavailable. Please try again later." },
@@ -91,76 +88,87 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 4. Resolve or create Owner User in Supabase Auth
+    let ownerId: string | null = null;
+    const authUser = await getAuthenticatedUserFromRequest(req);
+
+    if (authUser && authUser.id && (authUser.email || "").toLowerCase() === normalizedOwnerEmail) {
+      ownerId = authUser.id;
+    } else {
+      try {
+        // Attempt to create user with email confirmed for instant OTP / Magic Link signin
+        const { data: created, error: createError } = await supabase.auth.admin.createUser({
+          email: normalizedOwnerEmail,
+          email_confirm: true,
+        });
+
+        if (created?.user?.id) {
+          ownerId = created.user.id;
+        } else {
+          // If already registered, fetch user by email
+          const { data: listData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+          const existing = listData?.users?.find(
+            (u) => (u.email || "").toLowerCase() === normalizedOwnerEmail
+          );
+          if (existing?.id) {
+            ownerId = existing.id;
+          }
+        }
+      } catch (authErr) {
+        console.error("[/api/register] admin auth error:", authErr);
+      }
+    }
+
+    if (!ownerId) {
+      return NextResponse.json(
+        { error: "Could not link owner account. Please verify your email address." },
+        { status: 400 }
+      );
+    }
+
     let businessId = `sb-temp-${Date.now()}`;
     let persistedToDb = false;
 
-    const rawImages: string[] = Array.isArray(portfolio_images)
-      ? portfolio_images.slice(0, 6).filter((x): x is string => typeof x === "string" && x.length > 0)
-      : [];
+    const { data: businessData, error: businessError } = await supabase
+      .from("businesses")
+      .insert({
+        slug,
+        owner_id: ownerId,
+        owner_email: normalizedOwnerEmail,
+        name: name.trim(),
+        tagline: tagline ? tagline.trim() : null,
+        description: description ? description.trim() : null,
+        category_id,
+        city_name: city_name.trim(),
+        state_name: state_name ? state_name.trim() : "India",
+        pincode: pincode || null,
+        lat: Number(lat) || 26.1445,
+        lon: Number(lon) || 91.7362,
+        facing_bearing: typeof facing_bearing === "number" ? facing_bearing : null,
+        road_anchor_lat: typeof road_anchor_lat === "number" ? road_anchor_lat : null,
+        road_anchor_lon: typeof road_anchor_lon === "number" ? road_anchor_lon : null,
+        connector_type: validConnectorType,
+        whatsapp_phone: cleanPhone,
+        instagram_handle: instagram_handle ? instagram_handle.replace(/^@/, "").trim() : null,
+        website_url: safeWebsiteUrl,
+        google_maps_url: safeGoogleMapsUrl,
+        starting_price: starting_price || null,
+        logo_url: null,
+        is_verified: false,
+        is_featured: false,
+        verification_status: "none",
+        status: "active",
+      })
+      .select("id")
+      .single();
 
-    let storedImageUrls = rawImages;
+    if (businessError) {
+      return NextResponse.json({ error: businessError.message }, { status: 500 });
+    }
 
-    if (supabase) {
-      // Upload base64 portfolio photos to Supabase Storage CDN bucket (`storefront-media`)
-      if (rawImages.length > 0) {
-        storedImageUrls = await Promise.all(
-          rawImages.map((img, idx) => uploadStorefrontImage(supabase, slug, img, idx))
-        );
-      }
-
-      const { data: businessData, error: businessError } = await supabase
-        .from("businesses")
-        .insert({
-          slug,
-          owner_id: authUser.id,
-          name: name.trim(),
-          tagline: tagline ? tagline.trim() : null,
-          description: description ? description.trim() : null,
-          category_id,
-          city_name: city_name.trim(),
-          state_name: state_name ? state_name.trim() : "India",
-          pincode: pincode || null,
-          lat: Number(lat) || 26.1445,
-          lon: Number(lon) || 91.7362,
-          facing_bearing: typeof facing_bearing === "number" ? facing_bearing : null,
-          road_anchor_lat: typeof road_anchor_lat === "number" ? road_anchor_lat : null,
-          road_anchor_lon: typeof road_anchor_lon === "number" ? road_anchor_lon : null,
-          connector_type: validConnectorType,
-          whatsapp_phone: cleanPhone,
-          instagram_handle: instagram_handle ? instagram_handle.replace(/^@/, "").trim() : null,
-          website_url: safeWebsiteUrl,
-          google_maps_url: safeGoogleMapsUrl,
-          starting_price: starting_price || null,
-          logo_url: storedImageUrls[0] || null,
-          is_verified: false,
-          is_featured: false,
-          verification_status: "none",
-          status: "active",
-        })
-        .select("id")
-        .single();
-
-      if (businessError) {
-        return NextResponse.json({ error: businessError.message }, { status: 500 });
-      }
-
-      if (businessData) {
-        businessId = businessData.id;
-        persistedToDb = true;
-
-        // Insert portfolio items using CDN Storage URLs
-        if (storedImageUrls.length > 0) {
-          const items = storedImageUrls.map((imgUrl: string, idx: number) => ({
-            business_id: businessId,
-            image_url: imgUrl,
-            sort_order: idx + 1,
-          }));
-          const { error: portfolioError } = await supabase.from("portfolio_items").insert(items);
-          if (portfolioError) {
-            console.error("[/api/register] portfolio_items insert error:", portfolioError.message);
-          }
-        }
-      }
+    if (businessData) {
+      businessId = businessData.id;
+      persistedToDb = true;
     }
 
     // Keep in local registry for immediate 3D High Street live rendering
@@ -185,17 +193,14 @@ export async function POST(req: NextRequest) {
       website_url: safeWebsiteUrl || undefined,
       google_maps_url: safeGoogleMapsUrl || undefined,
       starting_price: starting_price || "",
-      logo_url: storedImageUrls[0] || "",
+      logo_url: undefined,
+      owner_id: ownerId,
+      owner_email: normalizedOwnerEmail,
       is_verified: false,
       is_featured: false,
       total_views: 1,
       total_leads: 0,
-      portfolio: storedImageUrls.map((imgUrl: string, idx: number) => ({
-        id: `p-${businessId}-${idx}`,
-        business_id: businessId,
-        image_url: imgUrl,
-        sort_order: idx + 1,
-      })),
+      portfolio: [],
       created_at: new Date().toISOString(),
     };
     addLocalStorefront(localStorefront);
@@ -206,9 +211,8 @@ export async function POST(req: NextRequest) {
         persisted_to_db: persistedToDb,
         id: businessId,
         slug,
-        logo_url: storedImageUrls[0] || "",
-        portfolio_urls: storedImageUrls,
-        message: "Storefront registered successfully!",
+        owner_email: normalizedOwnerEmail,
+        message: "Storefront plot registered & claimed successfully!",
       },
       { status: 201 }
     );
