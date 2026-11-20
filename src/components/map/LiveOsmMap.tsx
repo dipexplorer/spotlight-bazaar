@@ -81,6 +81,35 @@ interface LiveOsmMapProps {
 const CARTO_VOYAGER_STYLE = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
 const CARTO_DARK_MATTER_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
+// MapTiler & Fallback High-Powered Realism Satellite & 3D Terrain Configuration
+const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY || "";
+
+// Satellite Tile Source (MapTiler Satellite with Esri World Imagery fallback)
+const SATELLITE_TILE_URL = MAPTILER_KEY
+  ? `https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=${MAPTILER_KEY}`
+  : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+
+// Terrain-RGB Raster-DEM Tile Source (MapTiler terrain-rgb-v2 with AWS Terrarium fallback)
+const TERRAIN_TILE_URL = MAPTILER_KEY
+  ? `https://api.maptiler.com/tiles/terrain-rgb-v2/{z}/{x}/{y}.webp?key=${MAPTILER_KEY}`
+  : "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
+
+const TERRAIN_ENCODING: "mapbox" | "terrarium" = MAPTILER_KEY ? "mapbox" : "terrarium";
+const TERRAIN_TILE_SIZE = MAPTILER_KEY ? 512 : 256;
+const TERRAIN_MAX_ZOOM = MAPTILER_KEY ? 14 : 15;
+
+// Major Metros National HUD Coordinates (Image 3 Inspiration)
+const MAJOR_INDIA_HUBS_GEOJSON: GeoJSON.FeatureCollection<GeoJSON.Point> = {
+  type: "FeatureCollection",
+  features: [
+    { type: "Feature", properties: { name: "New Delhi", tag: "Capital", zoom: 12.8, pitch: 52, bearing: -5 }, geometry: { type: "Point", coordinates: [77.2090, 28.6139] } },
+    { type: "Feature", properties: { name: "Mumbai", tag: "Financial Hub", zoom: 12.8, pitch: 54, bearing: 15 }, geometry: { type: "Point", coordinates: [72.8777, 19.0760] } },
+    { type: "Feature", properties: { name: "Bengaluru", tag: "Tech Silicon Hub", zoom: 12.8, pitch: 50, bearing: 10 }, geometry: { type: "Point", coordinates: [77.5946, 12.9716] } },
+    { type: "Feature", properties: { name: "Chennai", tag: "Coastal Hub", zoom: 12.8, pitch: 50, bearing: 20 }, geometry: { type: "Point", coordinates: [80.2707, 13.0827] } },
+    { type: "Feature", properties: { name: "Kolkata", tag: "Eastern Hub", zoom: 12.8, pitch: 52, bearing: -10 }, geometry: { type: "Point", coordinates: [88.3639, 22.5726] } },
+  ],
+};
+
 // Fallback pure OpenStreetMap raster style (zero external dependencies)
 const OSM_RASTER_STYLE = {
   version: 8 as const,
@@ -294,6 +323,7 @@ export function LiveOsmMap({
   const markersRef = useRef<Marker[]>([]);
   const markersBySlugRef = useRef<Map<string, Marker>>(new Map());
   const playerMarkerRef = useRef<Marker | null>(null);
+  const guwahatiBeaconMarkerRef = useRef<Marker | null>(null);
   const resolvedPlacementsRef = useRef<Map<string, SnappedPlotPlacement>>(new Map());
   const dynamicConnectorsGeoJSONRef = useRef<GeoJSON.FeatureCollection<GeoJSON.LineString>>({
     type: "FeatureCollection",
@@ -822,10 +852,11 @@ export function LiveOsmMap({
     const urlZoom = params?.get("z") ? parseFloat(params.get("z")!) : NaN;
     const hasPlaceDeepLink = Boolean(urlPlace && Number.isFinite(urlLat) && Number.isFinite(urlLon));
 
-    let initialCenter: [number, number] = INDIA_CENTER;
-    let initialZoom = 4.3;
-    let initialPitch = 42;
-    let initialBearing = -6;
+    // Cinematic GTA 6 Oblique Perspective (Towering Himalayas + 3D Terrain + Coastlines)
+    let initialCenter: [number, number] = [81.5, 21.0];
+    let initialZoom = 4.5;
+    let initialPitch = 56;
+    let initialBearing = -8;
 
     if (matchedDeepLinkShop) {
       initialCenter = [matchedDeepLinkShop.lon, matchedDeepLinkShop.lat];
@@ -1082,7 +1113,8 @@ export function LiveOsmMap({
           p3d.group.rotation.y = playerLocalPosRef.current.heading;
         }
 
-        const coord = maplibregl.MercatorCoordinate.fromLngLat(NERQIVA_COORDS, 0);
+        const nqElev = (map as any).queryTerrainElevation ? ((map as any).queryTerrainElevation(NERQIVA_COORDS) || 0) : 0;
+        const coord = maplibregl.MercatorCoordinate.fromLngLat(NERQIVA_COORDS, nqElev);
         const scale = coord.meterInMercatorCoordinateUnits();
 
         const rotationX = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), Math.PI / 2);
@@ -1199,7 +1231,8 @@ export function LiveOsmMap({
                 entry.mesh.scale.set(baseScale, baseScale, baseScale);
                 entry.mesh.rotation.y = bearingToThreeRotationY(facingBearing);
 
-                const pCoord = maplibregl.MercatorCoordinate.fromLngLat([plotLon, plotLat], 0);
+                const pElev = (map as any).queryTerrainElevation ? ((map as any).queryTerrainElevation([plotLon, plotLat]) || 0) : 0;
+                const pCoord = maplibregl.MercatorCoordinate.fromLngLat([plotLon, plotLat], pElev);
                 const pScale = pCoord.meterInMercatorCoordinateUnits();
                 const pMatrix = new THREE.Matrix4()
                   .makeTranslation(pCoord.x, pCoord.y, pCoord.z)
@@ -1225,52 +1258,128 @@ export function LiveOsmMap({
 
       const isDark = map.getStyle()?.name?.toLowerCase().includes("dark") || isNightMode;
 
-      // 1. Permanent Sky & Atmospheric Horizon (ZERO ground fog so terrain and roads are 100% visible)
+      // 1. Permanent GPU Sky & Atmospheric Horizon (GTA 6-grade horizon depth & haze)
       try {
         if (!isDark) {
           map.setSky({
-            "sky-color": "#38bdf8",
-            "sky-horizon-blend": 0.4,
-            "horizon-color": "#bae6fd",
-            "horizon-fog-blend": 0.5,
+            "sky-color": "#1e3a8a",
+            "sky-horizon-blend": 0.45,
+            "horizon-color": "#93c5fd",
+            "horizon-fog-blend": 0.6,
             "fog-color": "#bae6fd",
-            "fog-ground-blend": 0.0, // FIX: Ground is crystal clear, no whiteout
+            "fog-ground-blend": 0.0,
+          });
+          (map as any).setFog?.({
+            range: [0.5, 14],
+            color: "#bae6fd",
+            "horizon-blend": 0.35,
+            "high-color": "#1e3a8a",
+            "space-color": "#020617",
+            "star-intensity": 0.0,
           });
         } else {
           map.setSky({
             "sky-color": "#020617",
             "sky-horizon-blend": 0.5,
-            "horizon-color": "#0f172a",
-            "horizon-fog-blend": 0.6,
+            "horizon-color": "#091428",
+            "horizon-fog-blend": 0.65,
             "fog-color": "#020617",
             "fog-ground-blend": 0.0,
           });
+          (map as any).setFog?.({
+            range: [0.5, 12],
+            color: "#040d1a",
+            "horizon-blend": 0.45,
+            "high-color": "#020617",
+            "space-color": "#010409",
+            "star-intensity": 0.75,
+          });
         }
       } catch (e) {
-        console.warn("[LiveOsmMap] setSky warning:", e);
+        console.warn("[LiveOsmMap] setSky/setFog warning:", e);
+      }
+
+      // 1b. DEM 3D Elevation Terrain (Himalayas, Western Ghats, Deccan Plateau elevation)
+      try {
+        if (!map.getSource("elevation-terrain-source")) {
+          map.addSource("elevation-terrain-source", {
+            type: "raster-dem",
+            tiles: [TERRAIN_TILE_URL],
+            tileSize: TERRAIN_TILE_SIZE,
+            maxzoom: TERRAIN_MAX_ZOOM,
+            encoding: TERRAIN_ENCODING,
+          });
+        }
+        map.setTerrain({
+          source: "elevation-terrain-source",
+          exaggeration: 1.65,
+        });
+      } catch (demErr) {
+        console.warn("[LiveOsmMap] DEM setTerrain warning:", demErr);
+      }
+
+      // 1c. Photorealistic Satellite Landcover Layer (Below roads & buildings)
+      try {
+        if (!map.getSource("satellite-imagery-source")) {
+          map.addSource("satellite-imagery-source", {
+            type: "raster",
+            tiles: [SATELLITE_TILE_URL],
+            tileSize: 256,
+            attribution: MAPTILER_KEY ? "© MapTiler © OpenStreetMap contributors" : "© Esri World Imagery",
+          });
+        }
+        const styleLayers = map.getStyle().layers || [];
+        const roadBeforeLayer = styleLayers.find((l) =>
+          l.id.startsWith("road_") || l.id.startsWith("bridge_") || l.id.startsWith("tunnel_") || l.id === "3d-city-buildings"
+        )?.id;
+
+        if (!map.getLayer("satellite-imagery-layer")) {
+          map.addLayer(
+            {
+              id: "satellite-imagery-layer",
+              type: "raster",
+              source: "satellite-imagery-source",
+              minzoom: 0,
+              maxzoom: 20,
+              paint: {
+                "raster-opacity": [
+                  "interpolate", ["linear"], ["zoom"],
+                  3.5, 0.95,
+                  15.0, 0.85,
+                  18.0, 0.55,
+                  19.5, 0.15,
+                ],
+                "raster-contrast": 0.12,
+                "raster-saturation": 0.08,
+              },
+            },
+            roadBeforeLayer || undefined
+          );
+        }
+      } catch (satErr) {
+        console.warn("[LiveOsmMap] Satellite layer warning:", satErr);
       }
 
       // 2. High-Contrast Production Road & Basemap Styling (Fixes washed-out / invisible roads in Day theme)
       try {
         if (!isDark) {
           if (map.getLayer("background")) {
-            map.setPaintProperty("background", "background-color", "#f8fafc");
+            map.setPaintProperty("background", "background-color", "#04152d");
           }
           if (map.getLayer("water")) {
             map.setPaintProperty("water", "fill-color", [
               "interpolate", ["linear"], ["zoom"],
-              9.5, "#0284c7",
-              12.0, "#38bdf8",
+              4.0, "#04152d",
+              9.5, "#04152d",
+              12.0, "#0284c7",
             ] as any);
             map.setPaintProperty("water", "fill-opacity", 1.0);
           }
           if (map.getLayer("landcover")) {
-            map.setPaintProperty("landcover", "fill-color", "#dcfce7");
-            map.setPaintProperty("landcover", "fill-opacity", 0.65);
+            map.setPaintProperty("landcover", "fill-opacity", 0.0);
           }
           if (map.getLayer("landuse_residential")) {
-            map.setPaintProperty("landuse_residential", "fill-color", "#f1f5f9");
-            map.setPaintProperty("landuse_residential", "fill-opacity", 0.85);
+            map.setPaintProperty("landuse_residential", "fill-opacity", 0.15);
           }
 
           // Physically accurate zoom-adaptive width matching 3.0m fill and 3.76m casing across all zooms
@@ -1347,6 +1456,24 @@ export function LiveOsmMap({
           }
         } else {
           // Night mode: maintain butt line-cap, matching width stops, and dark slate colors
+          if (map.getLayer("background")) {
+            map.setPaintProperty("background", "background-color", "#020b18");
+          }
+          if (map.getLayer("water")) {
+            map.setPaintProperty("water", "fill-color", [
+              "interpolate", ["linear"], ["zoom"],
+              4.0, "#020b18",
+              9.5, "#020b18",
+              12.0, "#0c243d",
+            ] as any);
+          }
+          if (map.getLayer("landcover")) {
+            map.setPaintProperty("landcover", "fill-opacity", 0.0);
+          }
+          if (map.getLayer("landuse_residential")) {
+            map.setPaintProperty("landuse_residential", "fill-opacity", 0.15);
+          }
+
           const minorCaseWidthNight: any = [
             "interpolate", ["exponential", 2], ["zoom"],
             14, 2.5,
@@ -1593,25 +1720,26 @@ export function LiveOsmMap({
               source: "protomaps",
               "source-layer": "buildings",
               type: "fill-extrusion",
-              minzoom: 15,
+              minzoom: 13.5,
               paint: {
                 "fill-extrusion-color": [
                   "interpolate",
                   ["linear"],
-                  ["coalesce", ["get", "render_height"], ["get", "height"], 10],
-                  0, "#f8fafc",
-                  15, "#e2e8f0",
-                  35, "#cbd5e1"
+                  ["coalesce", ["get", "render_height"], ["get", "height"], 12],
+                  0, "#e2e8f0",
+                  15, "#cbd5e1",
+                  35, "#94a3b8",
+                  70, "#64748b"
                 ],
                 "fill-extrusion-height": [
                   "interpolate",
                   ["linear"],
                   ["zoom"],
-                  15, 0,
-                  16, ["coalesce", ["get", "render_height"], ["get", "height"], 12]
+                  13.5, 0,
+                  15.0, ["coalesce", ["get", "render_height"], ["get", "height"], 12]
                 ],
                 "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], ["get", "min_height"], 0],
-                "fill-extrusion-opacity": 0.65,
+                "fill-extrusion-opacity": 0.82,
               },
             },
             labelLayerId
@@ -1648,12 +1776,34 @@ export function LiveOsmMap({
           }
         }
 
-        // Directional 3D sunlight so India's raised continent cliffs have dramatic sunlit highlights & depth
+        // Smooth CARTO's default city labels at national zoom so our sleek HUD tags shine cleanly without overlap
+        const cartoCityLayers = [
+          "place_city_r6", "place_city_r5", "place_city_dot_r7", "place_city_dot_r4",
+          "place_city_dot_r2", "place_city_dot_z7", "place_capital_dot_z7"
+        ];
+        for (const cLayer of cartoCityLayers) {
+          if (map.getLayer(cLayer)) {
+            map.setPaintProperty(cLayer, "text-opacity", [
+              "interpolate", ["linear"], ["zoom"],
+              8.8, 0.0,
+              9.8, 1.0,
+            ] as any);
+            try {
+              map.setPaintProperty(cLayer, "icon-opacity", [
+                "interpolate", ["linear"], ["zoom"],
+                8.8, 0.0,
+                9.8, 1.0,
+              ] as any);
+            } catch (e) {}
+          }
+        }
+
+        // Directional 3D sunlight for dramatic terrain relief & coastal highlights
         map.setLight({
           anchor: "viewport",
-          color: isDark ? "#38bdf8" : "#fff7ed",
-          intensity: isDark ? 0.35 : 0.48,
-          position: [1.5, 220, 48],
+          color: isDark ? "#7dd3fc" : "#fffbeb",
+          intensity: isDark ? 0.42 : 0.65,
+          position: [1.4, 210, 42],
         });
 
         loadIndiaBoundaryData().then((geo) => {
@@ -1661,10 +1811,8 @@ export function LiveOsmMap({
           if (!map.getStyle()) return;
 
           const darkNow = isNightModeRef.current || Boolean(map.getStyle()?.name?.toLowerCase().includes("dark"));
-          const liveOcean = darkNow ? "#040d1e" : "#0284c7";
-          const liveShadow = darkNow ? "#000000" : "#075985";
-          const liveContinent = darkNow ? "#0f293a" : "#16a34a";
-          const liveRim = darkNow ? "#38bdf8" : "#7dd3fc";
+          const liveOcean = darkNow ? "#020b18" : "#04152d";
+          const liveShadow = darkNow ? "#000000" : "#010814";
 
           if (!map.getSource("india-ocean-mask-source")) {
             map.addSource("india-ocean-mask-source", {
@@ -1683,7 +1831,7 @@ export function LiveOsmMap({
             ? "nerqiva-3d-commercial-layer"
             : undefined;
 
-          // Layer A: Pure Ocean Mask covering everything outside official Survey of India borders (including foreign labels!)
+          // Layer A: Pure Ocean Mask covering everything outside official Survey of India borders
           if (!map.getLayer("india-ocean-mask")) {
             map.addLayer(
               {
@@ -1714,12 +1862,12 @@ export function LiveOsmMap({
                 source: "india-land-source",
                 paint: {
                   "fill-color": liveShadow,
-                  "fill-translate": [14, 18],
+                  "fill-translate": [12, 16],
                   "fill-translate-anchor": "viewport",
                   "fill-opacity": [
                     "interpolate", ["linear"], ["zoom"],
-                    4.0, 0.55,
-                    7.5, 0.25,
+                    4.0, 0.45,
+                    7.5, 0.2,
                     9.5, 0.0,
                   ],
                 },
@@ -1730,68 +1878,198 @@ export function LiveOsmMap({
             map.setPaintProperty("india-island-shadow", "fill-color", liveShadow);
           }
 
-          // Layer C: Soft Luminous Coastal Surf / Shoreline Halo at Ocean Edge (sits cleanly at water level below 3D cliff!)
-          if (!map.getLayer("india-coastline-rim")) {
+          // Layer C1: Outer Coastal Bathymetry Reef (Deep Cyan Glow fringing coastline & islands)
+          if (!map.getLayer("india-coastal-shelf-outer")) {
             map.addLayer(
               {
-                id: "india-coastline-rim",
+                id: "india-coastal-shelf-outer",
                 type: "line",
                 source: "india-land-source",
                 layout: { "line-join": "round", "line-cap": "round" },
                 paint: {
-                  "line-color": liveRim,
+                  "line-color": "#0891b2",
                   "line-width": [
                     "interpolate", ["linear"], ["zoom"],
-                    3.9, 5.5,
-                    8.0, 4.0,
-                    11.0, 1.5,
+                    3.5, 24,
+                    6.5, 18,
+                    9.0, 10,
+                    11.0, 0,
                   ],
-                  "line-blur": 3.0,
+                  "line-blur": 14,
                   "line-opacity": [
                     "interpolate", ["linear"], ["zoom"],
-                    3.9, 0.72,
-                    8.5, 0.45,
-                    10.8, 0.0,
+                    3.5, 0.5,
+                    8.5, 0.3,
+                    10.5, 0,
                   ],
                 },
               },
               beforeCustom3D
             );
-          } else {
-            map.setPaintProperty("india-coastline-rim", "line-color", liveRim);
           }
 
-          // Layer D: Sculpted 3D Raised India Continent Slab (smoothly melts into 100% real OSM as you zoom in!)
-          if (!map.getLayer("india-3d-continent-extrusion")) {
+          // Layer C2: Mid-Shelf Coastal Bathymetry (Tropical Turquoise Shelf)
+          if (!map.getLayer("india-coastal-shelf-mid")) {
             map.addLayer(
               {
-                id: "india-3d-continent-extrusion",
-                type: "fill-extrusion",
+                id: "india-coastal-shelf-mid",
+                type: "line",
                 source: "india-land-source",
+                layout: { "line-join": "round", "line-cap": "round" },
                 paint: {
-                  "fill-extrusion-color": liveContinent,
-                  "fill-extrusion-height": [
+                  "line-color": "#06b6d4",
+                  "line-width": [
                     "interpolate", ["linear"], ["zoom"],
-                    3.9, 56000,
-                    6.5, 22000,
-                    8.5, 3500,
-                    9.5, 0,
+                    3.5, 12,
+                    6.5, 8,
+                    9.0, 4,
+                    11.0, 0,
                   ],
-                  "fill-extrusion-base": 0,
-                  "fill-extrusion-vertical-gradient": true,
-                  "fill-extrusion-opacity": [
+                  "line-blur": 6,
+                  "line-opacity": [
                     "interpolate", ["linear"], ["zoom"],
-                    3.9, 0.88,
-                    6.2, 0.78,
-                    7.5, 0.45,
-                    9.2, 0.0,
+                    3.5, 0.7,
+                    8.5, 0.45,
+                    10.5, 0,
                   ],
                 },
               },
               beforeCustom3D
             );
-          } else {
-            map.setPaintProperty("india-3d-continent-extrusion", "fill-extrusion-color", liveContinent);
+          }
+
+          // Layer C3: Radiant Inner Surf / Coral Shoreline (Crisp Seafoam Aqua Rim)
+          if (!map.getLayer("india-coastal-surf-inner")) {
+            map.addLayer(
+              {
+                id: "india-coastal-surf-inner",
+                type: "line",
+                source: "india-land-source",
+                layout: { "line-join": "round", "line-cap": "round" },
+                paint: {
+                  "line-color": "#67e8f9",
+                  "line-width": [
+                    "interpolate", ["linear"], ["zoom"],
+                    3.5, 4.0,
+                    6.5, 3.0,
+                    9.0, 1.8,
+                    11.0, 0,
+                  ],
+                  "line-blur": 2.0,
+                  "line-opacity": [
+                    "interpolate", ["linear"], ["zoom"],
+                    3.5, 0.88,
+                    8.5, 0.6,
+                    10.5, 0,
+                  ],
+                },
+              },
+              beforeCustom3D
+            );
+          }
+
+          // Remove old flat cartoon green slab so real DEM elevation & Himalayas shine unobstructed!
+          if (map.getLayer("india-3d-continent-extrusion")) {
+            map.removeLayer("india-3d-continent-extrusion");
+          }
+
+          // Layer D: Major Indian Metros National HUD (New Delhi, Mumbai, Bengaluru, Chennai, Kolkata)
+          if (!map.getSource("major-city-hubs-source")) {
+            map.addSource("major-city-hubs-source", {
+              type: "geojson",
+              data: MAJOR_INDIA_HUBS_GEOJSON,
+            });
+          }
+
+          if (!map.getLayer("major-city-hubs-halo")) {
+            map.addLayer(
+              {
+                id: "major-city-hubs-halo",
+                type: "circle",
+                source: "major-city-hubs-source",
+                maxzoom: 10.5,
+                paint: {
+                  "circle-color": "#38bdf8",
+                  "circle-radius": 14,
+                  "circle-opacity": 0.25,
+                  "circle-blur": 0.5,
+                },
+              },
+              beforeCustom3D
+            );
+          }
+
+          if (!map.getLayer("major-city-hubs-dot")) {
+            map.addLayer(
+              {
+                id: "major-city-hubs-dot",
+                type: "circle",
+                source: "major-city-hubs-source",
+                maxzoom: 10.5,
+                paint: {
+                  "circle-color": "#ffffff",
+                  "circle-radius": 4.5,
+                  "circle-stroke-width": 2.0,
+                  "circle-stroke-color": "#080B12",
+                },
+              },
+              beforeCustom3D
+            );
+          }
+
+          if (!map.getLayer("major-city-hubs-label")) {
+            map.addLayer(
+              {
+                id: "major-city-hubs-label",
+                type: "symbol",
+                source: "major-city-hubs-source",
+                maxzoom: 10.5,
+                layout: {
+                  "text-field": "{name}",
+                  "text-size": 11,
+                  "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+                  "text-offset": [0, -1.2],
+                  "text-anchor": "bottom",
+                  "text-allow-overlap": true,
+                },
+                paint: {
+                  "text-color": "#ffffff",
+                  "text-halo-color": "rgba(8,11,18,0.95)",
+                  "text-halo-width": 2.5,
+                },
+              },
+              beforeCustom3D
+            );
+          }
+
+          // Layer D2: Guwahati Golden Beacon with Animated Concentric Sonar Pulse Rings
+          if (!guwahatiBeaconMarkerRef.current) {
+            const beaconEl = document.createElement("div");
+            beaconEl.className = "guwahati-flagship-beacon pointer-events-auto cursor-pointer select-none flex flex-col items-center";
+            beaconEl.innerHTML = `
+              <div style="position:relative;display:flex;align-items:center;justify-content:center;width:64px;height:64px;">
+                <div style="position:absolute;width:60px;height:60px;border-radius:9999px;border:2px solid rgba(245,158,11,0.85);animation:ping 2s cubic-bezier(0,0,0.2,1) infinite;"></div>
+                <div style="position:absolute;width:40px;height:40px;border-radius:9999px;border:1.5px solid rgba(251,191,36,0.6);animation:pulse 2s cubic-bezier(0.4,0,0.6,1) infinite;"></div>
+                <div style="width:20px;height:20px;border-radius:9999px;background:#f59e0b;border:2.5px solid #ffffff;box-shadow:0 0 24px #f59e0b, 0 0 10px #f59e0b;display:flex;align-items:center;justify-content:center;z-index:2;">
+                  <div style="width:6px;height:6px;border-radius:9999px;background:#080b12;"></div>
+                </div>
+              </div>
+              <div style="margin-top:-6px;padding:3px 10px;border-radius:9999px;background:rgba(8,11,18,0.95);border:1px solid rgba(245,158,11,0.8);box-shadow:0 8px 24px rgba(0,0,0,0.85);display:flex;align-items:center;gap:6px;backdrop-filter:blur(8px);z-index:3;">
+                <span style="width:6px;height:6px;border-radius:9999px;background:#f59e0b;animation:pulse 1.5s infinite;"></span>
+                <span style="font-size:11px;font-weight:900;color:#fef08a;letter-spacing:0.02em;">Guwahati</span>
+                <span style="font-size:9px;font-weight:800;padding:1px 5px;border-radius:9999px;background:rgba(245,158,11,0.25);color:#fde047;border:1px solid rgba(245,158,11,0.4);">L1</span>
+              </div>
+            `;
+            beaconEl.onclick = () => {
+              if (onStorefrontSelect) onStorefrontSelect(nerqivaBusiness);
+              flyToStorefront(nerqivaBusiness);
+            };
+            guwahatiBeaconMarkerRef.current = new maplibregl.Marker({
+              element: beaconEl,
+              anchor: "center",
+            })
+              .setLngLat(NERQIVA_COORDS)
+              .addTo(map);
           }
 
           // Layer E (Tier 1 LOD — National View zoom < 9.8): Native WebGL Clustered Beacons (Scales to 100k+ Businesses!)
@@ -2015,8 +2293,49 @@ export function LiveOsmMap({
         }).catch(() => {});
       });
 
+      // Interactive hover & click handlers for Major Indian Metros National HUD
+      for (const hubLayer of ["major-city-hubs-dot", "major-city-hubs-label"]) {
+        map.on("mouseenter", hubLayer, () => {
+          map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", hubLayer, () => {
+          map.getCanvas().style.cursor = "";
+        });
+        map.on("click", hubLayer, (e) => {
+          const feat = e.features?.[0];
+          if (!feat || feat.geometry.type !== "Point") return;
+          const coords = feat.geometry.coordinates as [number, number];
+          const props = feat.properties || {};
+          isFlightActiveRef.current = true;
+          setIs3DMode(true);
+          map.flyTo({
+            center: coords,
+            zoom: props.zoom || 12.8,
+            pitch: props.pitch || 52,
+            bearing: props.bearing || 0,
+            duration: 1600,
+          });
+          map.once("moveend", () => {
+            isFlightActiveRef.current = false;
+          });
+          bazaarAudio.playStorefrontChime();
+          showToast(`📍 ${props.name}`);
+        });
+      }
+
       // Helper to apply 4-Tier LOD marker visibility & compact vs flagship styling cleanly on every zoom
       const syncMarkerLOD = (z: number) => {
+        if (guwahatiBeaconMarkerRef.current) {
+          const bel = guwahatiBeaconMarkerRef.current.getElement();
+          if (bel) {
+            if (z >= 11.5 || isWalkModeRef.current) {
+              bel.style.display = "none";
+            } else {
+              bel.style.display = "flex";
+            }
+          }
+        }
+
         markersRef.current.forEach((m) => {
           const el = m.getElement();
           if (!el) return;
@@ -2180,6 +2499,10 @@ export function LiveOsmMap({
     mapRef.current = map;
 
     return () => {
+      if (guwahatiBeaconMarkerRef.current) {
+        guwahatiBeaconMarkerRef.current.remove();
+        guwahatiBeaconMarkerRef.current = null;
+      }
       map.remove();
       mapRef.current = null;
     };
@@ -2232,14 +2555,17 @@ export function LiveOsmMap({
     }
   }, [selectedCity, mapLoaded]);
 
-  // Sync 3D Drone Mode (Tilt between 58° and 0°)
+  // Sync 3D Drone Mode (Cinematic GTA 6 Oblique / Street Perspective <-> 2D Top-Down View)
   const toggle3DDrone = useCallback(() => {
     if (!mapRef.current) return;
     const next3D = !is3DMode;
     setIs3DMode(next3D);
+    const z = mapRef.current.getZoom();
+    const targetPitch = next3D ? (z < 9.5 ? 56 : 58) : 0;
+    const targetBearing = next3D ? (z < 9.5 ? -8 : 25) : 0;
     mapRef.current.easeTo({
-      pitch: next3D ? 58 : 0,
-      bearing: next3D ? 25 : 0,
+      pitch: targetPitch,
+      bearing: targetBearing,
       duration: 1000,
     });
   }, [is3DMode]);
@@ -2770,7 +3096,7 @@ export function LiveOsmMap({
       return;
     }
 
-    // 4. Otherwise, reset to National All-India Overview
+    // 4. Otherwise, reset to National All-India Overview (GTA 6 Oblique Perspective)
     clearSearchPin();
     handleStopMove();
     setIsWalkMode(false);
@@ -2780,10 +3106,10 @@ export function LiveOsmMap({
     setIs3DMode(true);
     isFlightActiveRef.current = true;
     mapRef.current.flyTo({
-      center: INDIA_CENTER,
-      zoom: 4.3,
-      pitch: 42,
-      bearing: -6,
+      center: [81.5, 21.0],
+      zoom: 4.5,
+      pitch: 56,
+      bearing: -8,
       duration: 1200,
     });
     mapRef.current.once("moveend", () => {
@@ -2913,10 +3239,10 @@ export function LiveOsmMap({
                   isFlightActiveRef.current = true;
                   setIs3DMode(true);
                   mapRef.current.flyTo({
-                    center: INDIA_CENTER,
-                    zoom: 4.3,
-                    pitch: 42,
-                    bearing: -6,
+                    center: [81.5, 21.0],
+                    zoom: 4.5,
+                    pitch: 56,
+                    bearing: -8,
                     duration: 1400,
                   });
                   mapRef.current.once("moveend", () => {
