@@ -225,90 +225,6 @@ const INDIA_MAX_BOUNDS: [[number, number], [number, number]] = [
 ];
 const INDIA_MIN_ZOOM = 3.9;
 
-interface IndiaGeoData {
-  landGeoJSON: GeoJSON.Feature<GeoJSON.MultiPolygon>;
-  oceanMaskGeoJSON: GeoJSON.Feature<GeoJSON.Polygon>;
-}
-
-let cachedIndiaGeoDataPromise: Promise<IndiaGeoData | null> | null = null;
-
-function ringSignedArea(ring: [number, number][]): number {
-  let area = 0;
-  for (let i = 0; i < ring.length - 1; i++) {
-    area += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1];
-  }
-  return area / 2;
-}
-
-function normalizeClosedRing(raw: [number, number][], wantCCW: boolean): [number, number][] {
-  const pts: [number, number][] = raw.map(([lon, lat]) => [lon, lat]);
-  const first = pts[0];
-  const last = pts[pts.length - 1];
-  if (first[0] !== last[0] || first[1] !== last[1]) {
-    pts.push([first[0], first[1]]);
-  }
-  const isCCW = ringSignedArea(pts) > 0;
-  if (isCCW !== wantCCW) {
-    pts.reverse();
-  }
-  return pts;
-}
-
-function loadIndiaBoundaryData(): Promise<IndiaGeoData | null> {
-  if (cachedIndiaGeoDataPromise) return cachedIndiaGeoDataPromise;
-  cachedIndiaGeoDataPromise = fetch("/data/india-land.json")
-    .then((res) => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    })
-    .then((data: { rings?: [number, number][][] }) => {
-      if (!data?.rings || data.rings.length === 0) return null;
-
-      // MultiPolygon of official Survey of India landmass + Andaman & Nicobar + Lakshadweep (CCW exterior rings)
-      const multiPolyCoords = data.rings
-        .filter((r) => r.length >= 3)
-        .map((r) => [normalizeClosedRing(r, true)]);
-
-      const landGeoJSON: GeoJSON.Feature<GeoJSON.MultiPolygon> = {
-        type: "Feature",
-        properties: { name: "India" },
-        geometry: {
-          type: "MultiPolygon",
-          coordinates: multiPolyCoords,
-        },
-      };
-
-      // Inverted globe ocean mask: outer globe ring CCW + all official India rings as CW holes
-      const outerGlobeRing: [number, number][] = [
-        [-180, -85],
-        [180, -85],
-        [180, 85],
-        [-180, 85],
-        [-180, -85],
-      ];
-      const holeRings = data.rings
-        .filter((r) => r.length >= 3)
-        .map((r) => normalizeClosedRing(r, false));
-
-      const oceanMaskGeoJSON: GeoJSON.Feature<GeoJSON.Polygon> = {
-        type: "Feature",
-        properties: { name: "Ocean Mask" },
-        geometry: {
-          type: "Polygon",
-          coordinates: [outerGlobeRing, ...holeRings],
-        },
-      };
-
-      return { landGeoJSON, oceanMaskGeoJSON };
-    })
-    .catch((err) => {
-      console.warn("[LiveOsmMap] Failed to load india-land.json:", err);
-      cachedIndiaGeoDataPromise = null;
-      return null;
-    });
-  return cachedIndiaGeoDataPromise;
-}
-
 export function LiveOsmMap({
   cities,
   storefronts,
@@ -383,6 +299,33 @@ export function LiveOsmMap({
   useEffect(() => {
     focusedRegionRef.current = focusedRegion;
   }, [focusedRegion]);
+
+  // Global keyboard shortcut: Cmd+K / Ctrl+K or '/' to instantly focus the Omnibox search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        const input = document.getElementById("spotlight-bazaar-search");
+        if (input) {
+          input.focus();
+          setSearchFocused(true);
+        }
+      } else if (
+        e.key === "/" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
+        e.preventDefault();
+        const input = document.getElementById("spotlight-bazaar-search");
+        if (input) {
+          input.focus();
+          setSearchFocused(true);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
   const [focusedStorefront, setFocusedStorefront] = useState<BusinessStorefront | null>(null);
   const [remoteGeoResults, setRemoteGeoResults] = useState<
     { id: string; name: string; subtitle: string; kind: "pincode" | "state" | "city" | "area"; lat: number; lon: number; zoom: number }[]
@@ -1262,37 +1205,37 @@ export function LiveOsmMap({
       try {
         if (!isDark) {
           map.setSky({
-            "sky-color": "#1e3a8a",
-            "sky-horizon-blend": 0.45,
-            "horizon-color": "#93c5fd",
-            "horizon-fog-blend": 0.6,
-            "fog-color": "#bae6fd",
-            "fog-ground-blend": 0.0,
+            "sky-color": "#0a192f",
+            "sky-horizon-blend": 0.35,
+            "horizon-color": "#1e3a8a",
+            "horizon-fog-blend": 0.45,
+            "fog-color": "#0f2342",
+            "fog-ground-blend": 0.05,
           });
           (map as any).setFog?.({
-            range: [0.5, 14],
-            color: "#bae6fd",
-            "horizon-blend": 0.35,
-            "high-color": "#1e3a8a",
-            "space-color": "#020617",
-            "star-intensity": 0.0,
+            range: [0.8, 12.0],
+            color: "#0a192f",
+            "horizon-blend": 0.15,
+            "high-color": "#020712",
+            "space-color": "#010409",
+            "star-intensity": 0.5,
           });
         } else {
           map.setSky({
-            "sky-color": "#020617",
-            "sky-horizon-blend": 0.5,
-            "horizon-color": "#091428",
-            "horizon-fog-blend": 0.65,
-            "fog-color": "#020617",
-            "fog-ground-blend": 0.0,
+            "sky-color": "#010409",
+            "sky-horizon-blend": 0.4,
+            "horizon-color": "#030c1b",
+            "horizon-fog-blend": 0.5,
+            "fog-color": "#020814",
+            "fog-ground-blend": 0.05,
           });
           (map as any).setFog?.({
-            range: [0.5, 12],
-            color: "#040d1a",
-            "horizon-blend": 0.45,
-            "high-color": "#020617",
-            "space-color": "#010409",
-            "star-intensity": 0.75,
+            range: [0.8, 12.0],
+            color: "#030c1b",
+            "horizon-blend": 0.15,
+            "high-color": "#010409",
+            "space-color": "#000205",
+            "star-intensity": 0.85,
           });
         }
       } catch (e) {
@@ -1365,15 +1308,16 @@ export function LiveOsmMap({
           if (map.getLayer("background")) {
             map.setPaintProperty("background", "background-color", [
               "interpolate", ["linear"], ["zoom"],
-              7.5, "#04152d",
+              6.0, "#081b33",
               8.8, "#f8fafc",
             ]);
           }
           if (map.getLayer("water")) {
             map.setPaintProperty("water", "fill-color", [
               "interpolate", ["linear"], ["zoom"],
-              7.5, "#04152d",
-              9.0, "#0284c7",
+              4.0, "#081b33",
+              7.5, "#0b264a",
+              9.5, "#0284c7",
               12.0, "#38bdf8",
             ] as any);
             map.setPaintProperty("water", "fill-opacity", 1.0);
@@ -1819,390 +1763,245 @@ export function LiveOsmMap({
           position: [1.4, 210, 42],
         });
 
-        loadIndiaBoundaryData().then((geo) => {
-          if (!geo || !mapRef.current || mapRef.current !== map) return;
-          if (!map.getStyle()) return;
+        const beforeCustom3D = map.getLayer("nerqiva-3d-commercial-layer")
+          ? "nerqiva-3d-commercial-layer"
+          : undefined;
 
-          const darkNow = isNightModeRef.current || Boolean(map.getStyle()?.name?.toLowerCase().includes("dark"));
-          const liveOcean = darkNow ? "#020b18" : "#04152d";
-          const liveShadow = darkNow ? "#000000" : "#010814";
-
-          if (!map.getSource("india-ocean-mask-source")) {
-            map.addSource("india-ocean-mask-source", {
-              type: "geojson",
-              data: geo.oceanMaskGeoJSON,
-            });
-          }
-          if (!map.getSource("india-land-source")) {
-            map.addSource("india-land-source", {
-              type: "geojson",
-              data: geo.landGeoJSON,
-            });
-          }
-
-          const beforeCustom3D = map.getLayer("nerqiva-3d-commercial-layer")
-            ? "nerqiva-3d-commercial-layer"
-            : undefined;
-
-          // Layer A: Pure Ocean Mask covering everything outside official Survey of India borders
-          if (!map.getLayer("india-ocean-mask")) {
-            map.addLayer(
-              {
-                id: "india-ocean-mask",
-                type: "fill",
-                source: "india-ocean-mask-source",
-                paint: {
-                  "fill-color": liveOcean,
-                  "fill-opacity": [
-                    "interpolate", ["linear"], ["zoom"],
-                    8.2, 1.0,
-                    9.6, 0.0,
-                  ],
-                },
-              },
-              beforeCustom3D
-            );
-          } else {
-            map.setPaintProperty("india-ocean-mask", "fill-color", liveOcean);
-          }
-
-          // Layer B: Ocean Contact Shadow cast beneath the raised 3D India landmass
-          if (!map.getLayer("india-island-shadow")) {
-            map.addLayer(
-              {
-                id: "india-island-shadow",
-                type: "fill",
-                source: "india-land-source",
-                paint: {
-                  "fill-color": liveShadow,
-                  "fill-translate": [12, 16],
-                  "fill-translate-anchor": "viewport",
-                  "fill-opacity": [
-                    "interpolate", ["linear"], ["zoom"],
-                    4.0, 0.45,
-                    7.5, 0.2,
-                    9.5, 0.0,
-                  ],
-                },
-              },
-              beforeCustom3D
-            );
-          } else {
-            map.setPaintProperty("india-island-shadow", "fill-color", liveShadow);
-          }
-
-          // Layer C1: Outer Coastal Bathymetry Reef (Deep Cyan Glow fringing coastline & islands)
-          if (!map.getLayer("india-coastal-shelf-outer")) {
-            map.addLayer(
-              {
-                id: "india-coastal-shelf-outer",
-                type: "line",
-                source: "india-land-source",
-                layout: { "line-join": "round", "line-cap": "round" },
-                paint: {
-                  "line-color": "#0891b2",
-                  "line-width": [
-                    "interpolate", ["linear"], ["zoom"],
-                    3.5, 24,
-                    6.5, 18,
-                    9.0, 10,
-                    11.0, 0,
-                  ],
-                  "line-blur": 14,
-                  "line-opacity": [
-                    "interpolate", ["linear"], ["zoom"],
-                    3.5, 0.5,
-                    8.5, 0.3,
-                    10.5, 0,
-                  ],
-                },
-              },
-              beforeCustom3D
-            );
-          }
-
-          // Layer C2: Mid-Shelf Coastal Bathymetry (Tropical Turquoise Shelf)
-          if (!map.getLayer("india-coastal-shelf-mid")) {
-            map.addLayer(
-              {
-                id: "india-coastal-shelf-mid",
-                type: "line",
-                source: "india-land-source",
-                layout: { "line-join": "round", "line-cap": "round" },
-                paint: {
-                  "line-color": "#06b6d4",
-                  "line-width": [
-                    "interpolate", ["linear"], ["zoom"],
-                    3.5, 12,
-                    6.5, 8,
-                    9.0, 4,
-                    11.0, 0,
-                  ],
-                  "line-blur": 6,
-                  "line-opacity": [
-                    "interpolate", ["linear"], ["zoom"],
-                    3.5, 0.7,
-                    8.5, 0.45,
-                    10.5, 0,
-                  ],
-                },
-              },
-              beforeCustom3D
-            );
-          }
-
-          // Layer C3: Radiant Inner Surf / Coral Shoreline (Crisp Seafoam Aqua Rim)
-          if (!map.getLayer("india-coastal-surf-inner")) {
-            map.addLayer(
-              {
-                id: "india-coastal-surf-inner",
-                type: "line",
-                source: "india-land-source",
-                layout: { "line-join": "round", "line-cap": "round" },
-                paint: {
-                  "line-color": "#67e8f9",
-                  "line-width": [
-                    "interpolate", ["linear"], ["zoom"],
-                    3.5, 4.0,
-                    6.5, 3.0,
-                    9.0, 1.8,
-                    11.0, 0,
-                  ],
-                  "line-blur": 2.0,
-                  "line-opacity": [
-                    "interpolate", ["linear"], ["zoom"],
-                    3.5, 0.88,
-                    8.5, 0.6,
-                    10.5, 0,
-                  ],
-                },
-              },
-              beforeCustom3D
-            );
-          }
-
-          // Remove old flat cartoon green slab so real DEM elevation & Himalayas shine unobstructed!
-          if (map.getLayer("india-3d-continent-extrusion")) {
-            map.removeLayer("india-3d-continent-extrusion");
-          }
-
-          // Layer D: Major Indian Metros National HUD (New Delhi, Mumbai, Bengaluru, Chennai, Kolkata)
-          if (!map.getSource("major-city-hubs-source")) {
-            map.addSource("major-city-hubs-source", {
-              type: "geojson",
-              data: MAJOR_INDIA_HUBS_GEOJSON,
-            });
-          }
-
-          if (!map.getLayer("major-city-hubs-halo")) {
-            map.addLayer(
-              {
-                id: "major-city-hubs-halo",
-                type: "circle",
-                source: "major-city-hubs-source",
-                maxzoom: 10.5,
-                paint: {
-                  "circle-color": "#38bdf8",
-                  "circle-radius": 14,
-                  "circle-opacity": 0.25,
-                  "circle-blur": 0.5,
-                },
-              },
-              beforeCustom3D
-            );
-          }
-
-          if (!map.getLayer("major-city-hubs-dot")) {
-            map.addLayer(
-              {
-                id: "major-city-hubs-dot",
-                type: "circle",
-                source: "major-city-hubs-source",
-                maxzoom: 10.5,
-                paint: {
-                  "circle-color": "#ffffff",
-                  "circle-radius": 4.5,
-                  "circle-stroke-width": 2.0,
-                  "circle-stroke-color": "#080B12",
-                },
-              },
-              beforeCustom3D
-            );
-          }
-
-          if (!map.getLayer("major-city-hubs-label")) {
-            map.addLayer(
-              {
-                id: "major-city-hubs-label",
-                type: "symbol",
-                source: "major-city-hubs-source",
-                maxzoom: 10.5,
-                layout: {
-                  "text-field": "{name}",
-                  "text-size": 11,
-                  "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
-                  "text-offset": [0, -1.2],
-                  "text-anchor": "bottom",
-                  "text-allow-overlap": true,
-                },
-                paint: {
-                  "text-color": "#ffffff",
-                  "text-halo-color": "rgba(8,11,18,0.95)",
-                  "text-halo-width": 2.5,
-                },
-              },
-              beforeCustom3D
-            );
-          }
-
-          // Layer D2: Guwahati Golden Beacon with Animated Concentric Sonar Pulse Rings
-          if (!guwahatiBeaconMarkerRef.current) {
-            const beaconEl = document.createElement("div");
-            beaconEl.className = "guwahati-flagship-beacon pointer-events-auto cursor-pointer select-none flex flex-col items-center";
-            beaconEl.innerHTML = `
-              <div style="position:relative;display:flex;align-items:center;justify-content:center;width:64px;height:64px;">
-                <div style="position:absolute;width:60px;height:60px;border-radius:9999px;border:2px solid rgba(245,158,11,0.85);animation:ping 2s cubic-bezier(0,0,0.2,1) infinite;"></div>
-                <div style="position:absolute;width:40px;height:40px;border-radius:9999px;border:1.5px solid rgba(251,191,36,0.6);animation:pulse 2s cubic-bezier(0.4,0,0.6,1) infinite;"></div>
-                <div style="width:20px;height:20px;border-radius:9999px;background:#f59e0b;border:2.5px solid #ffffff;box-shadow:0 0 24px #f59e0b, 0 0 10px #f59e0b;display:flex;align-items:center;justify-content:center;z-index:2;">
-                  <div style="width:6px;height:6px;border-radius:9999px;background:#080b12;"></div>
-                </div>
-              </div>
-              <div style="margin-top:-6px;padding:3px 10px;border-radius:9999px;background:rgba(8,11,18,0.95);border:1px solid rgba(245,158,11,0.8);box-shadow:0 8px 24px rgba(0,0,0,0.85);display:flex;align-items:center;gap:6px;backdrop-filter:blur(8px);z-index:3;">
-                <span style="width:6px;height:6px;border-radius:9999px;background:#f59e0b;animation:pulse 1.5s infinite;"></span>
-                <span style="font-size:11px;font-weight:900;color:#fef08a;letter-spacing:0.02em;">Guwahati</span>
-                <span style="font-size:9px;font-weight:800;padding:1px 5px;border-radius:9999px;background:rgba(245,158,11,0.25);color:#fde047;border:1px solid rgba(245,158,11,0.4);">L1</span>
-              </div>
-            `;
-            beaconEl.onclick = () => {
-              if (onStorefrontSelect) onStorefrontSelect(nerqivaBusiness);
-              flyToStorefront(nerqivaBusiness);
-            };
-            guwahatiBeaconMarkerRef.current = new maplibregl.Marker({
-              element: beaconEl,
-              anchor: "center",
-            })
-              .setLngLat(NERQIVA_COORDS)
-              .addTo(map);
-          }
-
-          // Layer E (Tier 1 LOD — National View zoom < 9.8): Native WebGL Clustered Beacons (Scales to 100k+ Businesses!)
-          if (!map.getSource("storefronts-cluster-source")) {
-            map.addSource("storefronts-cluster-source", {
-              type: "geojson",
-              data: storefrontsGeoJSONRef.current,
-              cluster: true,
-              clusterMaxZoom: 9,
-              clusterRadius: 42,
-            });
-          }
-
-          if (!map.getLayer("storefront-cluster-halo")) {
-            map.addLayer(
-              {
-                id: "storefront-cluster-halo",
-                type: "circle",
-                source: "storefronts-cluster-source",
-                maxzoom: 9.8,
-                filter: ["has", "point_count"],
-                paint: {
-                  "circle-color": "#f59e0b",
-                  "circle-radius": ["step", ["get", "point_count"], 20, 10, 25, 50, 31],
-                  "circle-opacity": 0.25,
-                  "circle-blur": 0.5,
-                },
-              },
-              beforeCustom3D
-            );
-          }
-
-          if (!map.getLayer("storefront-cluster-circle")) {
-            map.addLayer(
-              {
-                id: "storefront-cluster-circle",
-                type: "circle",
-                source: "storefronts-cluster-source",
-                maxzoom: 9.8,
-                filter: ["has", "point_count"],
-                paint: {
-                  "circle-color": "#f59e0b",
-                  "circle-radius": ["step", ["get", "point_count"], 12, 10, 15, 50, 19],
-                  "circle-stroke-width": 2.5,
-                  "circle-stroke-color": "#080B12",
-                },
-              },
-              beforeCustom3D
-            );
-          }
-
-          if (!map.getLayer("storefront-cluster-count")) {
-            map.addLayer(
-              {
-                id: "storefront-cluster-count",
-                type: "symbol",
-                source: "storefronts-cluster-source",
-                maxzoom: 9.8,
-                filter: ["has", "point_count"],
-                layout: {
-                  "text-field": "{point_count_abbreviated}",
-                  "text-size": 11,
-                  "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
-                },
-                paint: {
-                  "text-color": "#080B12",
-                },
-              },
-              beforeCustom3D
-            );
-          }
-
-          if (!map.getLayer("storefront-beacon-halo")) {
-            map.addLayer(
-              {
-                id: "storefront-beacon-halo",
-                type: "circle",
-                source: "storefronts-cluster-source",
-                maxzoom: 9.8,
-                filter: ["!", ["has", "point_count"]],
-                paint: {
-                  "circle-color": ["coalesce", ["get", "accent_color"], "#fbbf24"],
-                  "circle-radius": [
-                    "interpolate", ["linear"], ["zoom"],
-                    4.0, ["match", ["get", "plot_level"], 3, 24, 2, 19, 15],
-                    9.0, ["match", ["get", "plot_level"], 3, 32, 2, 26, 21],
-                  ],
-                  "circle-opacity": ["match", ["get", "plot_level"], 3, 0.48, 2, 0.40, 0.32],
-                  "circle-blur": 0.65,
-                },
-              },
-              beforeCustom3D
-            );
-          }
-
-          if (!map.getLayer("storefront-beacon-dot")) {
-            map.addLayer(
-              {
-                id: "storefront-beacon-dot",
-                type: "circle",
-                source: "storefronts-cluster-source",
-                maxzoom: 9.8,
-                filter: ["!", ["has", "point_count"]],
-                paint: {
-                  "circle-color": ["coalesce", ["get", "accent_color"], "#f59e0b"],
-                  "circle-radius": [
-                    "interpolate", ["linear"], ["zoom"],
-                    4.0, ["match", ["get", "plot_level"], 3, 9.2, 2, 7.6, 6.2],
-                    9.0, ["match", ["get", "plot_level"], 3, 11.4, 2, 9.4, 8.0],
-                  ],
-                  "circle-stroke-width": 2.4,
-                  "circle-stroke-color": "#ffffff",
-                },
-              },
-              beforeCustom3D
-            );
+        // Clean up legacy synthetic AI-slop layers & sources if present
+        [
+          "india-ocean-mask",
+          "india-island-shadow",
+          "india-coastal-shelf-outer",
+          "india-coastal-shelf-mid",
+          "india-coastal-surf-inner",
+          "india-3d-continent-extrusion",
+        ].forEach((id) => {
+          if (map.getLayer(id)) {
+            try { map.removeLayer(id); } catch (e) {}
           }
         });
+        ["india-ocean-mask-source", "india-land-source"].forEach((id) => {
+          if (map.getSource(id)) {
+            try { map.removeSource(id); } catch (e) {}
+          }
+        });
+
+        // Layer D: Major Indian Metros National HUD (New Delhi, Mumbai, Bengaluru, Chennai, Kolkata)
+        if (!map.getSource("major-city-hubs-source")) {
+          map.addSource("major-city-hubs-source", {
+            type: "geojson",
+            data: MAJOR_INDIA_HUBS_GEOJSON,
+          });
+        }
+
+        if (!map.getLayer("major-city-hubs-halo")) {
+          map.addLayer(
+            {
+              id: "major-city-hubs-halo",
+              type: "circle",
+              source: "major-city-hubs-source",
+              maxzoom: 10.5,
+              paint: {
+                "circle-color": "#38bdf8",
+                "circle-radius": 14,
+                "circle-opacity": 0.22,
+                "circle-blur": 0.6,
+              },
+            },
+            beforeCustom3D
+          );
+        }
+
+        if (!map.getLayer("major-city-hubs-dot")) {
+          map.addLayer(
+            {
+              id: "major-city-hubs-dot",
+              type: "circle",
+              source: "major-city-hubs-source",
+              maxzoom: 10.5,
+              paint: {
+                "circle-color": "#ffffff",
+                "circle-radius": 4.0,
+                "circle-stroke-width": 2.0,
+                "circle-stroke-color": "#080B12",
+              },
+            },
+            beforeCustom3D
+          );
+        }
+
+        if (!map.getLayer("major-city-hubs-label")) {
+          map.addLayer(
+            {
+              id: "major-city-hubs-label",
+              type: "symbol",
+              source: "major-city-hubs-source",
+              maxzoom: 10.5,
+              layout: {
+                "text-field": "{name}",
+                "text-size": 11,
+                "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+                "text-offset": [0, -1.2],
+                "text-anchor": "bottom",
+                "text-allow-overlap": true,
+              },
+              paint: {
+                "text-color": "#ffffff",
+                "text-halo-color": "rgba(8,11,18,0.95)",
+                "text-halo-width": 2.5,
+              },
+            },
+            beforeCustom3D
+          );
+        }
+
+        // Layer D2: Guwahati Golden Beacon with Animated Concentric Sonar Pulse Rings
+        if (!guwahatiBeaconMarkerRef.current) {
+          const beaconEl = document.createElement("div");
+          beaconEl.className = "guwahati-flagship-beacon pointer-events-auto cursor-pointer select-none flex flex-col items-center";
+          beaconEl.innerHTML = `
+            <div style="position:relative;display:flex;align-items:center;justify-content:center;width:56px;height:56px;">
+              <div style="position:absolute;width:52px;height:52px;border-radius:9999px;border:1px solid rgba(245,158,11,0.5);animation:ping 2.4s cubic-bezier(0,0,0.2,1) infinite;"></div>
+              <div style="position:absolute;width:34px;height:34px;border-radius:9999px;border:1px solid rgba(251,191,36,0.45);animation:pulse 2s cubic-bezier(0.4,0,0.6,1) infinite;"></div>
+              <div style="width:14px;height:14px;border-radius:9999px;background:#f59e0b;border:2px solid #ffffff;box-shadow:0 0 16px rgba(245,158,11,0.9), 0 0 6px rgba(251,191,36,0.8);display:flex;align-items:center;justify-content:center;z-index:2;">
+                <div style="width:4px;height:4px;border-radius:9999px;background:#080b12;"></div>
+              </div>
+            </div>
+            <div style="margin-top:-8px;padding:2px 8px;border-radius:9999px;background:rgba(8,11,18,0.92);border:1px solid rgba(245,158,11,0.6);box-shadow:0 6px 20px rgba(0,0,0,0.8);display:flex;align-items:center;gap:5px;backdrop-filter:blur(10px);z-index:3;">
+              <span style="width:5px;height:5px;border-radius:9999px;background:#f59e0b;box-shadow:0 0 6px #f59e0b;"></span>
+              <span style="font-size:11px;font-weight:800;color:#fef08a;letter-spacing:0.02em;">Guwahati</span>
+              <span style="font-size:9px;font-weight:700;padding:0.5px 4px;border-radius:9999px;background:rgba(245,158,11,0.2);color:#fde047;border:1px solid rgba(245,158,11,0.35);">L1</span>
+            </div>
+          `;
+          beaconEl.onclick = () => {
+            if (onStorefrontSelect) onStorefrontSelect(nerqivaBusiness);
+            flyToStorefront(nerqivaBusiness);
+          };
+          guwahatiBeaconMarkerRef.current = new maplibregl.Marker({
+            element: beaconEl,
+            anchor: "center",
+          })
+            .setLngLat(NERQIVA_COORDS)
+            .addTo(map);
+        }
+
+        // Layer E (Tier 1 LOD — National View zoom < 9.8): Native WebGL Clustered Beacons (Scales to 100k+ Businesses!)
+        if (!map.getSource("storefronts-cluster-source")) {
+          map.addSource("storefronts-cluster-source", {
+            type: "geojson",
+            data: storefrontsGeoJSONRef.current,
+            cluster: true,
+            clusterMaxZoom: 9,
+            clusterRadius: 42,
+          });
+        }
+
+        if (!map.getLayer("storefront-cluster-halo")) {
+          map.addLayer(
+            {
+              id: "storefront-cluster-halo",
+              type: "circle",
+              source: "storefronts-cluster-source",
+              maxzoom: 9.8,
+              filter: ["has", "point_count"],
+              paint: {
+                "circle-color": "#f59e0b",
+                "circle-radius": ["step", ["get", "point_count"], 20, 10, 25, 50, 31],
+                "circle-opacity": 0.25,
+                "circle-blur": 0.5,
+              },
+            },
+            beforeCustom3D
+          );
+        }
+
+        if (!map.getLayer("storefront-cluster-circle")) {
+          map.addLayer(
+            {
+              id: "storefront-cluster-circle",
+              type: "circle",
+              source: "storefronts-cluster-source",
+              maxzoom: 9.8,
+              filter: ["has", "point_count"],
+              paint: {
+                "circle-color": "#f59e0b",
+                "circle-radius": ["step", ["get", "point_count"], 12, 10, 15, 50, 19],
+                "circle-stroke-width": 2.5,
+                "circle-stroke-color": "#080B12",
+              },
+            },
+            beforeCustom3D
+          );
+        }
+
+        if (!map.getLayer("storefront-cluster-count")) {
+          map.addLayer(
+            {
+              id: "storefront-cluster-count",
+              type: "symbol",
+              source: "storefronts-cluster-source",
+              maxzoom: 9.8,
+              filter: ["has", "point_count"],
+              layout: {
+                "text-field": "{point_count_abbreviated}",
+                "text-size": 11,
+                "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+              },
+              paint: {
+                "text-color": "#080B12",
+              },
+            },
+            beforeCustom3D
+          );
+        }
+
+        if (!map.getLayer("storefront-beacon-halo")) {
+          map.addLayer(
+            {
+              id: "storefront-beacon-halo",
+              type: "circle",
+              source: "storefronts-cluster-source",
+              maxzoom: 9.8,
+              filter: ["!", ["has", "point_count"]],
+              paint: {
+                "circle-color": ["coalesce", ["get", "accent_color"], "#fbbf24"],
+                "circle-radius": [
+                  "interpolate", ["linear"], ["zoom"],
+                  4.0, ["match", ["get", "plot_level"], 3, 24, 2, 19, 15],
+                  9.0, ["match", ["get", "plot_level"], 3, 32, 2, 26, 21],
+                ],
+                "circle-opacity": ["match", ["get", "plot_level"], 3, 0.48, 2, 0.40, 0.32],
+                "circle-blur": 0.65,
+              },
+            },
+            beforeCustom3D
+          );
+        }
+
+        if (!map.getLayer("storefront-beacon-dot")) {
+          map.addLayer(
+            {
+              id: "storefront-beacon-dot",
+              type: "circle",
+              source: "storefronts-cluster-source",
+              maxzoom: 9.8,
+              filter: ["!", ["has", "point_count"]],
+              paint: {
+                "circle-color": ["coalesce", ["get", "accent_color"], "#f59e0b"],
+                "circle-radius": [
+                  "interpolate", ["linear"], ["zoom"],
+                  4.0, ["match", ["get", "plot_level"], 3, 9.2, 2, 7.6, 6.2],
+                  9.0, ["match", ["get", "plot_level"], 3, 11.4, 2, 9.4, 8.0],
+                ],
+                "circle-stroke-width": 2.4,
+                "circle-stroke-color": "#ffffff",
+              },
+            },
+            beforeCustom3D
+          );
+        }
       } catch (indiaErr) {
-        console.warn("[LiveOsmMap] India 3D island mask setup warning:", indiaErr);
+        console.warn("[LiveOsmMap] HUD layers setup warning:", indiaErr);
       }
 
       // 5. Add True 3D Three.js Custom Building Layer (Nerqiva Studio Villa, Free Plots, Trees, Streetlights)
@@ -3338,9 +3137,9 @@ export function LiveOsmMap({
                   if (chosen) selectSuggestion(chosen);
                 }
               }}
-              className="w-full pl-10 pr-9 py-2 rounded-2xl bg-neutral-950/95 backdrop-blur-xl border border-neutral-700/80 text-white text-xs font-medium placeholder:text-neutral-400 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50 shadow-2xl transition-all"
+              className="w-full pl-10 pr-14 py-2 rounded-2xl bg-neutral-950/90 backdrop-blur-2xl border border-white/10 text-white text-xs font-medium placeholder:text-neutral-400 focus:outline-none focus:border-amber-400/80 focus:ring-1 focus:ring-amber-400/50 shadow-2xl transition-all"
             />
-            {searchQuery && (
+            {searchQuery ? (
               <button
                 type="button"
                 onClick={() => {
@@ -3353,6 +3152,10 @@ export function LiveOsmMap({
               >
                 <X className="w-3.5 h-3.5" />
               </button>
+            ) : (
+              <div className="absolute right-3 hidden sm:flex items-center gap-0.5 pointer-events-none text-[10px] font-mono text-neutral-400 bg-neutral-900/80 border border-neutral-700/60 px-1.5 py-0.5 rounded-md">
+                <span>⌘K</span>
+              </div>
             )}
           </div>
 
@@ -3547,13 +3350,13 @@ export function LiveOsmMap({
       <div className="absolute bottom-5 inset-x-4 z-20 flex flex-col items-center gap-2 pointer-events-none">
         {/* STATE A: ALL-INDIA NATIONAL VIEW — Sleek compact 1-row bar (zero Nerqiva hardcoding, zero southern India overlap!) */}
         {viewLevel === "india" && (
-          <div className="px-3.5 py-2 rounded-full bg-neutral-950/92 backdrop-blur-2xl border border-neutral-800/90 shadow-2xl flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 pointer-events-auto">
+          <div className="px-4 py-2 rounded-full bg-neutral-950/85 backdrop-blur-2xl border border-white/10 shadow-2xl shadow-black/80 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 pointer-events-auto">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-400">
                 <Globe2 className="w-3.5 h-3.5" />
               </div>
               <div className="flex items-center gap-1.5 text-xs">
-                <span className="font-bold text-white">India Map</span>
+                <span className="font-bold text-white tracking-wide">India Map</span>
                 <span className="text-neutral-600">·</span>
                 <span className="text-emerald-400 font-semibold">
                   {allLiveStorefronts.length} Live {allLiveStorefronts.length === 1 ? "Business" : "Businesses"}
@@ -3565,7 +3368,7 @@ export function LiveOsmMap({
               </div>
             </div>
 
-            <div className="h-4 w-px bg-neutral-800 hidden sm:block" />
+            <div className="h-4 w-px bg-white/10 hidden sm:block" />
 
             {/* Dynamic Active City Quick-Jump Chips */}
             <div className="flex items-center gap-1.5">
@@ -3587,7 +3390,7 @@ export function LiveOsmMap({
                       });
                     }
                   }}
-                  className="px-2.5 py-1 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-amber-500/40 text-[11px] font-semibold text-amber-300 flex items-center gap-1.5 transition-all"
+                  className="px-2.5 py-1 rounded-full bg-neutral-900/90 hover:bg-neutral-800 border border-amber-500/35 text-[11px] font-semibold text-amber-300 flex items-center gap-1.5 transition-all shadow-sm"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                   <span>{grp.city}</span>
@@ -3598,7 +3401,7 @@ export function LiveOsmMap({
 
             <Link
               href="/register"
-              className="px-3 py-1 rounded-full bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-[11px] flex items-center gap-1 transition-all"
+              className="px-3.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-[11px] flex items-center gap-1 transition-all shadow-md shadow-amber-950/20"
             >
               <Plus className="w-3 h-3" />
               <span>Claim Plot</span>
