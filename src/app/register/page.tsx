@@ -49,6 +49,7 @@ import { CategoryDropdown } from "@/components/register/CategoryDropdown";
 import {
   LocationMapPicker,
   PickedLocation,
+  resolveIndianPincode,
 } from "@/components/register/LocationMapPicker";
 
 const STEPS = [
@@ -148,40 +149,32 @@ export default function RegisterPage() {
   }, []);
 
   // When user types a valid 6-digit Indian PIN code, automatically locate it on the mini-map
-  const handlePincodeChange = (raw: string) => {
+  const handlePincodeChange = async (raw: string) => {
     const digits = raw.replace(/\D/g, "").slice(0, 6);
     setPincode(digits);
 
     if (/^[1-9]\d{5}$/.test(digits)) {
       setPinLookupLoading(true);
-      fetch(`/api/geo/search?q=${digits}`)
-        .then((r) => r.json())
-        .then((d) => {
-          const hit = Array.isArray(d?.results) ? d.results[0] : null;
-          if (hit && typeof hit.lat === "number" && typeof hit.lon === "number") {
-            setLat(Number(hit.lat.toFixed(6)));
-            setLon(Number(hit.lon.toFixed(6)));
-            setFlyTarget({
-              lat: hit.lat,
-              lon: hit.lon,
-              zoom: hit.zoom || 15,
-              key: Date.now(),
-            });
-            const parts = String(hit.subtitle || "")
-              .split(/[·,]/)
-              .map((p) => p.trim())
-              .filter((p) => p && p.toLowerCase() !== "india");
-            if (parts.length >= 2) {
-              setCity(parts[parts.length - 2]);
-              setStateName(parts[parts.length - 1]);
-            } else if (parts[0]) {
-              setCity(parts[0]);
-            }
-            setLocationLabel(hit.subtitle ? `${hit.name}, ${hit.subtitle}` : hit.name);
-          }
-        })
-        .catch(() => {})
-        .finally(() => setPinLookupLoading(false));
+      try {
+        const resolved = await resolveIndianPincode(digits);
+        if (resolved) {
+          setLat(Number(resolved.lat.toFixed(6)));
+          setLon(Number(resolved.lon.toFixed(6)));
+          if (resolved.city) setCity(resolved.city);
+          if (resolved.state) setStateName(resolved.state);
+          setLocationLabel(`${resolved.name}, ${resolved.state}`);
+          setFlyTarget({
+            lat: resolved.lat,
+            lon: resolved.lon,
+            zoom: resolved.zoom || 16.5,
+            key: Date.now(),
+          });
+        }
+      } catch (err) {
+        console.warn("[Register] PIN lookup error:", err);
+      } finally {
+        setPinLookupLoading(false);
+      }
     }
   };
 

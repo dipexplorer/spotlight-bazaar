@@ -11,96 +11,89 @@ export interface OsmQueryResponse {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const slug = (searchParams.get("slug") || searchParams.get("city") || "guwahati")
-    .toLowerCase()
-    .trim();
+  const rawSlug = searchParams.get("slug") || searchParams.get("city");
+  const slug = (rawSlug || "guwahati").toLowerCase().trim();
   const latStr = searchParams.get("lat");
   const lonStr = searchParams.get("lon");
   const radius = parseInt(searchParams.get("radius") || "3000", 10);
 
-  // 1. Try local cached pre-bundled GIS datasets
+  const hasCoords = Boolean(latStr && lonStr);
+  const lat = hasCoords ? parseFloat(latStr!) : NaN;
+  const lon = hasCoords ? parseFloat(lonStr!) : NaN;
+
   const geoDir = path.join(process.cwd(), "public", "data", "geo");
-  const localRoadsFile = path.join(geoDir, `${slug}.roads.json`);
-  const localWaterFile = path.join(geoDir, `${slug}.water.json`);
 
-  if (fs.existsSync(localRoadsFile)) {
-    try {
-      const roadContent = fs.readFileSync(localRoadsFile, "utf-8");
-      const roadsJson = JSON.parse(roadContent);
-      let waterJson = null;
-      if (fs.existsSync(localWaterFile)) {
-        waterJson = JSON.parse(fs.readFileSync(localWaterFile, "utf-8"));
+  // 1. Try local cached pre-bundled GIS datasets
+  // ONLY use local cache if caller explicitly requested city/slug without coordinates
+  const targetSlug = (!hasCoords && rawSlug) ? rawSlug.toLowerCase().trim() : null;
+
+  if (targetSlug) {
+    const localRoadsFile = path.join(geoDir, `${targetSlug}.roads.json`);
+    const localWaterFile = path.join(geoDir, `${targetSlug}.water.json`);
+
+    if (fs.existsSync(localRoadsFile)) {
+      try {
+        const roadContent = fs.readFileSync(localRoadsFile, "utf-8");
+        const roadsJson = JSON.parse(roadContent);
+        let waterJson = null;
+        if (fs.existsSync(localWaterFile)) {
+          waterJson = JSON.parse(fs.readFileSync(localWaterFile, "utf-8"));
+        }
+
+        return NextResponse.json({
+          city: targetSlug,
+          source: "cache",
+          roads: roadsJson,
+          water: waterJson,
+        });
+      } catch (err) {
+        console.warn(`[OSM API] Failed reading local cache for ${targetSlug}:`, err);
       }
-
-      return NextResponse.json({
-        city: slug,
-        source: "cache",
-        roads: roadsJson,
-        water: waterJson,
-      });
-    } catch (err) {
-      console.warn(`[OSM API] Failed reading local cache for ${slug}:`, err);
     }
   }
 
   // 2. If lat/lon provided and not in cache, query OpenStreetMap Overpass API
-  if (latStr && lonStr) {
-    const lat = parseFloat(latStr);
-    const lon = parseFloat(lonStr);
+  if (!isNaN(lat) && !isNaN(lon)) {
+    const overpassQuery = `
+      [out:json][timeout:15];
+      (
+        way["highway"~"motorway|trunk|primary|secondary|tertiary|residential|unclassified|service|living_street"](around:${radius},${lat},${lon});
+        way["natural"="water"](around:${radius},${lat},${lon});
+        way["waterway"~"riverbank|river|stream"](around:${radius},${lat},${lon});
+      );
+      out body;
+      >;
+      out skel qt;
+    `;
 
-    if (!isNaN(lat) && !isNaN(lon)) {
-      const overpassQuery = `
-        [out:json][timeout:15];
-        (
-          way["highway"~"motorway|trunk|primary|secondary|tertiary|residential"](around:${radius},${lat},${lon});
-          way["natural"="water"](around:${radius},${lat},${lon});
-          way["waterway"~"riverbank|river|stream"](around:${radius},${lat},${lon});
-        );
-        out body;
-        >;
-        out skel qt;
-      `;
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const overpassRes = await fetch("https://overpass-api.de/api/interpreter", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "SpotlightBazaar/1.0",
+        },
+        body: `data=${encodeURIComponent(overpassQuery)}`,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
 
-        const overpassRes = await fetch("https://overpass-api.de/api/interpreter", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": "SpotlightBazaar/1.0",
-          },
-          body: `data=${encodeURIComponent(overpassQuery)}`,
-          signal: controller.signal,
+      if (overpassRes.ok) {
+        const rawOsm = await overpassRes.json();
+        const geoJson = convertOsmToGeoJson(rawOsm);
+
+        return NextResponse.json({
+          city: slug,
+          source: "overpass",
+          roads: geoJson.roads,
+          water: geoJson.water,
         });
-        clearTimeout(timeoutId);
-
-        if (overpassRes.ok) {
-          const rawOsm = await overpassRes.json();
-          const geoJson = convertOsmToGeoJson(rawOsm);
-
-          // Save to local cache for future instantaneous loads
-          try {
-            if (!fs.existsSync(geoDir)) fs.mkdirSync(geoDir, { recursive: true });
-            fs.writeFileSync(localRoadsFile, JSON.stringify(geoJson.roads, null, 2), "utf-8");
-            if (geoJson.water) {
-              fs.writeFileSync(localWaterFile, JSON.stringify(geoJson.water, null, 2), "utf-8");
-            }
-          } catch (cacheErr) {
-            console.warn(`[OSM API] Could not cache result for ${slug}:`, cacheErr);
-          }
-
-          return NextResponse.json({
-            city: slug,
-            source: "overpass",
-            roads: geoJson.roads,
-            water: geoJson.water,
-          });
-        }
-      } catch (osmErr) {
-        console.warn(`[OSM API] Overpass API query failed or timed out:`, osmErr);
       }
+    } catch (osmErr) {
+      console.warn(`[OSM API] Overpass API query failed or timed out:`, osmErr);
     }
   }
 

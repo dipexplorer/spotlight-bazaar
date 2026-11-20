@@ -16,8 +16,13 @@ export interface IndiaPlaceEntry {
 export const INDIA_PLACES_INDEX: IndiaPlaceEntry[] = [
   // Featured Launch Region & Northeast
   { id: "city-guwahati", name: "Guwahati", subtitle: "Assam · Live Hub", kind: "city", lat: 26.1833, lon: 91.7462, zoom: 12.5, aliases: ["gauhati", "781001", "781030"] },
-  { id: "area-north-guwahati", name: "North Guwahati", subtitle: "Guwahati, Assam · PIN 781030", kind: "area", lat: 26.20624, lon: 91.72925, zoom: 15.6, aliases: ["781030", "iit guwahati", "amingaon"] },
-  { id: "city-shillong", name: "Shillong", subtitle: "Meghalaya", kind: "city", lat: 25.5788, lon: 91.8933, zoom: 12.5 },
+  { id: "area-north-guwahati", name: "North Guwahati", subtitle: "Guwahati, Assam · PIN 781030", kind: "area", lat: 26.20624, lon: 91.72925, zoom: 15.6, aliases: ["781030", "iit guwahati", "north guwahati"] },
+  { id: "area-amingaon", name: "Amingaon (North Guwahati)", subtitle: "Kamrup, Assam · PIN 781031", kind: "area", lat: 26.1982, lon: 91.6900, zoom: 15.6, aliases: ["781031", "amingaon", "collegenagar", "iitg"] },
+  { id: "area-panbazaar", name: "Pan Bazaar", subtitle: "Guwahati, Assam · PIN 781001", kind: "area", lat: 26.1866, lon: 91.7458, zoom: 16.0, aliases: ["781001", "panbazar", "fancy bazaar", "fancybazar"] },
+  { id: "area-dispur", name: "Dispur Capital Complex", subtitle: "Guwahati, Assam · PIN 781005", kind: "area", lat: 26.1433, lon: 91.7898, zoom: 15.5, aliases: ["781005", "dispur", "gs road", "last gate"] },
+  { id: "area-maligaon", name: "Maligaon", subtitle: "Guwahati, Assam · PIN 781012", kind: "area", lat: 26.1558, lon: 91.7056, zoom: 15.5, aliases: ["781012", "maligaon", "nfr headquarters"] },
+  { id: "area-parihar", name: "Parihar", subtitle: "Sitamarhi, Bihar · PIN 847253", kind: "area", lat: 26.75708, lon: 85.69112, zoom: 15.6, aliases: ["847253", "parihar", "sitamarhi"] },
+  { id: "city-shillong", name: "Shillong", subtitle: "Meghalaya · PIN 793001", kind: "city", lat: 25.5788, lon: 91.8933, zoom: 12.5, aliases: ["793001"] },
   { id: "city-dibrugarh", name: "Dibrugarh", subtitle: "Assam", kind: "city", lat: 27.4728, lon: 94.912, zoom: 12.5 },
   { id: "city-silchar", name: "Silchar", subtitle: "Assam", kind: "city", lat: 24.8333, lon: 92.7789, zoom: 12.5 },
   { id: "city-jorhat", name: "Jorhat", subtitle: "Assam", kind: "city", lat: 26.7509, lon: 94.2037, zoom: 12.5 },

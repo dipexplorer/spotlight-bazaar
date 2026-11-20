@@ -243,6 +243,9 @@ export async function GET(req: NextRequest) {
   }
 
   results = results.slice(0, 7);
-  searchCache.set(cacheKey, { ts: Date.now(), results });
+  // Only cache successful, non-empty results — never cache network timeouts or empty arrays
+  if (results.length > 0) {
+    searchCache.set(cacheKey, { ts: Date.now(), results });
+  }
   return NextResponse.json({ results });
 }

@@ -126,6 +126,137 @@ function createPinElement(): HTMLDivElement {
   return el;
 }
 
+export async function resolveIndianPincode(pin: string): Promise<{
+  pincode: string;
+  name: string;
+  city: string;
+  state: string;
+  lat: number;
+  lon: number;
+  zoom: number;
+} | null> {
+  const cleanPin = pin.replace(/\D/g, "").slice(0, 6);
+  if (!/^[1-9]\d{5}$/.test(cleanPin)) return null;
+
+  // 1. Instant check in local places index (0ms)
+  const localHits = searchLocalIndiaPlaces(cleanPin);
+  const exactLocal =
+    localHits.find(
+      (h) =>
+        h.aliases?.includes(cleanPin) ||
+        h.name.includes(cleanPin) ||
+        h.subtitle.includes(cleanPin)
+    ) || localHits[0];
+
+  if (exactLocal) {
+    const parts = exactLocal.subtitle
+      .split(/[·,]/)
+      .map((p) => p.trim())
+      .filter((p) => p && p.toLowerCase() !== "india" && !/^(pin\s*)?[1-9]\d{5}$/i.test(p));
+    const stateName = parts.length >= 1 ? parts[parts.length - 1] : "Assam";
+    const cleanName = exactLocal.name.replace(/\s*\(.*?\)/g, "").trim();
+    const cityName = cleanName || (parts.length >= 2 ? parts[parts.length - 2] : parts[0]);
+    return {
+      pincode: cleanPin,
+      name: exactLocal.name,
+      city: cityName,
+      state: stateName,
+      lat: exactLocal.lat,
+      lon: exactLocal.lon,
+      zoom: exactLocal.zoom || 16.5,
+    };
+  }
+
+  // 2. Client-side fetch from India Post / postalpincode.in in browser
+  try {
+    const res = await fetch(`https://api.postalpincode.in/pincode/${cleanPin}`);
+    if (res.ok) {
+      const data = await res.json();
+      const poList = data?.[0]?.PostOffice;
+      if (Array.isArray(poList) && poList.length > 0) {
+        const po = poList[0];
+        const poName = po.Name || "";
+        const district = po.District || "";
+        const state = po.State || "";
+        const city = poName || district;
+
+        // Try direct Nominatim coordinate lookup
+        try {
+          const nomRes = await fetch(
+            `https://nominatim.openstreetmap.org/search?postalcode=${cleanPin}&country=india&format=jsonv2&limit=1`
+          );
+          if (nomRes.ok) {
+            const nomData = await nomRes.json();
+            if (Array.isArray(nomData) && nomData.length > 0) {
+              const nLat = parseFloat(nomData[0].lat);
+              const nLon = parseFloat(nomData[0].lon);
+              if (!isNaN(nLat) && !isNaN(nLon)) {
+                return {
+                  pincode: cleanPin,
+                  name: `${poName} (PIN ${cleanPin})`,
+                  city,
+                  state,
+                  lat: nLat,
+                  lon: nLon,
+                  zoom: 16.5,
+                };
+              }
+            }
+          }
+        } catch {}
+
+        // Fallback geocode by district + state
+        try {
+          const fbRes = await fetch(
+            `https://nominatim.openstreetmap.org/search?city=${encodeURIComponent(district || city)}&state=${encodeURIComponent(state)}&country=india&format=jsonv2&limit=1`
+          );
+          if (fbRes.ok) {
+            const fbData = await fbRes.json();
+            if (Array.isArray(fbData) && fbData.length > 0) {
+              const fLat = parseFloat(fbData[0].lat);
+              const fLon = parseFloat(fbData[0].lon);
+              if (!isNaN(fLat) && !isNaN(fLon)) {
+                return {
+                  pincode: cleanPin,
+                  name: `${poName} (PIN ${cleanPin})`,
+                  city,
+                  state,
+                  lat: fLat,
+                  lon: fLon,
+                  zoom: 15.5,
+                };
+              }
+            }
+          }
+        } catch {}
+      }
+    }
+  } catch {}
+
+  // 3. Fallback to /api/geo/search
+  try {
+    const sRes = await fetch(`/api/geo/search?q=${cleanPin}`);
+    if (sRes.ok) {
+      const sData = await sRes.json();
+      const hit = sData?.results?.[0];
+      if (hit && typeof hit.lat === "number" && typeof hit.lon === "number") {
+        const parts = String(hit.subtitle || "").split(/[·,]/).map((p) => p.trim());
+        return {
+          pincode: cleanPin,
+          name: hit.name,
+          city: parts.length >= 2 ? parts[parts.length - 2] : hit.name,
+          state: parts[parts.length - 1] || "India",
+          lat: hit.lat,
+          lon: hit.lon,
+          zoom: hit.zoom || 16,
+        };
+      }
+    }
+  } catch {}
+
+  return null;
+}
+
 function parseCityStateFromSuggestion(s: GeoSuggestion): {
   city?: string;
   state?: string;
@@ -139,30 +270,26 @@ function parseCityStateFromSuggestion(s: GeoSuggestion): {
   const parts = s.subtitle
     .split(/[·,]/)
     .map((p) => p.trim())
-    .filter((p) => p && p.toLowerCase() !== "india" && !/^\d{6}$/.test(p));
+    .filter((p) => p && p.toLowerCase() !== "india" && !/^(pin\s*)?[1-9]\d{5}$/i.test(p));
+
+  const cleanName = s.name
+    .replace(/^PIN\s*[1-9]\d{5}\s*[·-]?\s*/i, "")
+    .replace(/\s*\(.*?\)/g, "")
+    .trim();
 
   if (s.kind === "city") {
     return {
       city: s.name,
-      state: parts[0] || undefined,
+      state: parts.length >= 1 ? parts[parts.length - 1] : undefined,
       pincode: pinMatch,
     };
   }
-  if (s.kind === "pincode") {
-    const cleanName = s.name.replace(/^PIN\s*\d{6}\s*[·-]?\s*/i, "").trim();
-    const cityPart = parts.length >= 2 ? parts[parts.length - 2] : parts[0] || cleanName;
-    const statePart = parts.length >= 2 ? parts[parts.length - 1] : undefined;
+  if (s.kind === "pincode" || s.kind === "area") {
+    const statePart = parts.length >= 1 ? parts[parts.length - 1] : undefined;
+    const districtPart = parts.length >= 2 ? parts[parts.length - 2] : undefined;
+    const cityPart = cleanName || districtPart || parts[0];
     return {
       city: cityPart || undefined,
-      state: statePart,
-      pincode: pinMatch,
-    };
-  }
-  if (s.kind === "area") {
-    const cityPart = parts.length >= 2 ? parts[parts.length - 2] : parts[0] || s.name;
-    const statePart = parts.length >= 2 ? parts[parts.length - 1] : undefined;
-    return {
-      city: cityPart,
       state: statePart,
       pincode: pinMatch,
     };
@@ -247,9 +374,31 @@ export function LocationMapPicker({
     });
   }, []);
 
-  // Ensure preview overlay layers exist on the mini-map
+  // Ensure preview overlay layers & real OSM vector road sources exist on the mini-map
   const ensurePreviewLayers = useCallback((map: MapLibreMap) => {
     try {
+      // 1. Add Carto OpenStreetMap Vector source so extractNearbyOsmRoads queries real OSM road geometry in 0ms anywhere in India!
+      if (!map.getSource("protomaps")) {
+        map.addSource("protomaps", {
+          type: "vector",
+          tiles: [
+            "https://tiles.basemaps.cartocdn.com/v/20261118-01/vectortiles/carto.streets/v2/{z}/{x}/{y}.mvt",
+          ],
+          minzoom: 0,
+          maxzoom: 15,
+        });
+        map.addLayer({
+          id: "osm-vector-roads-query-layer",
+          type: "line",
+          source: "protomaps",
+          "source-layer": "roads",
+          paint: {
+            "line-opacity": 0.01,
+            "line-color": "#f59e0b",
+          },
+        });
+      }
+
       if (!map.getSource("plot-driveway-preview")) {
         map.addSource("plot-driveway-preview", {
           type: "geojson",
@@ -306,7 +455,7 @@ export function LocationMapPicker({
     ): SnappedPlotPlacement => {
       const map = mapRef.current;
       // Extract strictly real OSM vector roads from the loaded map tiles (no hardcoded colonies!)
-      const osmRoads = extractNearbyOsmRoads(map, rawLon, rawLat, 220);
+      const osmRoads = extractNearbyOsmRoads(map, rawLon, rawLat, 260);
       const existingStorefronts = [...SEED_STOREFRONTS, ...getLocalStorefronts()].map((s) => ({
         lat: s.lat,
         lon: s.lon,
@@ -344,63 +493,43 @@ export function LocationMapPicker({
         ...extraMeta,
       });
 
-      // If vector tiles haven't rendered yet or local roads were sparse, query real OSM ways via Overpass fallback
+      // If vector tiles were still loading during a jump, retry extraction after 320ms so it snaps cleanly to real street
       if (osmRoads.length === 0) {
-        fetch(`/api/geo/osm?lat=${rawLat}&lon=${rawLon}&radius=350`)
-          .then((r) => r.json())
-          .then((data) => {
-            const geoRoads = data?.roads;
-            if (!geoRoads || !Array.isArray(geoRoads.features)) return;
-            const fetchedRoads: RoadPolyline[] = [];
-            geoRoads.features.forEach((feat: { geometry?: { type?: string; coordinates?: unknown } }, idx: number) => {
-              if (
-                feat.geometry?.type === "LineString" &&
-                Array.isArray(feat.geometry.coordinates) &&
-                feat.geometry.coordinates.length >= 2
-              ) {
-                fetchedRoads.push({
-                  id: `osm-fetch-${idx}`,
-                  source: "osm",
-                  coords: feat.geometry.coordinates as [number, number][],
-                  priority: 3,
-                });
-              }
+        setTimeout(() => {
+          const liveMap = mapRef.current;
+          if (!liveMap) return;
+          const retryRoads = extractNearbyOsmRoads(liveMap, rawLon, rawLat, 260);
+          if (retryRoads.length > 0) {
+            const reSnapped = computeSnappedPlotPlacement({
+              rawLat,
+              rawLon,
+              roads: retryRoads,
+              existingPlots: existingStorefronts,
             });
 
-            if (fetchedRoads.length > 0) {
-              const reSnapped = computeSnappedPlotPlacement({
-                rawLat,
-                rawLon,
-                roads: fetchedRoads,
-                existingPlots: existingStorefronts,
-              });
+            lastPlacementRef.current = reSnapped;
+            placeMarker(reSnapped.lon, reSnapped.lat);
+            renderPlotPreviewOverlay(reSnapped);
 
-              lastPlacementRef.current = reSnapped;
-              placeMarker(reSnapped.lon, reSnapped.lat);
-              renderPlotPreviewOverlay(reSnapped);
+            setSnapBadge(
+              reSnapped.connectorType === "osm_road"
+                ? reSnapped.wasAutoAdjusted
+                  ? "Snapped beside street · Auto-set back"
+                  : "Connected to OSM street"
+                : "Open land · Frontage avenue created"
+            );
 
-              if (reSnapped.connectorType === "osm_road") {
-                setSnapBadge(
-                  reSnapped.wasAutoAdjusted
-                    ? "Snapped beside street · Auto-set back"
-                    : "Connected to OSM street"
-                );
-              } else {
-                setSnapBadge("Open land · Frontage avenue created");
-              }
-
-              onChangeRef.current({
-                lat: reSnapped.lat,
-                lon: reSnapped.lon,
-                facingBearing: reSnapped.facingBearing,
-                roadAnchorLat: reSnapped.roadAnchorLat,
-                roadAnchorLon: reSnapped.roadAnchorLon,
-                connectorType: reSnapped.connectorType,
-                ...extraMeta,
-              });
-            }
-          })
-          .catch(() => {});
+            onChangeRef.current({
+              lat: reSnapped.lat,
+              lon: reSnapped.lon,
+              facingBearing: reSnapped.facingBearing,
+              roadAnchorLat: reSnapped.roadAnchorLat,
+              roadAnchorLon: reSnapped.roadAnchorLon,
+              connectorType: reSnapped.connectorType,
+              ...extraMeta,
+            });
+          }
+        }, 320);
       }
 
       return snapped;
@@ -577,7 +706,7 @@ export function LocationMapPicker({
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
-  // Debounced India geo search (PIN codes, areas, towns, streets)
+  // Debounced India geo search (PIN codes, areas, towns, streets) with direct client-side fallback
   useEffect(() => {
     const q = searchQuery.trim();
     if (q.length < 2) {
@@ -588,17 +717,43 @@ export function LocationMapPicker({
 
     let cancelled = false;
     setSearching(true);
+
+    // If query contains a 6-digit Indian PIN code, resolve it immediately via client India Post index
+    const pinMatch = q.match(/\b([1-9]\d{5})\b/)?.[1];
+    if (pinMatch) {
+      resolveIndianPincode(pinMatch).then((res) => {
+        if (!cancelled && res) {
+          setRemoteResults((prev) => [
+            {
+              id: `pincode-${res.pincode}`,
+              name: res.name,
+              subtitle: `${res.city}, ${res.state} · PIN ${res.pincode}`,
+              kind: "pincode",
+              lat: res.lat,
+              lon: res.lon,
+              zoom: res.zoom,
+              pincode: res.pincode,
+            },
+            ...prev.filter((p) => p.id !== `pincode-${res.pincode}`),
+          ]);
+          setSearching(false);
+        }
+      });
+    }
+
     const timer = setTimeout(() => {
       fetch(`/api/geo/search?q=${encodeURIComponent(q)}`)
         .then((r) => r.json())
         .then((d) => {
-          if (!cancelled && Array.isArray(d?.results)) {
-            setRemoteResults(d.results);
+          if (!cancelled && Array.isArray(d?.results) && d.results.length > 0) {
+            setRemoteResults((prev) => {
+              const seen = new Set(d.results.map((r: GeoSuggestion) => r.name.toLowerCase()));
+              const preserved = prev.filter((p) => !seen.has(p.name.toLowerCase()));
+              return [...preserved, ...d.results];
+            });
           }
         })
-        .catch(() => {
-          if (!cancelled) setRemoteResults([]);
-        })
+        .catch(() => {})
         .finally(() => {
           if (!cancelled) setSearching(false);
         });
@@ -768,19 +923,46 @@ export function LocationMapPicker({
               setSearchOpen(true);
               setActiveIdx(-1);
             }}
-            onKeyDown={(e) => {
-              if (!searchOpen || combinedSuggestions.length === 0) return;
+            onKeyDown={async (e) => {
               if (e.key === "ArrowDown") {
+                if (!searchOpen || combinedSuggestions.length === 0) return;
                 e.preventDefault();
                 setActiveIdx((prev) => (prev + 1) % combinedSuggestions.length);
               } else if (e.key === "ArrowUp") {
+                if (!searchOpen || combinedSuggestions.length === 0) return;
                 e.preventDefault();
                 setActiveIdx((prev) =>
                   prev <= 0 ? combinedSuggestions.length - 1 : prev - 1
                 );
-              } else if (e.key === "Enter" && activeIdx >= 0) {
+              } else if (e.key === "Enter") {
                 e.preventDefault();
-                handleSelectSuggestion(combinedSuggestions[activeIdx]);
+                if (activeIdx >= 0 && combinedSuggestions[activeIdx]) {
+                  handleSelectSuggestion(combinedSuggestions[activeIdx]);
+                } else if (combinedSuggestions.length > 0) {
+                  // User typed query and pressed Enter directly without down-arrow: pick top result
+                  handleSelectSuggestion(combinedSuggestions[0]);
+                } else {
+                  // Check if query is a 6-digit Indian PIN code and resolve immediately!
+                  const rawQ = searchQuery.trim();
+                  const pinMatch = rawQ.match(/\b([1-9]\d{5})\b/)?.[1];
+                  if (pinMatch) {
+                    setSearching(true);
+                    const res = await resolveIndianPincode(pinMatch);
+                    setSearching(false);
+                    if (res) {
+                      handleSelectSuggestion({
+                        id: `pincode-${res.pincode}`,
+                        name: res.name,
+                        subtitle: `${res.city}, ${res.state} · PIN ${res.pincode}`,
+                        kind: "pincode",
+                        lat: res.lat,
+                        lon: res.lon,
+                        zoom: res.zoom,
+                        pincode: res.pincode,
+                      });
+                    }
+                  }
+                }
               } else if (e.key === "Escape") {
                 setSearchOpen(false);
               }
