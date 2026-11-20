@@ -2965,7 +2965,10 @@ export function LiveOsmMap({
           <div className="relative flex items-center">
             <Search className="absolute left-3.5 w-4 h-4 text-neutral-300 pointer-events-none" />
             <input
+              id="spotlight-bazaar-search"
+              name="searchQuery"
               type="text"
+              aria-label="Search business, city, state, area, or PIN code"
               placeholder="Search business, city, state, area, or PIN code..."
               value={searchQuery}
               onChange={(e) => {
