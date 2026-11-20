@@ -190,11 +190,6 @@ export function PlotLive3DViewer({
     groundMesh.receiveShadow = true;
     scene.add(groundMesh);
 
-    // Architectural Grid lines on the plot apron
-    const gridHelper = new THREE.GridHelper(30, 15, 0xf59e0b, 0x27272a);
-    gridHelper.position.y = 0.02;
-    scene.add(gridHelper);
-
     // Entrance curb line
     const curbGeo = new THREE.BoxGeometry(32, 0.15, 0.4);
     const curbMat = new THREE.MeshStandardMaterial({ color: 0x52525b, roughness: 0.7 });
@@ -202,7 +197,7 @@ export function PlotLive3DViewer({
     curbMesh.position.set(0, 0.08, 13.8);
     scene.add(curbMesh);
 
-    // 7. Dynamic 3D Signboard Texture & Mesh
+    // 7. Dynamic 3D Signboard Texture & Mesh (hidden by default to avoid floating sign artifacts)
     const signCanvas = document.createElement("canvas");
     signCanvas.width = 1024;
     signCanvas.height = 256;
@@ -221,7 +216,7 @@ export function PlotLive3DViewer({
     const signMesh = new THREE.Mesh(signGeo, signMat);
     signMesh.name = "dashboard_3d_sign";
     signMesh.position.set(0, 5.8, 3.4);
-    signMesh.castShadow = true;
+    signMesh.visible = false;
     scene.add(signMesh);
 
     // Animation Loop

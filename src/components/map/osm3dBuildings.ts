@@ -406,12 +406,14 @@ export function createNerqivaVillaMesh(): THREE.Group {
   // 1. Charcoal Basalt Plinth Base (26m x 20m, y: 0 -> 0.35)
   const plinthGeo = new THREE.BoxGeometry(26, 0.35, 20);
   const plinth = new THREE.Mesh(plinthGeo, basaltMat);
+  plinth.name = "plot_base_plinth";
   plinth.position.set(0, 0.175, 0);
   group.add(plinth);
 
   // Architectural Perimeter Plinth Accent Lighting Ring
   const beaconGeo = new THREE.BoxGeometry(26.4, 0.08, 20.4);
   const beacon = new THREE.Mesh(beaconGeo, beaconMat);
+  beacon.name = "plot_accent_led";
   beacon.position.set(0, 0.04, 0);
   group.add(beacon);
 
@@ -424,6 +426,7 @@ export function createNerqivaVillaMesh(): THREE.Group {
   // 3. Honed Slate Arrival Driveway & Carport Turn-In Apron (y: 0.40 -> 0.44)
   // Main arrival court connecting front gate (z=+10.0) directly to studio entrance (z=+1.8)
   const drive = new THREE.Mesh(new THREE.BoxGeometry(8.4, 0.04, 8.2), drivewayMat);
+  drive.name = "plot_apron";
   drive.position.set(0, 0.42, 5.9);
   group.add(drive);
 
@@ -446,6 +449,7 @@ export function createNerqivaVillaMesh(): THREE.Group {
 
   // 4. Architectural Reflecting Water Pool (Front-Left Forecourt: x ∈ [-10.5, -5.9], z ∈ [+3.8, +8.2])
   const poolGroup = new THREE.Group();
+  poolGroup.name = "default_architectural_planter";
   poolGroup.position.set(-8.2, 0.40, 6.0);
 
   const poolBorder = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.24, 4.4), basaltMat);
@@ -467,6 +471,7 @@ export function createNerqivaVillaMesh(): THREE.Group {
   // 5. Dedicated Executive Carport & Sculpted Electric Cyber Coupe
   // Placed cleanly in Right Courtyard: x ∈ [+6.6, +11.4], z ∈ [-0.4, +6.0] (2.1m clear of ground floor, 1.1m clear of upper wing!)
   const carGroup = new THREE.Group();
+  carGroup.name = "default_architectural_vehicle";
   carGroup.position.set(9.0, 0.40, 2.8);
 
   // 5a. Honed Basalt Parking Pad with Bay Guide Lines & Rear Wheel Stops
@@ -720,11 +725,14 @@ export function createNerqivaVillaMesh(): THREE.Group {
   group.add(gfFrontLeftWall);
 
   // Vertical Architectural Golden Teak Louvers (Left Front Facade)
+  const louverGroup = new THREE.Group();
+  louverGroup.name = "default_architectural_wall_accent";
   for (let s = 0; s < 7; s++) {
     const louver = new THREE.Mesh(new THREE.BoxGeometry(0.16, 3.75, 0.20), teakMat);
     louver.position.set(-9.15 + s * 0.44, 2.68, 1.88);
-    group.add(louver);
+    louverGroup.add(louver);
   }
+  group.add(louverGroup);
 
   // 6a. High-Tech Enterprise Server Rack (100% Visible Inside Showroom!)
   const serverRack = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.7, 0.85), carbonMat);
@@ -2188,93 +2196,12 @@ function buildFoodCafePlot(): THREE.Group {
 
 /**
  * 4. Tech & Freelancers — Modern Tech & Dev Studio
- * Cantilevered graphite volume, cyan ribbon glazing, glowing dual-monitor studio & rooftop solar panels.
+ * Flagship luxury technical villa: cantilevered executive wing, glowing server room,
+ * executive carport with cyber coupe, reflecting pool, and rooftop sky-terrace.
  */
 function buildTechStudioPlot(): THREE.Group {
-  const g = new THREE.Group();
+  const g = createNerqivaVillaMesh();
   g.name = "category_plot_tech_freelance";
-  createCategoryBasePlinth(g, 0x090d16, 0x1e293b, 0x38bdf8);
-
-  const graphiteMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.45, metalness: 0.45 });
-  const titaniumMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.3, metalness: 0.25 });
-  const cyanGlowMat = new THREE.MeshStandardMaterial({
-    color: 0x38bdf8,
-    emissive: new THREE.Color(0x0284c7),
-    emissiveIntensity: 2.2,
-  });
-  const glassMat = new THREE.MeshStandardMaterial({
-    color: 0x0ea5e9,
-    roughness: 0.06,
-    metalness: 0.35,
-    transparent: true,
-    opacity: 0.75,
-  });
-  const solarMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.22, metalness: 0.65 });
-
-  // Ground Floor Core
-  const groundFloor = new THREE.Mesh(new THREE.BoxGeometry(14.8, 3.4, 9.6), graphiteMat);
-  groundFloor.position.set(-0.6, 2.06, -1.8);
-  g.add(groundFloor);
-
-  // Upper Cantilevered Titanium & Graphite Volume (shifted +X and +Z for bold architectural overhang)
-  const upperVolume = new THREE.Mesh(new THREE.BoxGeometry(16.8, 3.4, 10.6), titaniumMat);
-  upperVolume.position.set(0.6, 5.5, -1.0);
-  g.add(upperVolume);
-
-  // Recessed Dark Band + Cyan Ribbon Window on Upper Floor
-  const upperGlow = new THREE.Mesh(new THREE.BoxGeometry(14.8, 1.8, 0.2), cyanGlowMat);
-  upperGlow.position.set(0.6, 5.5, 4.18);
-  g.add(upperGlow);
-
-  const upperGlass = new THREE.Mesh(new THREE.BoxGeometry(15.2, 2.0, 0.14), glassMat);
-  upperGlass.position.set(0.6, 5.5, 4.35);
-  g.add(upperGlass);
-
-  // Vertical Architectural Fin Louvers on Left Wing
-  for (let i = 0; i < 4; i++) {
-    const fin = new THREE.Mesh(new THREE.BoxGeometry(0.18, 3.2, 0.65), graphiteMat);
-    fin.position.set(-6.4 + i * 1.1, 5.5, 4.45);
-    g.add(fin);
-  }
-
-  // Ground Floor Showroom Glass + Glowing Monitor Screens
-  const groundGlass = new THREE.Mesh(new THREE.BoxGeometry(12.4, 2.7, 0.14), glassMat);
-  groundGlass.position.set(-0.6, 1.85, 3.05);
-  g.add(groundGlass);
-
-  for (const sx of [-3.6, -0.6, 2.4]) {
-    const screen = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.0, 0.12), cyanGlowMat);
-    screen.position.set(sx, 1.9, 2.4);
-    g.add(screen);
-  }
-
-  // Cantilever Support Column on Right Side
-  const col = new THREE.Mesh(new THREE.BoxGeometry(0.65, 3.4, 0.65), graphiteMat);
-  col.position.set(7.8, 2.06, 3.2);
-  g.add(col);
-
-  // Rooftop Angled Solar Array with physical mounting stands (flush on roof surface, no floating)
-  const panelStandMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
-  for (const sx of [-4.2, 0.6, 5.4]) {
-    for (const bz of [-2.4, -0.8]) {
-      const stand = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.22, 0.14), panelStandMat);
-      stand.position.set(sx, 7.02, bz);
-      g.add(stand);
-    }
-    const panel = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.08, 2.4), solarMat);
-    panel.position.set(sx, 7.14, -1.6);
-    panel.rotation.x = 0.18;
-    g.add(panel);
-  }
-
-  // Cyan Architectural Edge Beacon Bar
-  const neonBar = new THREE.Mesh(new THREE.BoxGeometry(10.0, 0.24, 0.18), cyanGlowMat);
-  neonBar.position.set(0.6, 7.05, 4.36);
-  g.add(neonBar);
-
-  addArchitecturalPlanter(g, -7.8, 5.2, 0x0f172a, 0x16a34a);
-  addArchitecturalPlanter(g, 7.8, 5.6, 0x0f172a, 0x16a34a);
-
   return g;
 }
 
@@ -3250,6 +3177,15 @@ export function createCategoryPlotMesh(
 
   // Apply Owner Custom Wall Accent, Landscaping, Driveway Vehicle, Lighting & Street Banner
   if (options?.wallAccent) {
+    if (options.wallAccent !== "standard") {
+      const toRemove: THREE.Object3D[] = [];
+      group.traverse((obj) => {
+        if (obj.name === "default_architectural_wall_accent") toRemove.push(obj);
+      });
+      for (const r of toRemove) {
+        if (r.parent) r.parent.remove(r);
+      }
+    }
     addCustomWallAccent(group, options.wallAccent, safeAccentNum);
   }
   if (options?.gardenStyle) {
@@ -3265,6 +3201,15 @@ export function createCategoryPlotMesh(
     addCustomGardenLandscaping(group, options.gardenStyle);
   }
   if (options?.drivewayVehicle) {
+    if (options.drivewayVehicle !== "none") {
+      const toRemove: THREE.Object3D[] = [];
+      group.traverse((obj) => {
+        if (obj.name === "default_architectural_vehicle") toRemove.push(obj);
+      });
+      for (const r of toRemove) {
+        if (r.parent) r.parent.remove(r);
+      }
+    }
     addCustomDrivewayVehicle(group, options.drivewayVehicle, safeAccentNum);
   }
   if (options?.lightingStyle) {

@@ -941,27 +941,16 @@ export function LiveOsmMap({
           colonyGroup.add(connectorRoad);
 
           // 2. Nerqiva Studio Flagship 3D Villa (@nerqiva.studio ★ 4.9)
-          const villa = createNerqivaVillaMesh();
+          const villa = createCategoryPlotMesh("tech-freelance", {
+            plotLevel: 1,
+            facadeTheme: "default",
+            accentColor: "#f59e0b",
+          });
+          villa.name = "nerqiva_3d_villa";
           villa.scale.set(1.4, 1.4, 1.4);
           villa.position.set(0, 0, 0);
           villa.rotation.y = roadAngle; // Perfectly aligned with the road and driveway!
           colonyGroup.add(villa);
-
-          // 3. Tasteful garden landscaping cleanly inside Nerqiva Studio compound lawn (ZERO wall clipping!)
-          const gardenTrees: { pos: [number, number, number]; type: "pine" | "round" | "flowering"; s: number }[] = [
-            { pos: [-11.3, 0.4, -8.2], type: "flowering", s: 1.05 },
-            { pos: [-11.4, 0.4, -1.6], type: "round", s: 1.0 },
-            { pos: [-11.5, 0.4, 8.7], type: "pine", s: 0.95 },
-            { pos: [11.2, 0.4, -8.0], type: "pine", s: 1.05 },
-            { pos: [7.8, 0.4, -8.0], type: "flowering", s: 1.0 },
-            { pos: [11.0, 0.4, -3.8], type: "round", s: 0.95 },
-          ];
-          gardenTrees.forEach(({ pos, type, s }) => {
-            const t = createTreeMesh(type);
-            t.position.set(pos[0], pos[1], pos[2]);
-            t.scale.set(s, s, s);
-            villa.add(t);
-          });
 
           // 6. Controllable 3D Player Character Avatar outside Nerqiva Studio
           const player3D = createPlayerCharacter3D();
@@ -1049,6 +1038,42 @@ export function LiveOsmMap({
           // Between zoom 14.5 and 16.2, smoothly scale only the architectural villa and character avatar;
           // the access road connector connects real-world GPS coordinates and must stay 1:1 scale so it never pulls back or breaks
           const zoomFactor = Math.max(0, Math.min(1, (currentZoom - 14.5) / 1.7));
+
+          // Dynamically sync Nerqiva Studio customizations from allLiveStorefronts
+          const nqStorefront = allLiveStorefrontsRef.current.find((s) => s?.slug === "nerqiva-studio");
+          const pLevel = (nqStorefront?.plot_level === 3 ? 3 : nqStorefront?.plot_level === 2 ? 2 : 1) as 1 | 2 | 3;
+          const pTheme = nqStorefront?.plot_config?.facadeTheme || "default";
+          const pAccent = nqStorefront?.plot_config?.accentColor || "";
+          const pGarden = nqStorefront?.plot_config?.gardenStyle || "none";
+          const pVehicle = nqStorefront?.plot_config?.drivewayVehicle || "none";
+          const pLighting = nqStorefront?.plot_config?.lightingStyle || "neon";
+          const pBanner = nqStorefront?.plot_config?.bannerStyle || "none";
+          const pWall = nqStorefront?.plot_config?.wallAccent || "standard";
+          const nqKey = `${pLevel}|${pTheme}|${pAccent}|${pGarden}|${pVehicle}|${pLighting}|${pBanner}|${pWall}`;
+
+          if ((this as any).lastNerqivaKey !== nqKey) {
+            (this as any).lastNerqivaKey = nqKey;
+            const currentVilla = colony.children.find((c) => c.name === "nerqiva_3d_villa");
+            if (currentVilla) {
+              colony.remove(currentVilla);
+            }
+            const updatedVilla = createCategoryPlotMesh("tech-freelance", {
+              plotLevel: pLevel,
+              facadeTheme: pTheme,
+              accentColor: pAccent || undefined,
+              gardenStyle: pGarden,
+              drivewayVehicle: pVehicle,
+              lightingStyle: pLighting,
+              bannerStyle: pBanner,
+              wallAccent: pWall,
+            });
+            updatedVilla.name = "nerqiva_3d_villa";
+            const { angle: roadAngle } = computeRoadConnector(NERQIVA_COORDS, NEAREST_ROAD_COORDS);
+            updatedVilla.rotation.y = roadAngle;
+            updatedVilla.position.set(0, 0, 0);
+            colony.add(updatedVilla);
+          }
+
           const villa = colony.children.find((c) => c.name === "nerqiva_3d_villa");
           if (villa) {
             villa.scale.set(1.4 * zoomFactor, 1.4 * zoomFactor, 1.4 * zoomFactor);

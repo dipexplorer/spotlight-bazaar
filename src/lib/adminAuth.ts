@@ -5,6 +5,7 @@ export const DEFAULT_ADMIN_PASSKEY = "nerqiva-admin-2026";
 
 export const ADMIN_EMAILS = new Set([
   "nerqivastudio@gmail.com",
+  "nerqiva.studio@gmail.com",
   "admin@nerqivastudio.in",
   "contact@nerqivastudio.in",
   "dipankarmahato10@gmail.com",

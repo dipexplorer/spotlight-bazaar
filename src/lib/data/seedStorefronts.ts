@@ -20,6 +20,8 @@ export const SEED_STOREFRONTS: BusinessStorefront[] = [
     logo_url: "/mascot.jpg",
     is_verified: true,
     is_featured: true,
+    owner_email: "nerqiva.studio@gmail.com",
+    facing_bearing: 194,
     total_views: 48,
     total_leads: 12,
     portfolio: [
