@@ -478,14 +478,14 @@ export function LocationMapPicker({
     }
   }, []);
 
-  // Initialize MapLibre mini-map once with Carto Voyager vector style
+  // Initialize MapLibre mini-map once with high-contrast, crystal-clear OpenStreetMap style (zero over-whiting)
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
     const hasInitial = typeof lat === "number" && typeof lon === "number";
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: CARTO_VOYAGER_STYLE,
+      style: OSM_RASTER_FALLBACK,
       center: hasInitial ? [lon, lat] : INDIA_CENTER,
       zoom: hasInitial ? 16.5 : 3.05,
       minZoom: 2.7,
