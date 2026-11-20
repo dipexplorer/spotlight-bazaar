@@ -1121,7 +1121,7 @@ export function PlotCustomizer({
             return (
               <li
                 key={item.id}
-                className="px-4 py-3 flex items-center justify-between gap-3 hover:bg-neutral-900/30 transition-colors"
+                className="px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-neutral-900/40 transition-colors"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span
@@ -1137,16 +1137,13 @@ export function PlotCustomizer({
                       <span className="w-1 h-1 rounded-full bg-neutral-600" />
                     )}
                   </span>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex items-center gap-2">
                     <span
-                      className={`text-xs font-medium truncate block ${
-                        item.earned ? "text-neutral-300" : "text-white"
+                      className={`text-xs font-semibold truncate ${
+                        item.earned ? "text-neutral-400" : "text-neutral-100"
                       }`}
                     >
                       {item.label}
-                    </span>
-                    <span className="text-[10px] text-neutral-500 truncate block">
-                      {item.hint}
                     </span>
                   </div>
                 </div>

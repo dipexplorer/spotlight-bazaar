@@ -829,15 +829,15 @@ export function LocationMapPicker({
                   <div className="min-w-0 flex items-center gap-2.5">
                     <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                     <div className="min-w-0">
-                      <div className="text-xs font-semibold truncate">{item.name}</div>
+                      <div className="text-xs font-semibold text-white truncate">{item.name}</div>
                       {item.subtitle && (
-                        <div className="text-[11px] text-neutral-400 truncate">
+                        <div className="text-[11px] text-neutral-300 truncate">
                           {item.subtitle}
                         </div>
                       )}
                     </div>
                   </div>
-                  <span className="shrink-0 px-2 py-0.5 rounded-md bg-neutral-900 border border-neutral-800 text-[10px] font-medium uppercase tracking-wide text-neutral-400">
+                  <span className="shrink-0 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
                     {item.kind}
                   </span>
                 </button>

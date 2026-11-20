@@ -3126,8 +3126,9 @@ export function LiveOsmMap({
             <button
               onClick={toggle3DDrone}
               title={is3DMode ? "Switch to 2D Top-Down View" : "Switch to 3D Drone View"}
-              className={`p-2 rounded-xl text-xs font-semibold transition-all ${
-                is3DMode ? "text-amber-400 bg-amber-500/15" : "text-neutral-400 hover:text-white hover:bg-neutral-900"
+              aria-label={is3DMode ? "Switch to 2D Top-Down View" : "Switch to 3D Drone View"}
+              className={`min-h-[40px] min-w-[40px] sm:min-h-[36px] sm:min-w-[36px] p-2 rounded-xl text-xs font-semibold flex items-center justify-center transition-all ${
+                is3DMode ? "text-amber-400 bg-amber-500/15" : "text-neutral-300 hover:text-white hover:bg-neutral-900"
               }`}
             >
               <Compass className="w-4 h-4" />
@@ -3137,7 +3138,8 @@ export function LiveOsmMap({
             <button
               onClick={toggleNightMode}
               title="Toggle Map Style"
-              className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors"
+              aria-label="Toggle Day / Night Map Theme"
+              className="min-h-[40px] min-w-[40px] sm:min-h-[36px] sm:min-w-[36px] p-2 rounded-xl text-neutral-300 hover:text-white hover:bg-neutral-900 flex items-center justify-center transition-colors"
             >
               {isNightMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-cyan-400" />}
             </button>
@@ -3155,9 +3157,9 @@ export function LiveOsmMap({
                   : "Reset to India Overview"
               }
               aria-label="Reset or recenter map view"
-              className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors"
+              className="min-h-[40px] min-w-[40px] sm:min-h-[36px] sm:min-w-[36px] p-2 rounded-xl text-neutral-300 hover:text-white hover:bg-neutral-900 flex items-center justify-center transition-colors"
             >
-              <RotateCcw className="w-4 h-4 text-neutral-300" />
+              <RotateCcw className="w-4 h-4 text-neutral-200" />
             </button>
           </div>
 
