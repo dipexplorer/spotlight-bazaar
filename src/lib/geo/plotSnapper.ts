@@ -339,8 +339,8 @@ export function computeSnappedPlotPlacement(params: {
 
   const hit = findClosestRoadHit(rawLon, rawLat, 0, 0, roads);
 
-  // Case 3: Remote / unmapped open land (> 240m from any road or colony spine)
-  if (!hit || hit.distM > 240) {
+  // Case 3: Remote / unmapped open land (> 120m from any road) -> local frontage avenue
+  if (!hit || hit.distM > 120) {
     const facingBearing = 180; // face South cleanly
     const [gateLon, gateLat] = fromLocalMeters(rawLon, rawLat, 0, -(PLOT_HALF_DEPTH_M - 0.6));
     const [roadCenterLon, roadCenterLat] = fromLocalMeters(rawLon, rawLat, 0, -ROAD_SETBACK_M);
@@ -483,14 +483,15 @@ export function computeSnappedPlotPlacement(params: {
 export function resolveAllStorefrontPlacements(params: {
   storefronts: BusinessStorefront[];
   osmRoads: RoadPolyline[];
-  colonySeedRoads: RoadPolyline[];
+  colonySeedRoads?: RoadPolyline[];
 }): {
   resolvedBySlug: Map<string, SnappedPlotPlacement>;
   connectorsGeoJSON: GeoJSON.FeatureCollection<GeoJSON.LineString>;
 } {
-  const { storefronts, osmRoads, colonySeedRoads } = params;
+  const { storefronts, osmRoads } = params;
   const resolvedBySlug = new Map<string, SnappedPlotPlacement>();
-  const dynamicRoads: RoadPolyline[] = [...osmRoads, ...colonySeedRoads];
+  // Strictly query real OSM street roads — NEVER connect user plots to hardcoded roads or colony seeds
+  const activeOsmRoads: RoadPolyline[] = (osmRoads || []).filter((r) => r.source === "osm");
   const occupiedPlots: { lat: number; lon: number; slug: string }[] = [];
   const connectorFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
 
@@ -505,7 +506,7 @@ export function resolveAllStorefrontPlacements(params: {
     if (!s || s.slug === "nerqiva-studio") continue;
     if (typeof s.lat !== "number" || typeof s.lon !== "number") continue;
 
-    // Check if storefront already has saved snapped metadata AND is clear of all roads & plots
+    // Check if storefront already has saved snapped metadata from registration
     const hasSavedSnap =
       typeof s.facing_bearing === "number" &&
       typeof s.road_anchor_lat === "number" &&
@@ -514,68 +515,56 @@ export function resolveAllStorefrontPlacements(params: {
     let placement: SnappedPlotPlacement;
 
     if (hasSavedSnap) {
-      const roadClear = minDistanceToAnyRoad(s.lon, s.lat, 0, 0, dynamicRoads);
-      const plotClear = minDistanceToExistingPlots(s.lon, s.lat, 0, 0, occupiedPlots, s.slug);
-
-      if (roadClear >= MIN_ROAD_CLEARANCE_M - 1.5 && plotClear >= MIN_PLOT_SPACING_M - 2) {
-        const rad = (s.facing_bearing! * Math.PI) / 180;
-        const [gateLon, gateLat] = fromLocalMeters(
-          s.lon,
-          s.lat,
-          Math.sin(rad) * (PLOT_HALF_DEPTH_M - 0.6),
-          Math.cos(rad) * (PLOT_HALF_DEPTH_M - 0.6)
-        );
-        const connectorCoords: [number, number][] =
-          s.connector_type === "frontage"
-            ? (() => {
-                const fx = Math.sin(rad);
-                const fy = Math.cos(rad);
-                const rx = fy;
-                const ry = -fx;
-                const a = toLocalMeters(s.lon, s.lat, s.road_anchor_lon!, s.road_anchor_lat!);
-                const [flLon, flLat] = fromLocalMeters(s.lon, s.lat, a.x - rx * 18, a.y - ry * 18);
-                const [frLon, frLat] = fromLocalMeters(s.lon, s.lat, a.x + rx * 18, a.y + ry * 18);
-                return [
-                  [flLon, flLat],
-                  [s.road_anchor_lon!, s.road_anchor_lat!],
-                  [gateLon, gateLat],
-                  [s.road_anchor_lon!, s.road_anchor_lat!],
-                  [frLon, frLat],
-                ];
-              })()
-            : [
+      // 100% honor the user's verified registration placement beside the real OSM street
+      const rad = (s.facing_bearing! * Math.PI) / 180;
+      const [gateLon, gateLat] = fromLocalMeters(
+        s.lon,
+        s.lat,
+        Math.sin(rad) * (PLOT_HALF_DEPTH_M - 0.6),
+        Math.cos(rad) * (PLOT_HALF_DEPTH_M - 0.6)
+      );
+      const connectorCoords: [number, number][] =
+        s.connector_type === "frontage"
+          ? (() => {
+              const fx = Math.sin(rad);
+              const fy = Math.cos(rad);
+              const rx = fy;
+              const ry = -fx;
+              const a = toLocalMeters(s.lon, s.lat, s.road_anchor_lon!, s.road_anchor_lat!);
+              const [flLon, flLat] = fromLocalMeters(s.lon, s.lat, a.x - rx * 18, a.y - ry * 18);
+              const [frLon, frLat] = fromLocalMeters(s.lon, s.lat, a.x + rx * 18, a.y + ry * 18);
+              return [
+                [flLon, flLat],
+                [s.road_anchor_lon!, s.road_anchor_lat!],
                 [gateLon, gateLat],
                 [s.road_anchor_lon!, s.road_anchor_lat!],
+                [frLon, frLat],
               ];
+            })()
+          : [
+              [gateLon, gateLat],
+              [s.road_anchor_lon!, s.road_anchor_lat!],
+            ];
 
-        placement = {
-          lat: s.lat,
-          lon: s.lon,
-          rawLat: s.lat,
-          rawLon: s.lon,
-          facingBearing: s.facing_bearing!,
-          roadAnchorLat: s.road_anchor_lat!,
-          roadAnchorLon: s.road_anchor_lon!,
-          connectorType: s.connector_type || "osm_road",
-          connectorCoords,
-          footprintPolygon: buildPlotFootprintRing(s.lon, s.lat, s.facing_bearing!),
-          wasAutoAdjusted: false,
-        };
-      } else {
-        placement = computeSnappedPlotPlacement({
-          rawLat: s.lat,
-          rawLon: s.lon,
-          roads: dynamicRoads,
-          existingPlots: occupiedPlots,
-          ignoreSlug: s.slug,
-        });
-      }
+      placement = {
+        lat: s.lat,
+        lon: s.lon,
+        rawLat: s.lat,
+        rawLon: s.lon,
+        facingBearing: s.facing_bearing!,
+        roadAnchorLat: s.road_anchor_lat!,
+        roadAnchorLon: s.road_anchor_lon!,
+        connectorType: s.connector_type || "osm_road",
+        connectorCoords,
+        footprintPolygon: buildPlotFootprintRing(s.lon, s.lat, s.facing_bearing!),
+        wasAutoAdjusted: false,
+      };
     } else {
-      // Self-heal legacy / unsnapped storefronts automatically!
+      // Self-heal legacy / unsnapped storefronts automatically using strictly real OSM roads
       placement = computeSnappedPlotPlacement({
         rawLat: s.lat,
         rawLon: s.lon,
-        roads: dynamicRoads,
+        roads: activeOsmRoads,
         existingPlots: occupiedPlots,
         ignoreSlug: s.slug,
       });
@@ -584,14 +573,7 @@ export function resolveAllStorefrontPlacements(params: {
     resolvedBySlug.set(s.slug, placement);
     occupiedPlots.push({ lat: placement.lat, lon: placement.lon, slug: s.slug });
 
-    // Add this plot's generated connector into the colony road graph so subsequent nearby plots can branch off it!
     if (placement.connectorCoords.length >= 2) {
-      dynamicRoads.push({
-        id: `colony-${s.slug}`,
-        source: "colony",
-        coords: placement.connectorCoords,
-        priority: 2,
-      });
       connectorFeatures.push({
         type: "Feature",
         properties: {
@@ -616,24 +598,8 @@ export function resolveAllStorefrontPlacements(params: {
 }
 
 /**
- * Known colony spine roads (e.g. Nerqiva Studio's North Guwahati access road)
- * so both /register mini-map snapping and the main 3D map snap adjacent plots cleanly off the colony road.
+ * Returns empty array: zero hardcoded colony roads. Every business connects strictly to real OSM streets.
  */
 export function getColonySeedRoads(): RoadPolyline[] {
-  const roadJunction: [number, number] = [91.72838062047958, 26.206399578544207];
-  const nerqivaCenter: [number, number] = [91.72925728895483, 26.20624167049662];
-  // Gate sits ~12m west-northwest of Nerqiva center along the access spine
-  const m = toLocalMeters(roadJunction[0], roadJunction[1], nerqivaCenter[0], nerqivaCenter[1]);
-  const dist = Math.hypot(m.x, m.y);
-  const ratio = Math.max(0.1, (dist - 12) / dist);
-  const gatePt = fromLocalMeters(roadJunction[0], roadJunction[1], m.x * ratio, m.y * ratio);
-
-  return [
-    {
-      id: "colony-seed-nerqiva-spine",
-      source: "colony",
-      coords: [roadJunction, gatePt],
-      priority: 3,
-    },
-  ];
+  return [];
 }

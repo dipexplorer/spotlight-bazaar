@@ -66,9 +66,6 @@ export function PlotLive3DViewer({
     fillLight: THREE.DirectionalLight;
     ambientLight: THREE.AmbientLight;
     buildingGroup: THREE.Group | null;
-    signMesh: THREE.Mesh | null;
-    signTexture: THREE.CanvasTexture | null;
-    signCanvas: HTMLCanvasElement | null;
     animId: number | null;
   } | null>(null);
 
@@ -76,45 +73,6 @@ export function PlotLive3DViewer({
   const [isAutoRotate, setIsAutoRotate] = useState(true);
   const [activePreset, setActivePreset] = useState<"hero" | "front" | "top">("hero");
   const [webGlReady, setWebGlReady] = useState(false);
-
-  const displayText = (signText?.trim() || businessName.slice(0, 20)).toUpperCase();
-
-  // Helper to render high-res 2D canvas texture for the 3D storefront sign
-  const updateSignCanvas = useCallback(
-    (canvas: HTMLCanvasElement, text: string, color: string) => {
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      const w = canvas.width;
-      const h = canvas.height;
-
-      // Dark background
-      ctx.fillStyle = "#09090b";
-      ctx.fillRect(0, 0, w, h);
-
-      // Accent border
-      ctx.strokeStyle = color || "#f59e0b";
-      ctx.lineWidth = 14;
-      ctx.strokeRect(7, 7, w - 14, h - 14);
-
-      // Subtle inner corner accents
-      ctx.fillStyle = color || "#f59e0b";
-      ctx.fillRect(16, 16, 24, 6);
-      ctx.fillRect(16, 16, 6, 24);
-      ctx.fillRect(w - 40, 16, 24, 6);
-      ctx.fillRect(w - 22, 16, 6, 24);
-
-      // Brand typography
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "900 64px system-ui, -apple-system, sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-
-      const cleanText = text.length > 22 ? `${text.slice(0, 20)}…` : text;
-      ctx.fillText(cleanText, w / 2, h / 2);
-    },
-    []
-  );
 
   // Initialize Three.js scene once
   useEffect(() => {
@@ -197,28 +155,6 @@ export function PlotLive3DViewer({
     curbMesh.position.set(0, 0.08, 13.8);
     scene.add(curbMesh);
 
-    // 7. Dynamic 3D Signboard Texture & Mesh (hidden by default to avoid floating sign artifacts)
-    const signCanvas = document.createElement("canvas");
-    signCanvas.width = 1024;
-    signCanvas.height = 256;
-    updateSignCanvas(signCanvas, displayText, accentColor);
-
-    const signTexture = new THREE.CanvasTexture(signCanvas);
-    signTexture.colorSpace = THREE.SRGBColorSpace;
-    const signMat = new THREE.MeshStandardMaterial({
-      map: signTexture,
-      roughness: 0.25,
-      metalness: 0.15,
-      emissive: new THREE.Color(accentColor),
-      emissiveIntensity: 0.22,
-    });
-    const signGeo = new THREE.BoxGeometry(6.4, 1.35, 0.18);
-    const signMesh = new THREE.Mesh(signGeo, signMat);
-    signMesh.name = "dashboard_3d_sign";
-    signMesh.position.set(0, 5.8, 3.4);
-    signMesh.visible = false;
-    scene.add(signMesh);
-
     // Animation Loop
     let animId = 0;
     const animate = () => {
@@ -237,9 +173,6 @@ export function PlotLive3DViewer({
       fillLight,
       ambientLight,
       buildingGroup: null,
-      signMesh,
-      signTexture,
-      signCanvas,
       animId,
     };
 
@@ -265,9 +198,6 @@ export function PlotLive3DViewer({
       groundMat.dispose();
       curbGeo.dispose();
       curbMat.dispose();
-      signGeo.dispose();
-      signMat.dispose();
-      signTexture.dispose();
       threeRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -316,28 +246,6 @@ export function PlotLive3DViewer({
 
     inst.scene.add(newGroup);
     inst.buildingGroup = newGroup;
-
-    // Position 3D storefront signboard flush on upper facade fascia (no floating)
-    if (inst.signMesh) {
-      const box = new THREE.Box3();
-      newGroup.traverse((obj) => {
-        if (
-          (obj as THREE.Mesh).isMesh &&
-          obj.position.y >= 1.5 &&
-          obj.name !== "plot_base_plinth" &&
-          obj.name !== "plot_apron" &&
-          !obj.name.startsWith("custom_") &&
-          !obj.name.includes("planter") &&
-          !obj.name.includes("tree")
-        ) {
-          box.expandByObject(obj);
-        }
-      });
-      const roofY = Number.isFinite(box.max.y) ? box.max.y : 6.8;
-      const frontZ = Number.isFinite(box.max.z) ? box.max.z : 3.6;
-      inst.signMesh.position.set(0, Math.max(4.6, Math.min(6.2, roofY - 0.72)), frontZ + 0.12);
-      inst.signMesh.rotation.set(0, 0, 0);
-    }
   }, [
     categoryId,
     plotLevel,
@@ -349,21 +257,6 @@ export function PlotLive3DViewer({
     bannerStyle,
     wallAccent,
   ]);
-
-  // Update 3D Signboard Texture on text/accent changes
-  useEffect(() => {
-    const inst = threeRef.current;
-    if (!inst || !inst.signCanvas || !inst.signTexture || !inst.signMesh) return;
-
-    updateSignCanvas(inst.signCanvas, displayText, accentColor);
-    inst.signTexture.needsUpdate = true;
-
-    const mat = inst.signMesh.material as THREE.MeshStandardMaterial;
-    if (mat) {
-      mat.emissive.set(accentColor);
-      mat.emissiveIntensity = isNightMode ? 0.6 : 0.22;
-    }
-  }, [displayText, accentColor, isNightMode, updateSignCanvas]);
 
   // Day / Night lighting toggle effect
   useEffect(() => {

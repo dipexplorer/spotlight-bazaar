@@ -17,7 +17,7 @@ import { searchLocalIndiaPlaces } from "@/lib/geo/indiaPlaces";
 import {
   computeSnappedPlotPlacement,
   extractNearbyOsmRoads,
-  getColonySeedRoads,
+  RoadPolyline,
   SnappedPlotPlacement,
 } from "@/lib/geo/plotSnapper";
 import { getLocalStorefronts } from "@/lib/utils/localStorefront";
@@ -30,69 +30,28 @@ if (typeof window !== "undefined") {
 const CARTO_VOYAGER_STYLE =
   "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
 
-const MAP_THEMES: Record<
-  "streets" | "satellite",
-  { id: "streets" | "satellite"; label: string; style: maplibregl.StyleSpecification }
-> = {
-  streets: {
-    id: "streets",
-    label: "Streets",
-    style: {
-      version: 8,
-      sources: {
-        "osm-tiles": {
-          type: "raster",
-          tiles: [
-            "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-            "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-            "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          ],
-          tileSize: 256,
-          attribution: "© OpenStreetMap contributors",
-        },
-      },
-      layers: [
-        {
-          id: "osm-tiles-layer",
-          type: "raster",
-          source: "osm-tiles",
-          minzoom: 0,
-          maxzoom: 19,
-        },
+const OSM_RASTER_FALLBACK: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    "osm-tiles": {
+      type: "raster",
+      tiles: [
+        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
       ],
+      tileSize: 256,
+      attribution: "© OpenStreetMap contributors",
     },
   },
-  satellite: {
-    id: "satellite",
-    label: "Satellite",
-    style: {
-      version: 8,
-      sources: {
-        "esri-satellite": {
-          type: "raster",
-          tiles: [
-            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-          ],
-          tileSize: 256,
-          attribution: "© Esri",
-        },
-      },
-      layers: [
-        {
-          id: "esri-satellite-layer",
-          type: "raster",
-          source: "esri-satellite",
-          minzoom: 0,
-          maxzoom: 19,
-        },
-      ],
+  layers: [
+    {
+      id: "osm-tiles-layer",
+      type: "raster",
+      source: "osm-tiles",
+      minzoom: 0,
+      maxzoom: 19,
     },
-  },
+  ],
 };
-
-type MapThemeKey = keyof typeof MAP_THEMES;
-
-const OSM_RASTER_FALLBACK = MAP_THEMES.streets.style;
 
 const INDIA_CENTER: [number, number] = [80.8, 22.0];
 const INDIA_MAX_BOUNDS: [[number, number], [number, number]] = [
@@ -228,7 +187,6 @@ export function LocationMapPicker({
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
-  const [activeTheme, setActiveTheme] = useState<MapThemeKey>("streets");
   const [mapReady, setMapReady] = useState(false);
   const [locatingGps, setLocatingGps] = useState(false);
   const [reverseLoading, setReverseLoading] = useState(false);
@@ -292,32 +250,6 @@ export function LocationMapPicker({
   // Ensure preview overlay layers exist on the mini-map
   const ensurePreviewLayers = useCallback((map: MapLibreMap) => {
     try {
-      // Show existing colony seed spine road (e.g. Nerqiva access road) on mini-map
-      const seedRoads = getColonySeedRoads();
-      if (!map.getSource("mini-colony-seeds")) {
-        map.addSource("mini-colony-seeds", {
-          type: "geojson",
-          data: {
-            type: "FeatureCollection",
-            features: seedRoads.map((r) => ({
-              type: "Feature",
-              properties: { id: r.id },
-              geometry: { type: "LineString", coordinates: r.coords },
-            })),
-          },
-        });
-        map.addLayer({
-          id: "mini-colony-seeds-line",
-          type: "line",
-          source: "mini-colony-seeds",
-          paint: {
-            "line-color": "#64748b",
-            "line-width": 4,
-            "line-opacity": 0.75,
-          },
-        });
-      }
-
       if (!map.getSource("plot-driveway-preview")) {
         map.addSource("plot-driveway-preview", {
           type: "geojson",
@@ -365,7 +297,7 @@ export function LocationMapPicker({
     }
   }, []);
 
-  // Snap raw pin cleanly off nearby OSM/colony roads, face street, and draw live footprint preview
+  // Snap raw pin cleanly off real OSM street roads, face street, and draw live footprint preview
   const snapAndPlacePin = useCallback(
     (
       rawLon: number,
@@ -373,31 +305,18 @@ export function LocationMapPicker({
       extraMeta?: { city?: string; state?: string; pincode?: string; label?: string }
     ): SnappedPlotPlacement => {
       const map = mapRef.current;
-      const osmRoads = extractNearbyOsmRoads(map, rawLon, rawLat, 240);
-      const colonyRoads = getColonySeedRoads();
+      // Extract strictly real OSM vector roads from the loaded map tiles (no hardcoded colonies!)
+      const osmRoads = extractNearbyOsmRoads(map, rawLon, rawLat, 220);
       const existingStorefronts = [...SEED_STOREFRONTS, ...getLocalStorefronts()].map((s) => ({
         lat: s.lat,
         lon: s.lon,
         slug: s.slug,
       }));
 
-      // Also include previously generated connectors from local storefronts in the road graph
-      const localConnectors = getLocalStorefronts()
-        .filter((s) => typeof s.road_anchor_lat === "number" && typeof s.road_anchor_lon === "number")
-        .map((s) => ({
-          id: `local-conn-${s.slug}`,
-          source: "colony" as const,
-          coords: [
-            [s.lon, s.lat] as [number, number],
-            [s.road_anchor_lon!, s.road_anchor_lat!] as [number, number],
-          ],
-          priority: 2,
-        }));
-
       const snapped = computeSnappedPlotPlacement({
         rawLat,
         rawLon,
-        roads: [...osmRoads, ...colonyRoads, ...localConnectors],
+        roads: osmRoads,
         existingPlots: existingStorefronts,
       });
 
@@ -405,13 +324,11 @@ export function LocationMapPicker({
       placeMarker(snapped.lon, snapped.lat);
       renderPlotPreviewOverlay(snapped);
 
-      if (snapped.connectorType === "colony_branch") {
-        setSnapBadge("Snapped beside colony road · Auto-connected");
-      } else if (snapped.connectorType === "osm_road") {
+      if (snapped.connectorType === "osm_road") {
         setSnapBadge(
           snapped.wasAutoAdjusted
-            ? "Auto-set back off road · Facing street"
-            : "Connected to nearby OSM road"
+            ? "Snapped beside street · Auto-set back"
+            : "Connected to OSM street"
         );
       } else {
         setSnapBadge("Open land · Frontage avenue created");
@@ -426,6 +343,65 @@ export function LocationMapPicker({
         connectorType: snapped.connectorType,
         ...extraMeta,
       });
+
+      // If vector tiles haven't rendered yet or local roads were sparse, query real OSM ways via Overpass fallback
+      if (osmRoads.length === 0) {
+        fetch(`/api/geo/osm?lat=${rawLat}&lon=${rawLon}&radius=350`)
+          .then((r) => r.json())
+          .then((data) => {
+            const geoRoads = data?.roads;
+            if (!geoRoads || !Array.isArray(geoRoads.features)) return;
+            const fetchedRoads: RoadPolyline[] = [];
+            geoRoads.features.forEach((feat: { geometry?: { type?: string; coordinates?: unknown } }, idx: number) => {
+              if (
+                feat.geometry?.type === "LineString" &&
+                Array.isArray(feat.geometry.coordinates) &&
+                feat.geometry.coordinates.length >= 2
+              ) {
+                fetchedRoads.push({
+                  id: `osm-fetch-${idx}`,
+                  source: "osm",
+                  coords: feat.geometry.coordinates as [number, number][],
+                  priority: 3,
+                });
+              }
+            });
+
+            if (fetchedRoads.length > 0) {
+              const reSnapped = computeSnappedPlotPlacement({
+                rawLat,
+                rawLon,
+                roads: fetchedRoads,
+                existingPlots: existingStorefronts,
+              });
+
+              lastPlacementRef.current = reSnapped;
+              placeMarker(reSnapped.lon, reSnapped.lat);
+              renderPlotPreviewOverlay(reSnapped);
+
+              if (reSnapped.connectorType === "osm_road") {
+                setSnapBadge(
+                  reSnapped.wasAutoAdjusted
+                    ? "Snapped beside street · Auto-set back"
+                    : "Connected to OSM street"
+                );
+              } else {
+                setSnapBadge("Open land · Frontage avenue created");
+              }
+
+              onChangeRef.current({
+                lat: reSnapped.lat,
+                lon: reSnapped.lon,
+                facingBearing: reSnapped.facingBearing,
+                roadAnchorLat: reSnapped.roadAnchorLat,
+                roadAnchorLon: reSnapped.roadAnchorLon,
+                connectorType: reSnapped.connectorType,
+                ...extraMeta,
+              });
+            }
+          })
+          .catch(() => {});
+      }
 
       return snapped;
     },
@@ -502,33 +478,16 @@ export function LocationMapPicker({
     }
   }, []);
 
-  // Switch map view style (High-contrast streets vs. satellite)
-  const handleSwitchTheme = useCallback(
-    (nextTheme: MapThemeKey) => {
-      setActiveTheme(nextTheme);
-      const map = mapRef.current;
-      if (!map) return;
-      map.setStyle(MAP_THEMES[nextTheme].style);
-      map.once("styledata", () => {
-        ensurePreviewLayers(map);
-        if (lastPlacementRef.current) {
-          renderPlotPreviewOverlay(lastPlacementRef.current);
-        }
-      });
-    },
-    [ensurePreviewLayers, renderPlotPreviewOverlay]
-  );
-
-  // Initialize MapLibre mini-map once
+  // Initialize MapLibre mini-map once with Carto Voyager vector style
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
     const hasInitial = typeof lat === "number" && typeof lon === "number";
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: MAP_THEMES.streets.style,
+      style: CARTO_VOYAGER_STYLE,
       center: hasInitial ? [lon, lat] : INDIA_CENTER,
-      zoom: hasInitial ? 16 : 3.05,
+      zoom: hasInitial ? 16.5 : 3.05,
       minZoom: 2.7,
       maxZoom: 19.5,
       maxBounds: INDIA_MAX_BOUNDS,
@@ -576,6 +535,9 @@ export function LocationMapPicker({
     });
 
     mapRef.current = map;
+    if (mapContainerRef.current) {
+      (mapContainerRef.current as any)._mapLibre = map;
+    }
 
     return () => {
       ro.disconnect();
@@ -894,34 +856,8 @@ export function LocationMapPicker({
           aria-label="Interactive India map for selecting business coordinates"
         />
 
-        {/* Style Switcher & Zoom Controls */}
+        {/* Zoom Controls */}
         <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
-          {/* Layer switcher: Streets vs. Satellite */}
-          <div className="flex items-center rounded-xl overflow-hidden border border-neutral-800/90 bg-[#09090b]/92 backdrop-blur-md p-0.5 shadow-lg">
-            <button
-              type="button"
-              onClick={() => handleSwitchTheme("streets")}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
-                activeTheme === "streets"
-                  ? "bg-amber-500 text-neutral-950 shadow-sm"
-                  : "text-neutral-300 hover:text-white"
-              }`}
-            >
-              Streets
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTheme("satellite")}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
-                activeTheme === "satellite"
-                  ? "bg-amber-500 text-neutral-950 shadow-sm"
-                  : "text-neutral-300 hover:text-white"
-              }`}
-            >
-              Satellite
-            </button>
-          </div>
-
           <div className="flex flex-col rounded-xl overflow-hidden border border-neutral-800/90 bg-[#09090b]/90 backdrop-blur-md shadow-lg">
             <button
               type="button"

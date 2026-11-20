@@ -581,8 +581,8 @@ export function PlotCustomizer({
 
         {/* Right: Architectural Customizer Visual Controls */}
         <div className="lg:col-span-5 space-y-3">
-          {/* Sub-Category Pills (Balanced 3x2 Grid - All 6 Visible, Zero Scrolling) */}
-          <div className="grid grid-cols-3 gap-1.5 p-1 bg-[#121215] border border-neutral-800/90 rounded-xl">
+          {/* Sub-Category Pills (Balanced 3x2 / 6x1 Grid - All Visible, Zero Text Truncation) */}
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 p-1 bg-[#121215] border border-neutral-800/90 rounded-xl">
             {customizerTabs.map((tab) => {
               const active = activeTab === tab.id;
               const Icon = tab.icon;
@@ -591,14 +591,14 @@ export function PlotCustomizer({
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-2 px-2 rounded-lg text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all ${
+                  className={`py-2 px-1 rounded-lg text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition-all ${
                     active
                       ? "bg-amber-500 text-neutral-950 font-bold shadow-md shadow-amber-950/20"
                       : "text-neutral-400 hover:text-white hover:bg-neutral-800/60"
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5 shrink-0" />
-                  <span>{tab.label}</span>
+                  <span className="truncate">{tab.label}</span>
                 </button>
               );
             })}
@@ -649,12 +649,17 @@ export function PlotCustomizer({
                 </div>
               </fieldset>
 
-              {/* Brand Accent LED Color */}
+              {/* Brand Accent LED Color — Luminous Color Gems (No Truncated Text) */}
               <fieldset className="space-y-2 pt-1">
-                <legend className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
-                  Brand LED Glow &amp; Beacons
-                </legend>
-                <div className="grid grid-cols-3 gap-1.5">
+                <div className="flex items-center justify-between">
+                  <legend className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
+                    Brand LED Glow &amp; Beacons
+                  </legend>
+                  <span className="text-[11px] font-mono text-amber-400">
+                    {ACCENT_COLOR_PRESETS.find((c) => c.hex === accentColor)?.name || accentColor}
+                  </span>
+                </div>
+                <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 pt-1">
                   {ACCENT_COLOR_PRESETS.map((preset) => {
                     const selected = accentColor === preset.hex;
                     return (
@@ -662,22 +667,26 @@ export function PlotCustomizer({
                         key={preset.id}
                         type="button"
                         aria-pressed={selected}
+                        title={preset.name}
                         onClick={() => setAccentColor(preset.hex)}
-                        className={`min-h-[38px] px-2.5 rounded-xl border flex items-center gap-2 text-xs font-medium transition-all ${
+                        className={`h-11 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${
                           selected
-                            ? "bg-neutral-900 border-amber-500/80 text-white shadow-sm ring-1 ring-amber-500/40"
-                            : "bg-[#09090b] border-neutral-800 text-neutral-300 hover:border-neutral-700"
+                            ? "bg-neutral-900 border-amber-400 ring-2 ring-amber-400/30 scale-105 shadow-md shadow-amber-950/30"
+                            : "bg-[#09090b] border-neutral-800 hover:border-neutral-700 hover:scale-102"
                         }`}
                       >
                         <span
-                          className="w-3.5 h-3.5 rounded-full shrink-0 ring-1 ring-white/20 transition-transform"
+                          className="w-4 h-4 rounded-full transition-transform"
                           style={{
                             backgroundColor: preset.hex,
-                            boxShadow: `0 0 10px ${preset.hex}`,
-                            transform: selected ? "scale(1.15)" : "scale(1)",
+                            boxShadow: selected
+                              ? `0 0 12px ${preset.hex}, 0 0 4px ${preset.hex}`
+                              : `0 0 6px ${preset.hex}`,
                           }}
                         />
-                        <span className="truncate text-[11px] font-semibold">{preset.name}</span>
+                        <span className="text-[9px] font-mono font-medium text-neutral-400 truncate max-w-[44px]">
+                          {preset.id}
+                        </span>
                       </button>
                     );
                   })}

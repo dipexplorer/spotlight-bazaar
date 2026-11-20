@@ -51,7 +51,6 @@ import { getLocalStorefronts } from "@/lib/utils/localStorefront";
 import {
   bearingToThreeRotationY,
   extractNearbyOsmRoads,
-  getColonySeedRoads,
   resolveAllStorefrontPlacements,
   SnappedPlotPlacement,
 } from "@/lib/geo/plotSnapper";
@@ -642,7 +641,7 @@ export function LiveOsmMap({
     allLiveStorefrontsRef.current = allLiveStorefronts;
   }, [allLiveStorefronts]);
 
-  // Automatically snap & interconnect every registered business plot with live OSM + Colony roads
+  // Automatically snap & interconnect every registered business plot with strictly real OSM street roads
   const recomputePlotPlacements = useCallback((map: MapLibreMap | null) => {
     if (!map || !map.getStyle()) return;
     const center = map.getCenter();
@@ -650,20 +649,10 @@ export function LiveOsmMap({
       map.getZoom() >= 13.0
         ? extractNearbyOsmRoads(map, center.lng, center.lat, 650)
         : [];
-    const colonySeedRoads = [
-      ...getColonySeedRoads(),
-      {
-        id: "colony-nerqiva-exact-connector",
-        source: "colony" as const,
-        coords: getConnectorRoadCoordinates(),
-        priority: 3,
-      },
-    ];
 
     const { resolvedBySlug, connectorsGeoJSON } = resolveAllStorefrontPlacements({
       storefronts: allLiveStorefrontsRef.current,
       osmRoads,
-      colonySeedRoads,
     });
 
     resolvedPlacementsRef.current = resolvedBySlug;
