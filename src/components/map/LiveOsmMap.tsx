@@ -1340,14 +1340,13 @@ export function LiveOsmMap({
               type: "raster",
               source: "satellite-imagery-source",
               minzoom: 0,
-              maxzoom: 20,
+              maxzoom: 8.5,
               paint: {
                 "raster-opacity": [
                   "interpolate", ["linear"], ["zoom"],
                   3.5, 0.95,
-                  15.0, 0.85,
-                  18.0, 0.55,
-                  19.5, 0.15,
+                  7.0, 0.85,
+                  8.5, 0.0,
                 ],
                 "raster-contrast": 0.12,
                 "raster-saturation": 0.08,
@@ -1364,22 +1363,36 @@ export function LiveOsmMap({
       try {
         if (!isDark) {
           if (map.getLayer("background")) {
-            map.setPaintProperty("background", "background-color", "#04152d");
+            map.setPaintProperty("background", "background-color", [
+              "interpolate", ["linear"], ["zoom"],
+              7.5, "#04152d",
+              8.8, "#f8fafc",
+            ]);
           }
           if (map.getLayer("water")) {
             map.setPaintProperty("water", "fill-color", [
               "interpolate", ["linear"], ["zoom"],
-              4.0, "#04152d",
-              9.5, "#04152d",
-              12.0, "#0284c7",
+              7.5, "#04152d",
+              9.0, "#0284c7",
+              12.0, "#38bdf8",
             ] as any);
             map.setPaintProperty("water", "fill-opacity", 1.0);
           }
           if (map.getLayer("landcover")) {
-            map.setPaintProperty("landcover", "fill-opacity", 0.0);
+            map.setPaintProperty("landcover", "fill-color", "#dcfce7");
+            map.setPaintProperty("landcover", "fill-opacity", [
+              "interpolate", ["linear"], ["zoom"],
+              7.5, 0.0,
+              8.5, 0.65,
+            ]);
           }
           if (map.getLayer("landuse_residential")) {
-            map.setPaintProperty("landuse_residential", "fill-opacity", 0.15);
+            map.setPaintProperty("landuse_residential", "fill-color", "#f1f5f9");
+            map.setPaintProperty("landuse_residential", "fill-opacity", [
+              "interpolate", ["linear"], ["zoom"],
+              7.5, 0.0,
+              8.5, 0.85,
+            ]);
           }
 
           // Physically accurate zoom-adaptive width matching 3.0m fill and 3.76m casing across all zooms
@@ -2378,6 +2391,19 @@ export function LiveOsmMap({
       map.on("zoom", () => {
         const z = map.getZoom();
         syncMarkerLOD(z);
+
+        // Manage 3D elevation terrain: active at national zoom for realistic India relief; null at city/street level for 100% clean flat OSM roads
+        try {
+          if (z >= 9.2) {
+            if (map.getTerrain()) {
+              map.setTerrain(null);
+            }
+          } else {
+            if (!map.getTerrain() && map.getSource("elevation-terrain-source")) {
+              map.setTerrain({ source: "elevation-terrain-source", exaggeration: 1.5 });
+            }
+          }
+        } catch (e) {}
 
         const bucket = Math.round(z * 2) / 2;
         if (bucket !== lastReportedZoomBucket) {

@@ -13,7 +13,7 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { searchLocalIndiaPlaces } from "@/lib/geo/indiaPlaces";
+import { searchLocalIndiaPlaces, lookupIndianPincode } from "@/lib/geo/indiaPlaces";
 import {
   computeSnappedPlotPlacement,
   extractNearbyOsmRoads,
@@ -138,15 +138,21 @@ export async function resolveIndianPincode(pin: string): Promise<{
   const cleanPin = pin.replace(/\D/g, "").slice(0, 6);
   if (!/^[1-9]\d{5}$/.test(cleanPin)) return null;
 
-  // 1. Instant check in local places index (0ms)
+  // 1. Instant check in deterministic local postal index (0ms)
+  const direct = lookupIndianPincode(cleanPin);
+  if (direct) {
+    return direct;
+  }
+
   const localHits = searchLocalIndiaPlaces(cleanPin);
   const exactLocal =
     localHits.find(
       (h) =>
+        h.pincode === cleanPin ||
         h.aliases?.includes(cleanPin) ||
         h.name.includes(cleanPin) ||
         h.subtitle.includes(cleanPin)
-    ) || localHits[0];
+    );
 
   if (exactLocal) {
     const parts = exactLocal.subtitle
@@ -248,7 +254,7 @@ export async function resolveIndianPincode(pin: string): Promise<{
           state: parts[parts.length - 1] || "India",
           lat: hit.lat,
           lon: hit.lon,
-          zoom: hit.zoom || 16,
+          zoom: hit.zoom || 16.5,
         };
       }
     }
@@ -455,7 +461,7 @@ export function LocationMapPicker({
     ): SnappedPlotPlacement => {
       const map = mapRef.current;
       // Extract strictly real OSM vector roads from the loaded map tiles (no hardcoded colonies!)
-      const osmRoads = extractNearbyOsmRoads(map, rawLon, rawLat, 260);
+      const osmRoads = extractNearbyOsmRoads(map, rawLon, rawLat, 350);
       const existingStorefronts = [...SEED_STOREFRONTS, ...getLocalStorefronts()].map((s) => ({
         lat: s.lat,
         lon: s.lon,
@@ -498,7 +504,7 @@ export function LocationMapPicker({
         setTimeout(() => {
           const liveMap = mapRef.current;
           if (!liveMap) return;
-          const retryRoads = extractNearbyOsmRoads(liveMap, rawLon, rawLat, 260);
+          const retryRoads = extractNearbyOsmRoads(liveMap, rawLon, rawLat, 350);
           if (retryRoads.length > 0) {
             const reSnapped = computeSnappedPlotPlacement({
               rawLat,
@@ -614,7 +620,7 @@ export function LocationMapPicker({
     const hasInitial = typeof lat === "number" && typeof lon === "number";
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: OSM_RASTER_FALLBACK,
+      style: CARTO_VOYAGER_STYLE,
       center: hasInitial ? [lon, lat] : INDIA_CENTER,
       zoom: hasInitial ? 16.5 : 3.05,
       minZoom: 2.7,
@@ -630,6 +636,55 @@ export function LocationMapPicker({
     });
     ro.observe(mapContainerRef.current);
 
+    const applyHighContrastStyle = () => {
+      try {
+        if (map.getLayer("background")) {
+          map.setPaintProperty("background", "background-color", "#f8fafc");
+        }
+        if (map.getLayer("water")) {
+          map.setPaintProperty("water", "fill-color", "#0284c7");
+          map.setPaintProperty("water", "fill-opacity", 1.0);
+        }
+        if (map.getLayer("landcover")) {
+          map.setPaintProperty("landcover", "fill-color", "#dcfce7");
+          map.setPaintProperty("landcover", "fill-opacity", 0.65);
+        }
+        if (map.getLayer("landuse_residential")) {
+          map.setPaintProperty("landuse_residential", "fill-color", "#f1f5f9");
+          map.setPaintProperty("landuse_residential", "fill-opacity", 0.85);
+        }
+
+        const casingLayers = [
+          "road_minor_case", "road_service_case", "road_sec_case_noramp", "road_sec_case_ramp",
+          "road_pri_case_noramp", "road_pri_case_ramp", "road_trunk_case_noramp", "road_trunk_case_ramp",
+          "road_mot_case_noramp", "road_mot_case_ramp",
+          "bridge_minor_case", "bridge_service_case", "bridge_sec_case_noramp", "bridge_pri_case_noramp",
+          "tunnel_minor_case", "tunnel_sec_case_noramp", "tunnel_pri_case_noramp",
+          "road_minor_casing", "road_service_casing", "road_sec_casing",
+          "road_pri_casing", "road_trunk_casing", "road_mot_casing",
+        ];
+        for (const id of casingLayers) {
+          if (map.getLayer(id)) {
+            map.setPaintProperty(id, "line-color", "#64748b");
+            map.setPaintProperty(id, "line-opacity", 1.0);
+          }
+        }
+
+        const fillLayers = [
+          "road_minor_fill", "road_service_fill", "road_sec_fill_noramp",
+          "road_pri_fill_noramp", "road_trunk_fill_noramp", "road_mot_fill_noramp",
+          "bridge_minor_fill", "bridge_service_fill", "bridge_sec_fill_noramp", "bridge_pri_fill_noramp",
+          "tunnel_minor_fill", "tunnel_sec_fill_noramp", "tunnel_pri_fill_noramp",
+        ];
+        for (const id of fillLayers) {
+          if (map.getLayer(id)) {
+            map.setPaintProperty(id, "line-color", "#ffffff");
+            map.setPaintProperty(id, "line-opacity", 1.0);
+          }
+        }
+      } catch {}
+    };
+
     map.on("error", (e: { error?: { message?: string } }) => {
       if (e?.error?.message?.toLowerCase().includes("style")) {
         map.setStyle(OSM_RASTER_FALLBACK);
@@ -637,6 +692,7 @@ export function LocationMapPicker({
     });
 
     map.on("load", () => {
+      applyHighContrastStyle();
       ensurePreviewLayers(map);
       setMapReady(true);
       if (hasInitial) {
@@ -919,9 +975,28 @@ export function LocationMapPicker({
             value={searchQuery}
             onFocus={() => setSearchOpen(true)}
             onChange={(e) => {
-              setSearchQuery(e.target.value);
+              const val = e.target.value;
+              setSearchQuery(val);
               setSearchOpen(true);
               setActiveIdx(-1);
+
+              const cleanDigits = val.trim().replace(/\D/g, "");
+              if (cleanDigits.length === 6 && /^[1-9]\d{5}$/.test(cleanDigits)) {
+                resolveIndianPincode(cleanDigits).then((res) => {
+                  if (res) {
+                    handleSelectSuggestion({
+                      id: `pincode-${res.pincode}`,
+                      name: res.name,
+                      subtitle: `${res.city}, ${res.state} · PIN ${res.pincode}`,
+                      kind: "pincode",
+                      lat: res.lat,
+                      lon: res.lon,
+                      zoom: res.zoom,
+                      pincode: res.pincode,
+                    });
+                  }
+                });
+              }
             }}
             onKeyDown={async (e) => {
               if (e.key === "ArrowDown") {
@@ -944,8 +1019,8 @@ export function LocationMapPicker({
                 } else {
                   // Check if query is a 6-digit Indian PIN code and resolve immediately!
                   const rawQ = searchQuery.trim();
-                  const pinMatch = rawQ.match(/\b([1-9]\d{5})\b/)?.[1];
-                  if (pinMatch) {
+                  const pinMatch = rawQ.match(/\b([1-9]\d{5})\b/)?.[1] || rawQ.replace(/\D/g, "");
+                  if (/^[1-9]\d{5}$/.test(pinMatch)) {
                     setSearching(true);
                     const res = await resolveIndianPincode(pinMatch);
                     setSearching(false);
@@ -961,6 +1036,18 @@ export function LocationMapPicker({
                         pincode: res.pincode,
                       });
                     }
+                  } else if (rawQ.length >= 2) {
+                    setSearching(true);
+                    try {
+                      const res = await fetch(`/api/geo/search?q=${encodeURIComponent(rawQ)}`);
+                      if (res.ok) {
+                        const d = await res.json();
+                        if (Array.isArray(d?.results) && d.results.length > 0) {
+                          handleSelectSuggestion(d.results[0]);
+                        }
+                      }
+                    } catch {}
+                    setSearching(false);
                   }
                 }
               } else if (e.key === "Escape") {

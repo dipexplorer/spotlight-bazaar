@@ -197,15 +197,42 @@ export function extractNearbyOsmRoads(
       });
     }
 
-    // Fallback to rendered drivable road layers if source query was empty
+    // Fallback to all active road/bridge/tunnel layers in the current style
     if (roads.length === 0) {
-      const availableLayers = DRIVABLE_ROAD_LAYERS.filter((id) => Boolean(map.getLayer(id)));
-      if (availableLayers.length > 0) {
-        const rendered = map.queryRenderedFeatures({ layers: availableLayers });
+      const styleLayers = map.getStyle()?.layers || [];
+      const activeRoadLayers = styleLayers
+        .filter((l) => {
+          const id = l.id;
+          return (
+            (id.startsWith("road_") || id.startsWith("bridge_") || id.startsWith("tunnel_") || id.includes("street") || id.includes("transportation")) &&
+            (id.endsWith("_fill") || id.endsWith("_casing") || id.includes("noramp") || id.includes("ramp") || id.includes("line")) &&
+            !id.includes("path") && !id.includes("pedestrian") && !id.includes("rail") && !id.includes("ferry") && !id.includes("track")
+          );
+        })
+        .map((l) => l.id);
+
+      const layersToQuery = activeRoadLayers.length > 0
+        ? activeRoadLayers
+        : DRIVABLE_ROAD_LAYERS.filter((id) => Boolean(map.getLayer(id)));
+
+      if (layersToQuery.length > 0) {
+        let rendered: any[] = [];
+        try {
+          const pt = map.project([centerLon, centerLat]);
+          const pad = Math.min(600, Math.max(250, radiusMeters * 1.5));
+          const bbox: [[number, number], [number, number]] = [
+            [pt.x - pad, pt.y - pad],
+            [pt.x + pad, pt.y + pad],
+          ];
+          rendered = map.queryRenderedFeatures(bbox, { layers: layersToQuery });
+        } catch {
+          rendered = map.queryRenderedFeatures({ layers: layersToQuery });
+        }
+
         rendered.forEach((f, idx) => {
-          if (f.geometry.type === "LineString") {
+          if (f.geometry?.type === "LineString") {
             pushCoords(f.geometry.coordinates as [number, number][], `osm-ren-${idx}`, 2);
-          } else if (f.geometry.type === "MultiLineString") {
+          } else if (f.geometry?.type === "MultiLineString") {
             (f.geometry.coordinates as [number, number][][]).forEach((line, sub) => {
               pushCoords(line, `osm-ren-${idx}-${sub}`, 2);
             });
@@ -339,8 +366,8 @@ export function computeSnappedPlotPlacement(params: {
 
   const hit = findClosestRoadHit(rawLon, rawLat, 0, 0, roads);
 
-  // Case 3: Remote / unmapped open land (> 120m from any road) -> local frontage avenue
-  if (!hit || hit.distM > 120) {
+  // Case 3: Remote / unmapped open land (> 350m from any road) -> local frontage avenue
+  if (!hit || hit.distM > 350) {
     const facingBearing = 180; // face South cleanly
     const [gateLon, gateLat] = fromLocalMeters(rawLon, rawLat, 0, -(PLOT_HALF_DEPTH_M - 0.6));
     const [roadCenterLon, roadCenterLat] = fromLocalMeters(rawLon, rawLat, 0, -ROAD_SETBACK_M);
