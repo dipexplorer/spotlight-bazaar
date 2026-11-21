@@ -283,7 +283,7 @@ export function createStreetNeighborhood(
   const poolGeo = trackGeo(new THREE.CircleGeometry(coneRadiusBottom, 16));
   poolGeo.rotateX(-Math.PI / 2);
 
-  const lampDistances = [14.0, 36.0, 58.0];
+  const lampDistances = [14.0, 36.0, 58.0, 80.0];
   const curbOffset = roadCorridorHalfWidth + 0.8; // 4.0m from road centerline (safely on the verge)
 
   for (const s of lampDistances) {

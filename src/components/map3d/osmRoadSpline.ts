@@ -51,8 +51,8 @@ export class OsmRoadSpline {
 
     const position = this.curve.getPointAt(u);
     const tangent = this.curve.getTangentAt(u).normalize();
-    // Normal vector perpendicular to tangent on X-Z plane (pointing to the right of travel)
-    const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+    // Canonical right-hand normal perpendicular to forward tangent on the X-Z ground plane (+X when tangent is +Z)
+    const normal = new THREE.Vector3(tangent.z, 0, -tangent.x).normalize();
     const heading = Math.atan2(tangent.x, tangent.z);
 
     return { position, tangent, normal, heading };

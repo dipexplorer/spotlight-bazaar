@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { osmRoadSpline } from "./osmRoadSpline";
 
 /**
  * Living Pedestrian & Citizen Simulation System
@@ -55,13 +56,14 @@ interface CharacterParts {
 
 interface Pedestrian {
   parts: CharacterParts;
-  x: number;
-  z: number;
+  s: number;
+  isLeft: boolean;
+  lateralOffset: number;
   speed: number;
   direction: number; // 1 or -1
   phase: number;
-  minZ: number;
-  maxZ: number;
+  minS: number;
+  maxS: number;
   isWindowShopping: boolean;
   shopTimer: number;
 }
@@ -171,14 +173,14 @@ function buildCharacter(palette: typeof CLOTHING_COLORS[0]): CharacterParts {
  */
 export function createPedestrianSystem(
   streetLength: number = 89.35,
-  sidewalkOffset: number = 3.35,
+  sidewalkOffset: number = 3.85,
   startZ: number = 18.0
 ): PedestrianSystem {
   const group = new THREE.Group();
   group.name = "living_pedestrian_system";
 
-  const minZ = Math.max(16.0, startZ);
-  const maxZ = Math.max(minZ + 15, streetLength - 6.0);
+  const minS = Math.max(16.0, startZ);
+  const maxS = Math.min(streetLength - 6.0, osmRoadSpline.totalLength - 10.0);
 
   // Calm, authentic citizen presence (2 well-spaced citizens on sidewalk)
   const pedestrianCount = 2;
@@ -188,30 +190,34 @@ export function createPedestrianSystem(
     const palette = CLOTHING_COLORS[i % CLOTHING_COLORS.length];
     const parts = buildCharacter(palette);
 
-    const isLeftSidewalk = i % 2 === 0;
-    // Strict sidewalk positioning so NPCs walk strictly along designated sidewalk
-    const lateralJitter = (Math.random() - 0.5) * 0.10;
-    const x = (isLeftSidewalk ? -sidewalkOffset : sidewalkOffset) + lateralJitter;
-    // Evenly distribute along the road length
-    const segment = (maxZ - minZ) / pedestrianCount;
-    const z = minZ + (i * segment) + Math.random() * (segment * 0.5);
-    const direction = i % 2 === 0 ? 1 : -1;
-    const speed = 1.4 + Math.random() * 0.4; // Relaxed pedestrian stroll
+    const isLeft = i % 2 === 0;
+    const lateralJitter = (Math.random() - 0.5) * 0.15;
+    const offset = sidewalkOffset + lateralJitter;
 
-    parts.root.position.set(x, 0.02, z);
-    parts.root.rotation.y = direction === 1 ? 0 : Math.PI;
+    // Evenly distribute along the road spline distance
+    const segment = (maxS - minS) / pedestrianCount;
+    const s = minS + i * segment + Math.random() * (segment * 0.4);
+    const direction = i % 2 === 0 ? 1 : -1;
+    const speed = 1.3 + Math.random() * 0.35; // Relaxed pedestrian stroll
+
+    const pose = osmRoadSpline.getPoseAtDistance(s);
+    const lateral = isLeft ? -offset : offset;
+    parts.root.position.copy(pose.position).addScaledVector(pose.normal, lateral);
+    parts.root.position.y = 0.02;
+    parts.root.rotation.y = direction === 1 ? pose.heading : pose.heading + Math.PI;
 
     group.add(parts.root);
 
     pedestrians.push({
       parts,
-      x,
-      z,
+      s,
+      isLeft,
+      lateralOffset: offset,
       speed,
       direction,
       phase: Math.random() * Math.PI * 2,
-      minZ,
-      maxZ,
+      minS,
+      maxS,
       isWindowShopping: false,
       shopTimer: 0,
     });
@@ -227,8 +233,9 @@ export function createPedestrianSystem(
         p.shopTimer -= clampedDelta;
         if (p.shopTimer <= 0) {
           p.isWindowShopping = false;
-          // Resume walking, restore forward facing rotation
-          p.parts.root.rotation.y = p.direction === 1 ? 0 : Math.PI;
+          // Resume walking along road heading
+          const pose = osmRoadSpline.getPoseAtDistance(p.s);
+          p.parts.root.rotation.y = p.direction === 1 ? pose.heading : pose.heading + Math.PI;
         }
         continue;
       }
@@ -237,31 +244,36 @@ export function createPedestrianSystem(
       if (Math.random() < 0.002) {
         p.isWindowShopping = true;
         p.shopTimer = 3.0 + Math.random() * 4.0;
-        // Turn facing towards the shop facade
-        p.parts.root.rotation.y = p.x < 0 ? -Math.PI / 2 : Math.PI / 2;
+        // Turn facing outward towards the shop facade/verge
+        const pose = osmRoadSpline.getPoseAtDistance(p.s);
+        p.parts.root.rotation.y = p.isLeft ? pose.heading - Math.PI / 2 : pose.heading + Math.PI / 2;
         continue;
       }
 
-      // Move along sidewalk
-      p.z += p.speed * p.direction * clampedDelta;
+      // Move along the curved sidewalk spline
+      p.s += p.speed * p.direction * clampedDelta;
       p.phase += p.speed * 3.5 * clampedDelta;
 
       // Loop around at street ends
-      if (p.direction === 1 && p.z > p.maxZ) {
-        p.z = p.minZ;
-      } else if (p.direction === -1 && p.z < p.minZ) {
-        p.z = p.maxZ;
+      if (p.direction === 1 && p.s > p.maxS) {
+        p.s = p.minS;
+      } else if (p.direction === -1 && p.s < p.minS) {
+        p.s = p.maxS;
       }
 
-      p.parts.root.position.z = p.z;
+      const pose = osmRoadSpline.getPoseAtDistance(p.s);
+      const lateral = p.isLeft ? -p.lateralOffset : p.lateralOffset;
+      p.parts.root.position.copy(pose.position).addScaledVector(pose.normal, lateral);
+      p.parts.root.position.y = 0.02;
+      p.parts.root.rotation.y = p.direction === 1 ? pose.heading : pose.heading + Math.PI;
 
       // Trigonometric Walking Animation Cycles
-      const s = Math.sin(p.phase);
-      p.parts.legL.rotation.x = -s * 0.55;
-      p.parts.legR.rotation.x = s * 0.55;
+      const sVal = Math.sin(p.phase);
+      p.parts.legL.rotation.x = -sVal * 0.55;
+      p.parts.legR.rotation.x = sVal * 0.55;
 
-      p.parts.armL.rotation.x = s * 0.45;
-      p.parts.armR.rotation.x = -s * 0.45;
+      p.parts.armL.rotation.x = sVal * 0.45;
+      p.parts.armR.rotation.x = -sVal * 0.45;
 
       // Subtle natural hip sway & head bob
       p.parts.body.position.y = Math.abs(Math.cos(p.phase)) * 0.04;

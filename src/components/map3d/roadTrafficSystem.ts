@@ -166,6 +166,13 @@ function createCompactCar(): { group: THREE.Group; wheels: THREE.Group[] } {
     group.add(beam);
   }
 
+  // Road Surface Illumination Pool in front of vehicle
+  const carPoolGeo = new THREE.CircleGeometry(2.2, 14);
+  carPoolGeo.rotateX(-Math.PI / 2);
+  const carPool = new THREE.Mesh(carPoolGeo, beamMat);
+  carPool.position.set(0, 0.03, 6.2);
+  group.add(carPool);
+
   // Rear Taillights (-Z rear)
   for (const side of [-1, 1]) {
     const tail = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.12, 0.04), taillightMat);
