@@ -167,18 +167,22 @@ function buildCharacter(palette: typeof CLOTHING_COLORS[0]): CharacterParts {
 }
 
 /**
- * Creates the animated pedestrian crowd simulation
+ * Creates the animated pedestrian crowd simulation along street sidewalks and business frontage
  */
-export function createPedestrianSystem(streetLength: number): PedestrianSystem {
+export function createPedestrianSystem(
+  streetLength: number = 89.35,
+  sidewalkOffset: number = 3.6,
+  startZ: number = 14.0
+): PedestrianSystem {
   const group = new THREE.Group();
   group.name = "living_pedestrian_system";
 
-  const sidewalkLeftX = -11.5;
-  const sidewalkRightX = 11.5;
-  const minZ = 0;
-  const maxZ = streetLength;
+  const sidewalkLeftX = -sidewalkOffset;
+  const sidewalkRightX = sidewalkOffset;
+  const minZ = Math.max(0, startZ);
+  const maxZ = Math.max(minZ + 10, streetLength);
 
-  const pedestrianCount = 14;
+  const pedestrianCount = 12;
   const pedestrians: Pedestrian[] = [];
 
   for (let i = 0; i < pedestrianCount; i++) {
@@ -186,10 +190,12 @@ export function createPedestrianSystem(streetLength: number): PedestrianSystem {
     const parts = buildCharacter(palette);
 
     const isLeftSidewalk = i % 2 === 0;
-    const x = isLeftSidewalk ? sidewalkLeftX : sidewalkRightX;
+    // Add small random lateral jitter so pedestrians don't walk in a single rigid line
+    const lateralJitter = (Math.random() - 0.5) * 0.4;
+    const x = (isLeftSidewalk ? sidewalkLeftX : sidewalkRightX) + lateralJitter;
     const z = minZ + Math.random() * (maxZ - minZ);
     const direction = Math.random() > 0.5 ? 1 : -1;
-    const speed = 2.4 + Math.random() * 1.2;
+    const speed = 2.2 + Math.random() * 1.0;
 
     parts.root.position.set(x, 0.08, z);
     parts.root.rotation.y = direction === 1 ? 0 : Math.PI;

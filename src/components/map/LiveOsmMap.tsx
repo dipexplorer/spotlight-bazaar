@@ -31,7 +31,24 @@ import {
   ExternalLink,
   Radio,
   ShieldCheck,
+  Cloud,
+  CloudRain,
+  CloudFog,
+  CloudLightning,
 } from "lucide-react";
+import {
+  fetchRegionalWeather,
+  WeatherTelemetry,
+  getSeasonalFallbackWeather,
+} from "@/lib/weather/weatherService";
+import {
+  createPedestrianSystem,
+  PedestrianSystem,
+} from "@/components/map3d/pedestrianSystem";
+import {
+  createRainParticleSystem,
+  RainSystem,
+} from "@/components/map3d/rainSystem";
 import {
   formatWebsiteDisplay,
   getGoogleMapsUrl,
@@ -383,6 +400,51 @@ export function LiveOsmMap({
   useEffect(() => {
     focusedRegionRef.current = focusedRegion;
   }, [focusedRegion]);
+
+  // Dynamic Real-Time Regional Weather Engine (Open-Meteo API + 3D Atmosphere)
+  const [currentWeather, setCurrentWeather] = useState<WeatherTelemetry | null>(() =>
+    getSeasonalFallbackWeather(INDIA_CENTER[1], INDIA_CENTER[0], "India")
+  );
+  const currentWeatherRef = useRef<WeatherTelemetry | null>(currentWeather);
+  useEffect(() => {
+    currentWeatherRef.current = currentWeather;
+  }, [currentWeather]);
+  const lastWeatherFetchCoordsRef = useRef<{ lat: number; lon: number; time: number } | null>(null);
+
+  const updateWeatherForLocation = useCallback(async (lat: number, lon: number, cityName?: string) => {
+    const fallbackCity = cityName || (lat > 25 ? (lon > 89 ? "Guwahati" : "New Delhi") : "Mumbai");
+    try {
+      const weather = await fetchRegionalWeather(lat, lon, fallbackCity);
+      setCurrentWeather(weather);
+      currentWeatherRef.current = weather;
+
+      // Dynamically adapt MapLibre GPU sky and atmospheric fog to regional weather
+      if (mapRef.current && weather?.visuals) {
+        try {
+          mapRef.current.setSky({
+            "sky-color": weather.visuals.skyColor,
+            "sky-horizon-blend": 0.35,
+            "horizon-color": weather.visuals.horizonColor,
+            "horizon-fog-blend": 0.45,
+            "fog-color": weather.visuals.fogColor,
+            "fog-ground-blend": 0.05,
+          });
+          (mapRef.current as any).setFog?.({
+            range: weather.isFoggy ? [0.5, 6.0] : [0.8, 12.0],
+            color: weather.visuals.fogColor,
+            "horizon-blend": weather.isFoggy ? 0.3 : 0.15,
+            "high-color": weather.visuals.skyColor,
+            "space-color": "#010409",
+            "star-intensity": weather.isDay ? 0.0 : 0.6,
+          });
+        } catch (skyErr) {
+          // ignore setSky in styles that do not support it
+        }
+      }
+    } catch (e) {
+      console.warn("[LiveOsmMap] Weather update error:", e);
+    }
+  }, []);
 
   // Global keyboard shortcut: Cmd+K / Ctrl+K or '/' to instantly focus the Omnibox search
   useEffect(() => {
@@ -1006,6 +1068,19 @@ export function LiveOsmMap({
           colonyGroup.add(player3D.group);
           (this as any).player3D = player3D;
 
+          // 7. Living Indian Citizens & Ambient Pedestrian Simulation
+          const pedestrianSystem = createPedestrianSystem(roadLength, 3.6, 14.0);
+          pedestrianSystem.group.rotation.y = roadAngle;
+          colonyGroup.add(pedestrianSystem.group);
+          (this as any).pedestrians = pedestrianSystem;
+
+          // 8. Dynamic 3D Rain Particle System
+          const rainSystem = createRainParticleSystem(1200);
+          rainSystem.mesh.visible = false;
+          colonyGroup.add(rainSystem.mesh);
+          (this as any).rain = rainSystem;
+          (this as any).lastFrameTime = performance.now();
+
           scene.add(colonyGroup);
           (this as any).colonyGroup = colonyGroup;
 
@@ -1061,15 +1136,26 @@ export function LiveOsmMap({
 
         (window as any).__matrixOk = true;
 
-        // Update Three.js lighting in real-time to match Day/Night mode
+        // Calculate frame delta for living pedestrian & rain simulation
+        const now = performance.now();
+        const delta = Math.min((now - ((this as any).lastFrameTime || now)) * 0.001, 0.05);
+        (this as any).lastFrameTime = now;
+
+        // Update Three.js lighting in real-time to match Day/Night and Regional Weather
         const sunLight = (this as any).sun as THREE.DirectionalLight | undefined;
         const ambLight = (this as any).amb as THREE.AmbientLight | undefined;
+        const weather = currentWeatherRef.current;
         if (sunLight && ambLight) {
           if (isNightModeRef.current) {
             sunLight.color.setHex(0x38bdf8);
             sunLight.intensity = 0.85;
             ambLight.color.setHex(0x1e293b);
             ambLight.intensity = 0.65;
+          } else if (weather?.visuals) {
+            sunLight.color.setHex(weather.visuals.sunColor);
+            sunLight.intensity = weather.visuals.sunIntensity;
+            ambLight.color.setHex(weather.visuals.ambientColor);
+            ambLight.intensity = weather.visuals.ambientIntensity;
           } else {
             sunLight.color.setHex(0xfff7ed);
             sunLight.intensity = 3.0;
@@ -1128,6 +1214,29 @@ export function LiveOsmMap({
           const p3d = (this as any).player3D;
           if (p3d?.group) {
             p3d.group.scale.set(1.25 * zoomFactor, 1.25 * zoomFactor, 1.25 * zoomFactor);
+          }
+
+          // Living Indian Citizens & Ambient Pedestrian Simulation
+          const pedestrians = (this as any).pedestrians as PedestrianSystem | undefined;
+          if (pedestrians) {
+            if (currentZoom >= 14.3) {
+              pedestrians.group.visible = true;
+              pedestrians.update(delta);
+              pedestrians.group.scale.set(zoomFactor, zoomFactor, zoomFactor);
+            } else {
+              pedestrians.group.visible = false;
+            }
+          }
+
+          // Dynamic 3D Rain Particle System (active when raining and zoomed in)
+          const rain = (this as any).rain as RainSystem | undefined;
+          if (rain) {
+            if (weather?.isRaining && currentZoom >= 14.3) {
+              rain.mesh.visible = true;
+              rain.update(delta, weather?.windSpeed || 8);
+            } else {
+              rain.mesh.visible = false;
+            }
           }
         }
 
@@ -1248,6 +1357,11 @@ export function LiveOsmMap({
                   entry.sun.intensity = 0.85;
                   entry.amb.color.setHex(0x1e293b);
                   entry.amb.intensity = 0.65;
+                } else if (weather?.visuals) {
+                  entry.sun.color.setHex(weather.visuals.sunColor);
+                  entry.sun.intensity = weather.visuals.sunIntensity;
+                  entry.amb.color.setHex(weather.visuals.ambientColor);
+                  entry.amb.intensity = weather.visuals.ambientIntensity;
                 } else {
                   entry.sun.color.setHex(0xfff7ed);
                   entry.sun.intensity = 3.0;
@@ -1285,24 +1399,28 @@ export function LiveOsmMap({
 
       const isDark = map.getStyle()?.name?.toLowerCase().includes("dark") || isNightMode;
 
-      // 1. Permanent GPU Sky & Atmospheric Horizon (GTA 6-grade horizon depth & haze)
+      // 1. Permanent GPU Sky & Atmospheric Horizon (GTA 6-grade horizon depth & haze + Regional Weather)
       try {
+        const weather = currentWeatherRef.current;
         if (!isDark) {
+          const skyColor = weather?.visuals.skyColor || "#0a192f";
+          const horizonColor = weather?.visuals.horizonColor || "#1e3a8a";
+          const fogColor = weather?.visuals.fogColor || "#0f2342";
           map.setSky({
-            "sky-color": "#0a192f",
+            "sky-color": skyColor,
             "sky-horizon-blend": 0.35,
-            "horizon-color": "#1e3a8a",
+            "horizon-color": horizonColor,
             "horizon-fog-blend": 0.45,
-            "fog-color": "#0f2342",
+            "fog-color": fogColor,
             "fog-ground-blend": 0.05,
           });
           (map as any).setFog?.({
-            range: [0.8, 12.0],
-            color: "#0a192f",
-            "horizon-blend": 0.15,
-            "high-color": "#020712",
+            range: weather?.isFoggy ? [0.5, 6.0] : [0.8, 12.0],
+            color: fogColor,
+            "horizon-blend": weather?.isFoggy ? 0.3 : 0.15,
+            "high-color": skyColor,
             "space-color": "#010409",
-            "star-intensity": 0.5,
+            "star-intensity": weather?.isDay ? 0.0 : 0.5,
           });
         } else {
           map.setSky({
@@ -2217,6 +2335,10 @@ export function LiveOsmMap({
       setMapLoaded(true);
       (window as any).__map = map;
 
+      // Initialize real-time regional weather for initial viewport
+      const initC = map.getCenter();
+      updateWeatherForLocation(initC.lat, initC.lng, "India");
+
       // Add navigation controls (zoom, compass)
       map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "bottom-right");
       map.addControl(
@@ -2436,6 +2558,16 @@ export function LiveOsmMap({
           if (getDistanceKm(c.lat, c.lng, fr.lat, fr.lon) > maxDriftKm) {
             setFocusedRegion(null);
           }
+        }
+
+        // Dynamic Weather Refresh on Regional Pan (debounced by distance & TTL)
+        const lastW = lastWeatherFetchCoordsRef.current;
+        const now = Date.now();
+        const distDeg = lastW ? Math.hypot(c.lat - lastW.lat, c.lng - lastW.lon) : 999;
+        if (!lastW || distDeg > 0.35 || now - lastW.time > 15 * 60 * 1000) {
+          lastWeatherFetchCoordsRef.current = { lat: c.lat, lon: c.lng, time: now };
+          const curCityName = fr?.name || (c.lat > 25 && c.lng > 89 ? "Guwahati" : "India");
+          updateWeatherForLocation(c.lat, c.lng, curCityName);
         }
       });
 
@@ -2774,6 +2906,7 @@ export function LiveOsmMap({
       setFocusedStorefront(b);
       isFlightActiveRef.current = true;
       setIs3DMode(true);
+      updateWeatherForLocation(b.lat, b.lon, b.city_name || b.name);
       mapRef.current.flyTo({
         center: [b.lon, b.lat],
         zoom: 18.2,
@@ -2786,7 +2919,7 @@ export function LiveOsmMap({
       });
       bazaarAudio.playStorefrontChime();
     },
-    [clearSearchPin, handleStopMove]
+    [clearSearchPin, handleStopMove, updateWeatherForLocation]
   );
 
   // Fly cleanly to any Indian State, City, Area, or 6-digit PIN code (switches bottom dock to State B: Region View)
@@ -2806,6 +2939,7 @@ export function LiveOsmMap({
       });
       placeSearchPin(place.name, place.lat, place.lon);
       isFlightActiveRef.current = true;
+      updateWeatherForLocation(place.lat, place.lon, place.name);
       mapRef.current.flyTo({
         center: [place.lon, place.lat],
         zoom: place.zoom,
@@ -2818,7 +2952,7 @@ export function LiveOsmMap({
       });
       showToast(`📍 ${place.name}`);
     },
-    [handleStopMove, placeSearchPin, showToast]
+    [handleStopMove, placeSearchPin, showToast, updateWeatherForLocation]
   );
 
   // RENDER 4-TIER LOD HTML MARKERS FOR ALL LIVE STOREFRONTS (Hidden at zoom < 9.5 where WebGL clustered beacons handle National View!)
@@ -3464,6 +3598,33 @@ export function LiveOsmMap({
 
         {/* Right: Controls & CTA */}
         <div className="flex items-center gap-1.5 pointer-events-auto shrink-0">
+          {/* Dynamic Regional Weather Telemetry Chip */}
+          {currentWeather && (
+            <div
+              title={`Live Regional Weather: ${currentWeather.cityName} (${currentWeather.temperature}°C · ${currentWeather.conditionText} · Wind ${currentWeather.windSpeed} km/h · Humidity ${currentWeather.humidity}%)`}
+              className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-neutral-950/90 backdrop-blur-2xl border border-white/10 shadow-2xl text-xs font-semibold text-neutral-200 pointer-events-auto shrink-0 transition-all"
+            >
+              {currentWeather.isRaining ? (
+                <CloudRain className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
+              ) : currentWeather.isFoggy ? (
+                <CloudFog className="w-3.5 h-3.5 text-slate-300" />
+              ) : currentWeather.conditionIcon === "cloud" ? (
+                <Cloud className="w-3.5 h-3.5 text-blue-300" />
+              ) : currentWeather.isDay ? (
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+              ) : (
+                <Moon className="w-3.5 h-3.5 text-cyan-300" />
+              )}
+              <div className="flex items-center gap-1.5">
+                <span className="text-white font-bold">{currentWeather.cityName}</span>
+                <span className="text-neutral-500">·</span>
+                <span className="text-amber-400 font-mono font-bold">{currentWeather.temperature}°C</span>
+                <span className="hidden xl:inline text-neutral-500">·</span>
+                <span className="hidden xl:inline text-neutral-300 font-normal">{currentWeather.conditionText}</span>
+              </div>
+            </div>
+          )}
+
           {onToggle3DMap && (
             <button
               type="button"
