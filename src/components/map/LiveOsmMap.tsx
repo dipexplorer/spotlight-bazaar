@@ -40,6 +40,7 @@ import {
   fetchRegionalWeather,
   WeatherTelemetry,
   getSeasonalFallbackWeather,
+  interpretWmoCode,
 } from "@/lib/weather/weatherService";
 import {
   createPedestrianSystem,
@@ -57,6 +58,14 @@ import {
   createStreetNeighborhood,
   StreetNeighborhood,
 } from "@/components/map3d/streetNeighborhood";
+import {
+  createCloudSystem,
+  CloudSystem,
+} from "@/components/map3d/cloudSystem";
+import {
+  createWaterSystem,
+  WaterSystem,
+} from "@/components/map3d/waterSystem";
 import {
   createRoadTrafficSystem,
   RoadTrafficSystem,
@@ -464,7 +473,7 @@ export function LiveOsmMap({
         color: fogColor,
         "horizon-blend": isFoggy ? (z >= 16 ? 0.12 : 0.28) : 0.15,
         "high-color": skyColor,
-        "space-color": "#010409",
+        "space-color": isDark ? "#010409" : (weather?.visuals.skyColor || "#0284c7"),
         "star-intensity": isDay ? 0.0 : 0.65,
       });
     } catch (e) {
@@ -1134,8 +1143,8 @@ export function LiveOsmMap({
           colonyGroup.add(pedestrianSystem.group);
           (this as any).pedestrians = pedestrianSystem;
 
-          // 8. Living Indian Road Traffic System (Moving Auto-Rickshaw & Compact Cab)
-          const roadTraffic = createRoadTrafficSystem(roadLength, roadAngle);
+          // 8. Living Indian Road Traffic System (Moving Auto-Rickshaw & Compact Cab with Night Beams)
+          const roadTraffic = createRoadTrafficSystem(roadLength, roadAngle, isNightModeRef.current);
           colonyGroup.add(roadTraffic.group);
           (this as any).traffic = roadTraffic;
 
@@ -1144,6 +1153,18 @@ export function LiveOsmMap({
           rainSystem.mesh.visible = false;
           colonyGroup.add(rainSystem.mesh);
           (this as any).rain = rainSystem;
+
+          // 10. Dynamic 3D Volumetric Clouds & Seasonal Ground Fog
+          const clouds = createCloudSystem(260);
+          colonyGroup.add(clouds.group);
+          (this as any).clouds = clouds;
+
+          // 11. Living Water, River Wave Surface & Flocking 3D Birds
+          const water = createWaterSystem(-38.0, 120.0, 320.0);
+          water.group.rotation.y = roadAngle;
+          colonyGroup.add(water.group);
+          (this as any).water = water;
+
           (this as any).lastFrameTime = performance.now();
 
           scene.add(colonyGroup);
@@ -1320,6 +1341,28 @@ export function LiveOsmMap({
               rain.mesh.visible = false;
             }
           }
+
+          // 10. Dynamic 3D Volumetric Clouds & Seasonal Ground Fog
+          const clouds = (this as any).clouds as CloudSystem | undefined;
+          if (clouds) {
+            clouds.group.visible = currentZoom >= 12.8;
+            if (clouds.group.visible) {
+              clouds.update(delta, weather, isNightModeRef.current);
+            }
+          }
+
+          // 11. Living Water, River Wave Surface & Flocking 3D Birds
+          const water = (this as any).water as WaterSystem | undefined;
+          if (water) {
+            water.group.visible = currentZoom >= 13.0;
+            if (water.group.visible) {
+              water.update(delta, isNightModeRef.current);
+            }
+          }
+
+          if (streetNeighborhood && streetNeighborhood.group.visible) {
+            streetNeighborhood.update(delta);
+          }
         }
 
         // Update 3D player walk cycle and position
@@ -1479,37 +1522,51 @@ export function LiveOsmMap({
     const setup3DOnMap = () => {
       if (!map) return;
 
-      const isDark = map.getStyle()?.name?.toLowerCase().includes("dark") || isNightMode;
+      const isDark = isNightModeRef.current || Boolean(map.getStyle()?.name?.toLowerCase().includes("dark"));
 
       // 1. Permanent GPU Sky & Atmospheric Horizon (GTA 6-grade horizon depth & haze + Regional Weather)
       try {
         const weather = currentWeatherRef.current;
         if (!isDark) {
-          const skyColor = weather?.visuals.skyColor || "#0a192f";
-          const horizonColor = weather?.visuals.horizonColor || "#1e3a8a";
-          const fogColor = weather?.visuals.fogColor || "#0f2342";
+          const skyColor = weather?.visuals.skyColor || "#0284c7";
+          const horizonColor = weather?.visuals.horizonColor || "#7dd3fc";
+          const fogColor = weather?.visuals.fogColor || "#38bdf8";
           map.setSky({
             "sky-color": skyColor,
-            "sky-horizon-blend": 0.35,
+            "sky-horizon-blend": 0.65,
             "horizon-color": horizonColor,
-            "horizon-fog-blend": 0.45,
+            "horizon-fog-blend": 0.55,
             "fog-color": fogColor,
-            "fog-ground-blend": 0.05,
+            "fog-ground-blend": 0.08,
           });
           applyDynamicWeatherFog(map.getZoom(), weather, isDark);
         } else {
           map.setSky({
-            "sky-color": "#010409",
-            "sky-horizon-blend": 0.4,
-            "horizon-color": "#030c1b",
-            "horizon-fog-blend": 0.5,
-            "fog-color": "#020814",
-            "fog-ground-blend": 0.05,
+            "sky-color": "#020617",
+            "sky-horizon-blend": 0.60,
+            "horizon-color": "#0c1e3d",
+            "horizon-fog-blend": 0.50,
+            "fog-color": "#061126",
+            "fog-ground-blend": 0.08,
           });
           applyDynamicWeatherFog(map.getZoom(), weather, isDark);
         }
       } catch (e) {
         console.warn("[LiveOsmMap] setSky/setFog warning:", e);
+      }
+
+      // Update Three.js sub-systems for Day/Night immediately
+      try {
+        const sn = (custom3DLayer as any).streetNeighborhood as StreetNeighborhood | undefined;
+        if (sn) sn.setNightMode(isDark);
+        const tr = (custom3DLayer as any).traffic as RoadTrafficSystem | undefined;
+        if (tr) tr.setNightMode(isDark);
+        const wt = (custom3DLayer as any).water as WaterSystem | undefined;
+        if (wt) wt.update(0, isDark);
+        const cl = (custom3DLayer as any).clouds as CloudSystem | undefined;
+        if (cl) cl.update(0, currentWeatherRef.current, isDark);
+      } catch (subErr) {
+        // ignore
       }
 
       // 1b. DEM 3D Elevation Terrain (Himalayas, Western Ghats, Deccan Plateau elevation)
@@ -1577,16 +1634,16 @@ export function LiveOsmMap({
 
       // 2. High-Contrast Production Road & Basemap Styling (GTA VI-Style Realistic Vector Environment)
       try {
-        const groundColor = isDark ? "#0d131d" : "#1e2632";
-        const parkColor = isDark ? "#133827" : "#1b4332";
-        const roadSurfaceColor = isDark ? "#18202c" : "#2d3748";
-        const curbColor = isDark ? "#334155" : "#475569";
+        const groundColor = isDark ? "#090e17" : "#245838";
+        const parkColor = isDark ? "#0a2215" : "#15803d";
+        const roadSurfaceColor = isDark ? "#0f172a" : "#334155";
+        const curbColor = isDark ? "#334155" : "#cbd5e1";
 
         if (map.getLayer("background")) {
           map.setPaintProperty("background", "background-color", [
             "interpolate", ["linear"], ["zoom"],
-            4.0, "#081b33",
-            8.8, isDark ? "#081b33" : "#0d1829",
+            4.0, isDark ? "#030c1b" : "#071b30",
+            8.8, isDark ? "#051329" : "#0c2b50",
             12.0, groundColor,
             16.0, groundColor,
           ]);
@@ -1594,10 +1651,10 @@ export function LiveOsmMap({
         if (map.getLayer("water")) {
           map.setPaintProperty("water", "fill-color", [
             "interpolate", ["linear"], ["zoom"],
-            4.0, "#081b33",
-            7.5, "#0b264a",
-            9.5, "#0284c7",
-            12.0, "#0284c7",
+            4.0, isDark ? "#030c1b" : "#071b30",
+            7.5, isDark ? "#051329" : "#0b264a",
+            9.5, isDark ? "#041c33" : "#0284c7",
+            12.0, isDark ? "#041c33" : "#0284c7",
           ] as any);
           map.setPaintProperty("water", "fill-opacity", 1.0);
         }
@@ -2734,6 +2791,18 @@ export function LiveOsmMap({
     if (!mapRef.current) return;
     const nextNight = !isNightMode;
     setIsNightMode(nextNight);
+    isNightModeRef.current = nextNight;
+
+    setCurrentWeather((prev) => {
+      if (!prev) return prev;
+      const updated = interpretWmoCode(prev.weatherCode, !nextNight, prev.temperature);
+      return {
+        ...prev,
+        isDay: !nextNight,
+        ...updated,
+      };
+    });
+
     mapRef.current.setStyle(nextNight ? CARTO_DARK_MATTER_STYLE : CARTO_VOYAGER_STYLE);
   }, [isNightMode]);
 

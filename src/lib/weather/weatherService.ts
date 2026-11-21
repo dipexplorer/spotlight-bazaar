@@ -52,13 +52,13 @@ export function interpretWmoCode(
         isFoggy: false,
         isOvercast: false,
         visuals: {
-          skyColor: "#010409",
-          horizonColor: "#030c1b",
-          fogColor: "#020814",
+          skyColor: "#020617",
+          horizonColor: "#0c192c",
+          fogColor: "#060d1a",
           sunColor: 0x38bdf8,
-          sunIntensity: 0.85,
+          sunIntensity: 0.95,
           ambientColor: 0x1e293b,
-          ambientIntensity: 0.65,
+          ambientIntensity: 0.75,
         },
       };
     }
@@ -69,13 +69,13 @@ export function interpretWmoCode(
       isFoggy: false,
       isOvercast: false,
       visuals: {
-        skyColor: "#0a192f",
-        horizonColor: "#1e3a8a",
-        fogColor: "#0f2342",
+        skyColor: "#0284c7",
+        horizonColor: "#bae6fd",
+        fogColor: "#e0f2fe",
         sunColor: 0xfff7ed,
-        sunIntensity: 3.0,
+        sunIntensity: 3.4,
         ambientColor: 0xdbeafe,
-        ambientIntensity: 1.6,
+        ambientIntensity: 1.8,
       },
     };
   }
@@ -90,13 +90,13 @@ export function interpretWmoCode(
       isFoggy: false,
       isOvercast: true,
       visuals: {
-        skyColor: isDay ? (isHeavyOvercast ? "#1e293b" : "#172554") : "#090d16",
-        horizonColor: isDay ? (isHeavyOvercast ? "#334155" : "#1e3a8a") : "#0f172a",
-        fogColor: isDay ? (isHeavyOvercast ? "#1e293b" : "#0f2342") : "#050810",
-        sunColor: isDay ? (isHeavyOvercast ? 0xcfd8dc : 0xffedd5) : 0x223249,
-        sunIntensity: isDay ? (isHeavyOvercast ? 1.6 : 2.4) : 0.6,
-        ambientColor: isDay ? (isHeavyOvercast ? 0x94a3b8 : 0xb0c4de) : 0x151f30,
-        ambientIntensity: isDay ? 1.8 : 0.7,
+        skyColor: isDay ? (isHeavyOvercast ? "#64748b" : "#38bdf8") : "#090d16",
+        horizonColor: isDay ? (isHeavyOvercast ? "#94a3b8" : "#bae6fd") : "#0f172a",
+        fogColor: isDay ? (isHeavyOvercast ? "#cbd5e1" : "#e0f2fe") : "#050810",
+        sunColor: isDay ? (isHeavyOvercast ? 0xe2e8f0 : 0xffedd5) : 0x223249,
+        sunIntensity: isDay ? (isHeavyOvercast ? 1.8 : 2.8) : 0.6,
+        ambientColor: isDay ? (isHeavyOvercast ? 0xcbd5e1 : 0xdbeafe) : 0x151f30,
+        ambientIntensity: isDay ? 2.0 : 0.7,
       },
     };
   }
@@ -110,13 +110,13 @@ export function interpretWmoCode(
       isFoggy: true,
       isOvercast: true,
       visuals: {
-        skyColor: isDay ? "#334155" : "#090d16",
-        horizonColor: isDay ? "#475569" : "#1e293b",
-        fogColor: isDay ? "#334155" : "#0f172a",
+        skyColor: isDay ? "#94a3b8" : "#090d16",
+        horizonColor: isDay ? "#cbd5e1" : "#1e293b",
+        fogColor: isDay ? "#e2e8f0" : "#0f172a",
         sunColor: isDay ? 0xfef3c7 : 0x38bdf8,
-        sunIntensity: isDay ? 1.3 : 0.5,
-        ambientColor: isDay ? 0x94a3b8 : 0x1e293b,
-        ambientIntensity: isDay ? 1.5 : 0.6,
+        sunIntensity: isDay ? 1.6 : 0.5,
+        ambientColor: isDay ? 0xdbeafe : 0x1e293b,
+        ambientIntensity: isDay ? 1.8 : 0.6,
       },
     };
   }

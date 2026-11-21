@@ -1,14 +1,18 @@
 import * as THREE from "three";
 
 /**
- * Procedural Living Indian Road Traffic System
- * Renders 2 authentic moving Indian vehicles (Auto-Rickshaw & Compact Cab)
- * driving smoothly along designated road connector lanes at 60 FPS.
+ * Living Indian Road Traffic System with Dynamic Day/Night Headlight Beams
+ * Features:
+ * - 1 Authentic Bajaj RE-style Green/Yellow Auto-Rickshaw (Inbound Lane)
+ * - 1 Modern White Compact Cab (Outbound Lane)
+ * - Dynamic night headlight beams projecting forward onto the road
+ * - Rotating wheels and continuous road lane navigation
  */
 
 export interface RoadTrafficSystem {
   group: THREE.Group;
   update: (delta: number) => void;
+  setNightMode: (isDark: boolean) => void;
   dispose: () => void;
 }
 
@@ -22,6 +26,15 @@ const whiteCarMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness:
 const blackMat = new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.7 });
 const headlightMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
 const taillightMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+
+// Volumetric Headlight Beams Material
+const beamMat = new THREE.MeshBasicMaterial({
+  color: 0xfef08a,
+  transparent: true,
+  opacity: 0.0,
+  depthWrite: false,
+  side: THREE.DoubleSide,
+});
 
 function createWheel(): THREE.Group {
   const g = new THREE.Group();
@@ -48,15 +61,9 @@ function createAutoRickshaw(): { group: THREE.Group; wheels: THREE.Group[] } {
   group.add(chassis);
 
   // Upper yellow passenger cabin & windshield cowl
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.24, 0.55, 1.4), yellowMat);
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.26, 0.55, 1.3), yellowMat);
   cabin.position.set(0, 0.8, -0.2);
   group.add(cabin);
-
-  // Front slope cowl
-  const frontCowl = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.62, 0.55, 4), yellowMat);
-  frontCowl.rotation.y = Math.PI / 4;
-  frontCowl.position.set(0, 0.76, 0.75);
-  group.add(frontCowl);
 
   // Black canvas top
   const canvasTop = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.12, 1.9), blackMat);
@@ -73,6 +80,13 @@ function createAutoRickshaw(): { group: THREE.Group; wheels: THREE.Group[] } {
   const light = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.14, 0.05), headlightMat);
   light.position.set(0, 0.48, 1.16);
   group.add(light);
+
+  // Volumetric Headlight Beam (+Z forward)
+  const beamGeo = new THREE.ConeGeometry(1.4, 8.5, 10, 1, true);
+  beamGeo.rotateX(Math.PI / 2);
+  const beam = new THREE.Mesh(beamGeo, beamMat);
+  beam.position.set(0, 0.42, 5.4);
+  group.add(beam);
 
   // Rear Taillights
   for (const side of [-1, 1]) {
@@ -120,17 +134,24 @@ function createCompactCar(): { group: THREE.Group; wheels: THREE.Group[] } {
   roof.position.set(0, 1.1, -0.15);
   group.add(roof);
 
-  // Front Headlights
+  // Front Headlights (-Z forward)
   for (const side of [-1, 1]) {
     const light = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.12, 0.04), headlightMat);
-    light.position.set(side * 0.62, 0.46, 1.81);
+    light.position.set(side * 0.62, 0.46, -1.81);
     group.add(light);
+
+    // Volumetric Headlight Beams (-Z forward)
+    const beamGeo = new THREE.ConeGeometry(1.2, 9.5, 10, 1, true);
+    beamGeo.rotateX(-Math.PI / 2);
+    const beam = new THREE.Mesh(beamGeo, beamMat);
+    beam.position.set(side * 0.55, 0.40, -6.5);
+    group.add(beam);
   }
 
   // Rear Taillights
   for (const side of [-1, 1]) {
     const tail = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.12, 0.04), taillightMat);
-    tail.position.set(side * 0.62, 0.48, -1.81);
+    tail.position.set(side * 0.62, 0.48, 1.81);
     group.add(tail);
   }
 
@@ -147,7 +168,7 @@ function createCompactCar(): { group: THREE.Group; wheels: THREE.Group[] } {
   return { group, wheels };
 }
 
-export function createRoadTrafficSystem(roadLength: number, roadAngle: number): RoadTrafficSystem {
+export function createRoadTrafficSystem(roadLength: number, roadAngle: number, initialDark = false): RoadTrafficSystem {
   const group = new THREE.Group();
   group.name = "living_road_traffic_system";
 
@@ -177,29 +198,33 @@ export function createRoadTrafficSystem(roadLength: number, roadAngle: number): 
   // Align whole traffic system to road connector orientation
   group.rotation.y = roadAngle;
 
-  const update = (delta: number) => {
-    const clampedDelta = Math.min(delta, 0.05);
+  beamMat.opacity = initialDark ? 0.25 : 0.0;
 
-    // Auto-rickshaw moving forward (+Z)
-    autoZ += autoSpeed * clampedDelta;
+  const setNightMode = (isDark: boolean) => {
+    beamMat.opacity = isDark ? 0.25 : 0.0;
+  };
+
+  const update = (delta: number) => {
+    // 1. Move Auto-Rickshaw (+Z forward toward storefront)
+    autoZ += autoSpeed * delta;
     if (autoZ > maxZ) {
       autoZ = minZ;
     }
     auto.group.position.z = autoZ;
     // Rotate wheels
     for (const w of auto.wheels) {
-      w.rotation.x += autoSpeed * clampedDelta * 4.0;
+      w.rotation.x -= autoSpeed * delta * 4.2;
     }
 
-    // Car moving in reverse direction (-Z)
-    carZ -= carSpeed * clampedDelta;
+    // 2. Move Compact Car (-Z backward toward OSM road)
+    carZ -= carSpeed * delta;
     if (carZ < minZ) {
       carZ = maxZ;
     }
     car.group.position.z = carZ;
     // Rotate wheels
     for (const w of car.wheels) {
-      w.rotation.x -= carSpeed * clampedDelta * 4.0;
+      w.rotation.x += carSpeed * delta * 3.8;
     }
   };
 
@@ -207,6 +232,5 @@ export function createRoadTrafficSystem(roadLength: number, roadAngle: number): 
     group.clear();
   };
 
-  return { group, update, dispose };
+  return { group, update, setNightMode, dispose };
 }
-
