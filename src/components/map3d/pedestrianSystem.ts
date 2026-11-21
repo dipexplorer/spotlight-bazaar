@@ -171,18 +171,17 @@ function buildCharacter(palette: typeof CLOTHING_COLORS[0]): CharacterParts {
  */
 export function createPedestrianSystem(
   streetLength: number = 89.35,
-  sidewalkOffset: number = 3.6,
-  startZ: number = 14.0
+  sidewalkOffset: number = 3.35,
+  startZ: number = 18.0
 ): PedestrianSystem {
   const group = new THREE.Group();
   group.name = "living_pedestrian_system";
 
-  const sidewalkLeftX = -sidewalkOffset;
-  const sidewalkRightX = sidewalkOffset;
-  const minZ = Math.max(0, startZ);
-  const maxZ = Math.max(minZ + 10, streetLength);
+  const minZ = Math.max(16.0, startZ);
+  const maxZ = Math.max(minZ + 15, streetLength - 6.0);
 
-  const pedestrianCount = 12;
+  // Balanced natural crowd (4 well-spaced authentic citizens)
+  const pedestrianCount = 4;
   const pedestrians: Pedestrian[] = [];
 
   for (let i = 0; i < pedestrianCount; i++) {
@@ -190,12 +189,14 @@ export function createPedestrianSystem(
     const parts = buildCharacter(palette);
 
     const isLeftSidewalk = i % 2 === 0;
-    // Add small random lateral jitter so pedestrians don't walk in a single rigid line
-    const lateralJitter = (Math.random() - 0.5) * 0.4;
-    const x = (isLeftSidewalk ? sidewalkLeftX : sidewalkRightX) + lateralJitter;
-    const z = minZ + Math.random() * (maxZ - minZ);
-    const direction = Math.random() > 0.5 ? 1 : -1;
-    const speed = 2.2 + Math.random() * 1.0;
+    // Strict sidewalk positioning so NPCs walk strictly along designated sidewalk
+    const lateralJitter = (Math.random() - 0.5) * 0.15;
+    const x = (isLeftSidewalk ? -sidewalkOffset : sidewalkOffset) + lateralJitter;
+    // Evenly distribute along the road length
+    const segment = (maxZ - minZ) / pedestrianCount;
+    const z = minZ + (i * segment) + Math.random() * (segment * 0.6);
+    const direction = i % 2 === 0 ? 1 : -1;
+    const speed = 2.0 + Math.random() * 0.8;
 
     parts.root.position.set(x, 0.08, z);
     parts.root.rotation.y = direction === 1 ? 0 : Math.PI;

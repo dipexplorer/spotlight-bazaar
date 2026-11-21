@@ -50,6 +50,14 @@ import {
   RainSystem,
 } from "@/components/map3d/rainSystem";
 import {
+  createPlotTerrainApron,
+  TerrainApron,
+} from "@/components/map3d/terrainApron";
+import {
+  createRoadTrafficSystem,
+  RoadTrafficSystem,
+} from "@/components/map3d/roadTrafficSystem";
+import {
   formatWebsiteDisplay,
   getGoogleMapsUrl,
   normalizeExternalUrl,
@@ -411,6 +419,55 @@ export function LiveOsmMap({
   }, [currentWeather]);
   const lastWeatherFetchCoordsRef = useRef<{ lat: number; lon: number; time: number } | null>(null);
 
+  // Dynamic In-Screen Atmospheric Fog Engine (adapts to weather and clears at plot zoom)
+  const applyDynamicWeatherFog = useCallback((z: number, weather: WeatherTelemetry | null, isDark: boolean) => {
+    if (!mapRef.current) return;
+    const map = mapRef.current;
+    try {
+      const isFoggy = weather?.isFoggy;
+      const isOvercast = weather?.isOvercast;
+      const isDay = weather?.isDay ?? !isDark;
+
+      const fogColor = isDark
+        ? "#020814"
+        : weather?.visuals.fogColor || "#0f2342";
+      const skyColor = isDark
+        ? "#010409"
+        : weather?.visuals.skyColor || "#0a192f";
+
+      // Zoom-adaptive fog range:
+      // When zooming down to the plot area (z >= 16.5), fog near-plane clears so the storefront & road are crisp!
+      let near = 0.8;
+      let far = 12.0;
+
+      if (isFoggy) {
+        // High zoom: dense mist [0.5, 5.0]; Plot zoom: clears out to [3.4, 28.0]
+        const t = Math.max(0, Math.min(1, (z - 11.5) / 5.0));
+        near = 0.5 + t * 2.9;
+        far = 5.0 + t * 23.0;
+      } else if (isOvercast) {
+        const t = Math.max(0, Math.min(1, (z - 12.0) / 4.5));
+        near = 0.8 + t * 2.4;
+        far = 9.0 + t * 19.0;
+      } else {
+        const t = Math.max(0, Math.min(1, (z - 12.0) / 4.5));
+        near = 1.0 + t * 2.2;
+        far = 14.0 + t * 16.0;
+      }
+
+      (map as any).setFog?.({
+        range: [near, far],
+        color: fogColor,
+        "horizon-blend": isFoggy ? (z >= 16 ? 0.12 : 0.28) : 0.15,
+        "high-color": skyColor,
+        "space-color": "#010409",
+        "star-intensity": isDay ? 0.0 : 0.65,
+      });
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
   const updateWeatherForLocation = useCallback(async (lat: number, lon: number, cityName?: string) => {
     const fallbackCity = cityName || (lat > 25 ? (lon > 89 ? "Guwahati" : "New Delhi") : "Mumbai");
     try {
@@ -429,14 +486,7 @@ export function LiveOsmMap({
             "fog-color": weather.visuals.fogColor,
             "fog-ground-blend": 0.05,
           });
-          (mapRef.current as any).setFog?.({
-            range: weather.isFoggy ? [0.5, 6.0] : [0.8, 12.0],
-            color: weather.visuals.fogColor,
-            "horizon-blend": weather.isFoggy ? 0.3 : 0.15,
-            "high-color": weather.visuals.skyColor,
-            "space-color": "#010409",
-            "star-intensity": weather.isDay ? 0.0 : 0.6,
-          });
+          applyDynamicWeatherFog(mapRef.current.getZoom(), weather, isNightModeRef.current);
         } catch (skyErr) {
           // ignore setSky in styles that do not support it
         }
@@ -444,7 +494,7 @@ export function LiveOsmMap({
     } catch (e) {
       console.warn("[LiveOsmMap] Weather update error:", e);
     }
-  }, []);
+  }, [applyDynamicWeatherFog]);
 
   // Global keyboard shortcut: Cmd+K / Ctrl+K or '/' to instantly focus the Omnibox search
   useEffect(() => {
@@ -1061,6 +1111,11 @@ export function LiveOsmMap({
           villa.rotation.y = roadAngle; // Perfectly aligned with the road and driveway!
           colonyGroup.add(villa);
 
+          // 0. Photorealistic Landscaped Terrain Skirt & Roadside Trees (eliminates white void)
+          const terrainApron = createPlotTerrainApron(roadLength, roadAngle);
+          colonyGroup.add(terrainApron.group);
+          (this as any).terrainApron = terrainApron;
+
           // 6. Controllable 3D Player Character Avatar outside Nerqiva Studio
           const player3D = createPlayerCharacter3D();
           player3D.group.position.set(playerLocalPosRef.current.x, 0, playerLocalPosRef.current.z);
@@ -1068,13 +1123,18 @@ export function LiveOsmMap({
           colonyGroup.add(player3D.group);
           (this as any).player3D = player3D;
 
-          // 7. Living Indian Citizens & Ambient Pedestrian Simulation
-          const pedestrianSystem = createPedestrianSystem(roadLength, 3.6, 14.0);
+          // 7. Living Indian Citizens & Ambient Pedestrian Simulation (Balanced & on sidewalks)
+          const pedestrianSystem = createPedestrianSystem(roadLength, 3.35, 18.0);
           pedestrianSystem.group.rotation.y = roadAngle;
           colonyGroup.add(pedestrianSystem.group);
           (this as any).pedestrians = pedestrianSystem;
 
-          // 8. Dynamic 3D Rain Particle System
+          // 8. Living Indian Road Traffic System (Moving Auto-Rickshaw & Compact Cab)
+          const roadTraffic = createRoadTrafficSystem(roadLength, roadAngle);
+          colonyGroup.add(roadTraffic.group);
+          (this as any).traffic = roadTraffic;
+
+          // 9. Dynamic 3D Rain Particle System
           const rainSystem = createRainParticleSystem(1200);
           rainSystem.mesh.visible = false;
           colonyGroup.add(rainSystem.mesh);
@@ -1216,7 +1276,13 @@ export function LiveOsmMap({
             p3d.group.scale.set(1.25 * zoomFactor, 1.25 * zoomFactor, 1.25 * zoomFactor);
           }
 
-          // Living Indian Citizens & Ambient Pedestrian Simulation
+          // Photorealistic Landscaped Terrain Skirt (visible at street & city zoom >= 13.8)
+          const terrainApron = (this as any).terrainApron as TerrainApron | undefined;
+          if (terrainApron) {
+            terrainApron.group.visible = currentZoom >= 13.8;
+          }
+
+          // Living Indian Citizens & Ambient Pedestrian Simulation (Balanced & on sidewalks)
           const pedestrians = (this as any).pedestrians as PedestrianSystem | undefined;
           if (pedestrians) {
             if (currentZoom >= 14.3) {
@@ -1225,6 +1291,17 @@ export function LiveOsmMap({
               pedestrians.group.scale.set(zoomFactor, zoomFactor, zoomFactor);
             } else {
               pedestrians.group.visible = false;
+            }
+          }
+
+          // Living Indian Road Traffic (Moving Auto-Rickshaw & Compact Cab)
+          const traffic = (this as any).traffic as RoadTrafficSystem | undefined;
+          if (traffic) {
+            if (currentZoom >= 14.3) {
+              traffic.group.visible = true;
+              traffic.update(delta);
+            } else {
+              traffic.group.visible = false;
             }
           }
 
@@ -1414,14 +1491,7 @@ export function LiveOsmMap({
             "fog-color": fogColor,
             "fog-ground-blend": 0.05,
           });
-          (map as any).setFog?.({
-            range: weather?.isFoggy ? [0.5, 6.0] : [0.8, 12.0],
-            color: fogColor,
-            "horizon-blend": weather?.isFoggy ? 0.3 : 0.15,
-            "high-color": skyColor,
-            "space-color": "#010409",
-            "star-intensity": weather?.isDay ? 0.0 : 0.5,
-          });
+          applyDynamicWeatherFog(map.getZoom(), weather, isDark);
         } else {
           map.setSky({
             "sky-color": "#010409",
@@ -1431,14 +1501,7 @@ export function LiveOsmMap({
             "fog-color": "#020814",
             "fog-ground-blend": 0.05,
           });
-          (map as any).setFog?.({
-            range: [0.8, 12.0],
-            color: "#030c1b",
-            "horizon-blend": 0.15,
-            "high-color": "#010409",
-            "space-color": "#000205",
-            "star-intensity": 0.85,
-          });
+          applyDynamicWeatherFog(map.getZoom(), weather, isDark);
         }
       } catch (e) {
         console.warn("[LiveOsmMap] setSky/setFog warning:", e);
@@ -1463,13 +1526,14 @@ export function LiveOsmMap({
         console.warn("[LiveOsmMap] DEM setTerrain warning:", demErr);
       }
 
-      // 1c. Photorealistic Satellite Landcover Layer (Below roads & buildings)
+      // 1c. Photorealistic Satellite Landcover Layer (Continuous from National to Street Level, Below roads & buildings)
       try {
         if (!map.getSource("satellite-imagery-source")) {
           map.addSource("satellite-imagery-source", {
             type: "raster",
             tiles: [SATELLITE_TILE_URL],
             tileSize: 256,
+            maxzoom: 19,
             attribution: MAPTILER_KEY ? "© MapTiler © OpenStreetMap contributors" : "© Esri World Imagery",
           });
         }
@@ -1485,16 +1549,17 @@ export function LiveOsmMap({
               type: "raster",
               source: "satellite-imagery-source",
               minzoom: 0,
-              maxzoom: 8.5,
+              maxzoom: 22,
               paint: {
                 "raster-opacity": [
                   "interpolate", ["linear"], ["zoom"],
                   3.5, 0.95,
-                  7.0, 0.85,
-                  8.5, 0.0,
+                  7.0, 0.90,
+                  14.0, 0.86,
+                  18.0, 0.84,
                 ],
-                "raster-contrast": 0.12,
-                "raster-saturation": 0.08,
+                "raster-contrast": 0.14,
+                "raster-saturation": 0.10,
               },
             },
             roadBeforeLayer || undefined
@@ -1511,7 +1576,8 @@ export function LiveOsmMap({
             map.setPaintProperty("background", "background-color", [
               "interpolate", ["linear"], ["zoom"],
               6.0, "#081b33",
-              8.8, "#f8fafc",
+              8.8, "#0a192f",
+              16.0, "#0a192f",
             ]);
           }
           if (map.getLayer("water")) {
@@ -1525,20 +1591,19 @@ export function LiveOsmMap({
             map.setPaintProperty("water", "fill-opacity", 1.0);
           }
           if (map.getLayer("landcover")) {
-            map.setPaintProperty("landcover", "fill-color", "#dcfce7");
-            map.setPaintProperty("landcover", "fill-opacity", [
-              "interpolate", ["linear"], ["zoom"],
-              7.5, 0.0,
-              8.5, 0.65,
-            ]);
+            map.setPaintProperty("landcover", "fill-opacity", 0.12);
           }
           if (map.getLayer("landuse_residential")) {
-            map.setPaintProperty("landuse_residential", "fill-color", "#f1f5f9");
-            map.setPaintProperty("landuse_residential", "fill-opacity", [
-              "interpolate", ["linear"], ["zoom"],
-              7.5, 0.0,
-              8.5, 0.85,
-            ]);
+            map.setPaintProperty("landuse_residential", "fill-opacity", 0.06);
+          }
+          if (map.getLayer("landuse")) {
+            map.setPaintProperty("landuse", "fill-opacity", 0.08);
+          }
+          if (map.getLayer("park_national_park")) {
+            map.setPaintProperty("park_national_park", "fill-opacity", 0.12);
+          }
+          if (map.getLayer("park_nature_reserve")) {
+            map.setPaintProperty("park_nature_reserve", "fill-opacity", 0.12);
           }
 
           // Physically accurate zoom-adaptive width matching 3.0m fill and 3.76m casing across all zooms
@@ -2511,6 +2576,7 @@ export function LiveOsmMap({
       map.on("zoom", () => {
         const z = map.getZoom();
         syncMarkerLOD(z);
+        applyDynamicWeatherFog(z, currentWeatherRef.current, isNightModeRef.current);
 
         // Manage 3D elevation terrain: active at national zoom for realistic India relief; null at city/street level for 100% clean flat OSM roads
         try {
