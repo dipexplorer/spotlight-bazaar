@@ -59,14 +59,6 @@ import {
   StreetNeighborhood,
 } from "@/components/map3d/streetNeighborhood";
 import {
-  createCloudSystem,
-  CloudSystem,
-} from "@/components/map3d/cloudSystem";
-import {
-  createWaterSystem,
-  WaterSystem,
-} from "@/components/map3d/waterSystem";
-import {
   createRoadTrafficSystem,
   RoadTrafficSystem,
 } from "@/components/map3d/roadTrafficSystem";
@@ -442,16 +434,20 @@ export function LiveOsmMap({
       const isDay = weather?.isDay ?? !isDark;
 
       const fogColor = isDark
-        ? "#020814"
-        : weather?.visuals.fogColor || "#0f2342";
+        ? "#060d1a"
+        : isOvercast
+          ? "#cbd5e1"
+          : weather?.visuals.fogColor || "#e0f2fe";
       const skyColor = isDark
-        ? "#010409"
-        : weather?.visuals.skyColor || "#0a192f";
+        ? "#020617"
+        : isOvercast
+          ? "#94a3b8"
+          : weather?.visuals.skyColor || "#0284c7";
 
       // Zoom-adaptive fog range:
       // When zooming down to the plot area (z >= 16.5), fog near-plane clears so the storefront & road are crisp!
       let near = 0.8;
-      let far = 12.0;
+      let far = 14.0;
 
       if (isFoggy) {
         // High zoom: dense mist [0.5, 5.0]; Plot zoom: clears out to [3.4, 28.0]
@@ -473,8 +469,8 @@ export function LiveOsmMap({
         color: fogColor,
         "horizon-blend": isFoggy ? (z >= 16 ? 0.12 : 0.28) : 0.15,
         "high-color": skyColor,
-        "space-color": isDark ? "#010409" : (weather?.visuals.skyColor || "#0284c7"),
-        "star-intensity": isDay ? 0.0 : 0.65,
+        "space-color": isDark ? "#010409" : isOvercast ? "#64748b" : (weather?.visuals.skyColor || "#0284c7"),
+        "star-intensity": isDark ? 0.75 : 0.0,
       });
     } catch (e) {
       // ignore
@@ -1143,27 +1139,16 @@ export function LiveOsmMap({
           colonyGroup.add(pedestrianSystem.group);
           (this as any).pedestrians = pedestrianSystem;
 
-          // 8. Living Indian Road Traffic System (Moving Auto-Rickshaw & Compact Cab with Night Beams)
+          // 8. Living Indian Road Traffic System (Calm Auto-Rickshaw with Night Beams)
           const roadTraffic = createRoadTrafficSystem(roadLength, roadAngle, isNightModeRef.current);
           colonyGroup.add(roadTraffic.group);
           (this as any).traffic = roadTraffic;
 
-          // 9. Dynamic 3D Rain Particle System
+          // 9. Dynamic 3D Rain Particle System (active only during rain showers)
           const rainSystem = createRainParticleSystem(1200);
           rainSystem.mesh.visible = false;
           colonyGroup.add(rainSystem.mesh);
           (this as any).rain = rainSystem;
-
-          // 10. Dynamic 3D Volumetric Clouds & Seasonal Ground Fog
-          const clouds = createCloudSystem(260);
-          colonyGroup.add(clouds.group);
-          (this as any).clouds = clouds;
-
-          // 11. Living Water, River Wave Surface & Flocking 3D Birds
-          const water = createWaterSystem(-38.0, 120.0, 320.0);
-          water.group.rotation.y = roadAngle;
-          colonyGroup.add(water.group);
-          (this as any).water = water;
 
           (this as any).lastFrameTime = performance.now();
 
@@ -1342,24 +1327,6 @@ export function LiveOsmMap({
             }
           }
 
-          // 10. Dynamic 3D Volumetric Clouds & Seasonal Ground Fog
-          const clouds = (this as any).clouds as CloudSystem | undefined;
-          if (clouds) {
-            clouds.group.visible = currentZoom >= 12.8;
-            if (clouds.group.visible) {
-              clouds.update(delta, weather, isNightModeRef.current);
-            }
-          }
-
-          // 11. Living Water, River Wave Surface & Flocking 3D Birds
-          const water = (this as any).water as WaterSystem | undefined;
-          if (water) {
-            water.group.visible = currentZoom >= 13.0;
-            if (water.group.visible) {
-              water.update(delta, isNightModeRef.current);
-            }
-          }
-
           if (streetNeighborhood && streetNeighborhood.group.visible) {
             streetNeighborhood.update(delta);
           }
@@ -1524,20 +1491,22 @@ export function LiveOsmMap({
 
       const isDark = isNightModeRef.current || Boolean(map.getStyle()?.name?.toLowerCase().includes("dark"));
 
-      // 1. Permanent GPU Sky & Atmospheric Horizon (GTA 6-grade horizon depth & haze + Regional Weather)
+      // 1. Permanent GPU Sky & Atmospheric Horizon (Real Dynamic Weather & Realistic Day/Night)
       try {
         const weather = currentWeatherRef.current;
         if (!isDark) {
-          const skyColor = weather?.visuals.skyColor || "#0284c7";
-          const horizonColor = weather?.visuals.horizonColor || "#7dd3fc";
-          const fogColor = weather?.visuals.fogColor || "#38bdf8";
+          const isOvercast = weather?.isOvercast || weather?.isRaining;
+          const isFoggy = weather?.isFoggy;
+          const skyColor = isOvercast ? "#64748b" : (weather?.visuals.skyColor || "#0284c7");
+          const horizonColor = isOvercast ? "#94a3b8" : (weather?.visuals.horizonColor || "#bae6fd");
+          const fogColor = isOvercast ? "#cbd5e1" : (weather?.visuals.fogColor || "#e0f2fe");
           map.setSky({
             "sky-color": skyColor,
-            "sky-horizon-blend": 0.65,
+            "sky-horizon-blend": isOvercast ? 0.72 : 0.65,
             "horizon-color": horizonColor,
-            "horizon-fog-blend": 0.55,
+            "horizon-fog-blend": isOvercast ? 0.60 : 0.55,
             "fog-color": fogColor,
-            "fog-ground-blend": 0.08,
+            "fog-ground-blend": isFoggy ? 0.16 : 0.08,
           });
           applyDynamicWeatherFog(map.getZoom(), weather, isDark);
         } else {
@@ -1561,10 +1530,6 @@ export function LiveOsmMap({
         if (sn) sn.setNightMode(isDark);
         const tr = (custom3DLayer as any).traffic as RoadTrafficSystem | undefined;
         if (tr) tr.setNightMode(isDark);
-        const wt = (custom3DLayer as any).water as WaterSystem | undefined;
-        if (wt) wt.update(0, isDark);
-        const cl = (custom3DLayer as any).clouds as CloudSystem | undefined;
-        if (cl) cl.update(0, currentWeatherRef.current, isDark);
       } catch (subErr) {
         // ignore
       }
@@ -1632,13 +1597,39 @@ export function LiveOsmMap({
         console.warn("[LiveOsmMap] Satellite layer warning:", satErr);
       }
 
-      // 2. High-Contrast Production Road & Basemap Styling (GTA VI-Style Realistic Vector Environment)
-      try {
-        const groundColor = isDark ? "#090e17" : "#245838";
-        const parkColor = isDark ? "#0a2215" : "#15803d";
-        const roadSurfaceColor = isDark ? "#0f172a" : "#334155";
-        const curbColor = isDark ? "#334155" : "#cbd5e1";
+      // 2. High-Contrast Production Road & Basemap Styling (Clean Photorealistic Vector Environment)
+      const groundColor = isDark ? "#0b141d" : "#245838";
+      const parkColor = isDark ? "#0a2215" : "#15803d";
+      const roadSurfaceColor = isDark ? "#0f172a" : "#2c3542";
+      const curbColor = isDark ? "#334155" : "#94a3b8";
 
+      // Physically accurate zoom-adaptive width matching real-world 2-lane road dimensions
+      const minorCaseWidth: any = [
+        "interpolate", ["exponential", 2], ["zoom"],
+        13, 3.0,
+        15, 6.0,
+        16, 10.0,
+        17, 16.0,
+        18, 26.0,
+        19, 48.0,
+        20, 88.0,
+        21, 160.0,
+        22, 280.0,
+      ];
+      const minorFillWidth: any = [
+        "interpolate", ["exponential", 2], ["zoom"],
+        13, 2.0,
+        15, 4.5,
+        16, 7.5,
+        17, 12.0,
+        18, 20.0,
+        19, 38.0,
+        20, 72.0,
+        21, 136.0,
+        22, 240.0,
+      ];
+
+      try {
         if (map.getLayer("background")) {
           map.setPaintProperty("background", "background-color", [
             "interpolate", ["linear"], ["zoom"],
@@ -1670,31 +1661,6 @@ export function LiveOsmMap({
           }
         }
 
-        // Physically accurate zoom-adaptive width matching real-world 2-lane road dimensions
-        const minorCaseWidth: any = [
-          "interpolate", ["exponential", 2], ["zoom"],
-          13, 3.0,
-          15, 6.0,
-          16, 10.0,
-          17, 16.0,
-          18, 26.0,
-          19, 48.0,
-          20, 88.0,
-          21, 160.0,
-          22, 280.0,
-        ];
-        const minorFillWidth: any = [
-          "interpolate", ["exponential", 2], ["zoom"],
-          13, 2.0,
-          15, 4.5,
-          16, 7.5,
-          17, 12.0,
-          18, 20.0,
-          19, 38.0,
-          20, 72.0,
-          21, 136.0,
-          22, 240.0,
-        ];
         const secCaseWidth: any = ["interpolate", ["linear"], ["zoom"], 14, 5, 16, 12, 18, 28];
         const secFillWidth: any = ["interpolate", ["linear"], ["zoom"], 14, 3.5, 16, 9, 18, 22];
 
@@ -1767,54 +1733,11 @@ export function LiveOsmMap({
           });
         }
 
-        const caseColor = !isDark ? "#64748b" : "#1e293b";
-        const fillColor = !isDark ? "#ffffff" : "#0f172a";
-        const caseWidth = !isDark ? [
-          "interpolate", ["exponential", 2], ["zoom"],
-          14, 2.5,
-          15, 3.2,
-          16, 4.5,
-          17, 6.5,
-          18, 10.5,
-          19, 18.0,
-          20, 32.5,
-          21, 63.0,
-          22, 125.0
-        ] : [
-          "interpolate", ["exponential", 2], ["zoom"],
-          14, 2.5,
-          15, 3.2,
-          16, 4.5,
-          17, 6.5,
-          18, 10.5,
-          19, 18.0,
-          20, 32.5,
-          21, 63.0,
-          22, 125.0
-        ];
-        const fillWidth = !isDark ? [
-          "interpolate", ["exponential", 2], ["zoom"],
-          14, 1.5,
-          15, 2.0,
-          16, 3.0,
-          17, 4.5,
-          18, 7.5,
-          19, 13.0,
-          20, 24.5,
-          21, 47.5,
-          22, 95.0
-        ] : [
-          "interpolate", ["exponential", 2], ["zoom"],
-          14, 1.5,
-          15, 2.0,
-          16, 3.0,
-          17, 4.5,
-          18, 7.5,
-          19, 13.0,
-          20, 24.5,
-          21, 47.5,
-          22, 95.0
-        ];
+        // Sync connector roads with OSM road styling: exact same colors and zoom-adaptive widths
+        const caseColor = curbColor;
+        const fillColor = roadSurfaceColor;
+        const caseWidth = minorCaseWidth;
+        const fillWidth = minorFillWidth;
 
         if (!map.getLayer("nerqiva-connector-case")) {
           map.addLayer(

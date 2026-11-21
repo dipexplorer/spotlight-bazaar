@@ -37,53 +37,13 @@ export function createStreetNeighborhood(
     return g;
   };
 
-  // 1. PBR Materials
+  // 1. PBR Materials for Neighborhood Buildings & Ambient Greenery
   const turfMat = trackMat(
     new THREE.MeshStandardMaterial({
       color: initialDark ? 0x0f291e : 0x245838,
       roughness: 0.88,
       metalness: 0.04,
       flatShading: true,
-    })
-  );
-
-  const asphaltMat = trackMat(
-    new THREE.MeshStandardMaterial({
-      color: initialDark ? 0x0f172a : 0x334155,
-      roughness: 0.80,
-      metalness: 0.12,
-    })
-  );
-
-  const sidewalkMat = trackMat(
-    new THREE.MeshStandardMaterial({
-      color: initialDark ? 0x334155 : 0x94a3b8,
-      roughness: 0.78,
-      metalness: 0.08,
-    })
-  );
-
-  const curbMat = trackMat(
-    new THREE.MeshStandardMaterial({
-      color: initialDark ? 0x1e293b : 0x64748b,
-      roughness: 0.7,
-      metalness: 0.15,
-    })
-  );
-
-  const whiteRoadMarkingMat = trackMat(
-    new THREE.MeshStandardMaterial({
-      color: 0xf8fafc,
-      roughness: 0.45,
-      metalness: 0.05,
-    })
-  );
-
-  const yellowRoadMarkingMat = trackMat(
-    new THREE.MeshStandardMaterial({
-      color: 0xfbbf24,
-      roughness: 0.45,
-      metalness: 0.05,
     })
   );
 
@@ -164,86 +124,12 @@ export function createStreetNeighborhood(
     })
   );
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // 1. MANICURED URBAN PARCEL APRON
-  // ───────────────────────────────────────────────────────────────────────────
-  const parcelWidth = 240.0;
-  const parcelLength = 220.0;
-  const groundGeo = trackGeo(new THREE.BoxGeometry(parcelWidth, 0.08, parcelLength));
-  const groundMesh = new THREE.Mesh(groundGeo, turfMat);
-  groundMesh.position.set(0, 0.01, 7.0);
-  groundMesh.receiveShadow = true;
-  group.add(groundMesh);
-
-  const parcelCurbGeo = trackGeo(new THREE.BoxGeometry(parcelWidth + 0.4, 0.14, 0.3));
-  const parcelCurb = new THREE.Mesh(parcelCurbGeo, curbMat);
-  parcelCurb.position.set(0, 0.05, 7.0 + parcelLength / 2);
-  group.add(parcelCurb);
+  // Road Corridor Alignment: Road surface is rendered directly by the OpenStreetMap vector layers,
+  // perfectly synced and identical to all neighboring OSM streets (no over-crafted artificial boxes).
+  const roadCorridorHalfWidth = 3.2; // 6.4m corridor matching OpenStreetMap minor street
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 2. 3D ASPHALT ROADWAY WITH MARKINGS & SIDEWALKS
-  // ───────────────────────────────────────────────────────────────────────────
-  const roadWidth = 5.8;
-  const sidewalkWidth = 1.4;
-  const curbEdge = roadWidth / 2 + sidewalkWidth; // 4.3m from centerline
-
-  const effectiveRoadLen = Math.max(20, roadLength - 14.0);
-  const roadCenterZ = 14.0 + effectiveRoadLen / 2;
-
-  const roadSurfaceGeo = trackGeo(new THREE.BoxGeometry(roadWidth, 0.08, effectiveRoadLen));
-  const roadSurface = new THREE.Mesh(roadSurfaceGeo, asphaltMat);
-  roadSurface.position.set(0, 0.02, roadCenterZ);
-  roadSurface.receiveShadow = true;
-  group.add(roadSurface);
-
-  // Sidewalks & Curbs
-  for (const side of [-1, 1]) {
-    const walkGeo = trackGeo(new THREE.BoxGeometry(sidewalkWidth, 0.14, effectiveRoadLen));
-    const walk = new THREE.Mesh(walkGeo, sidewalkMat);
-    walk.position.set(side * (roadWidth / 2 + sidewalkWidth / 2), 0.05, roadCenterZ);
-    walk.receiveShadow = true;
-    group.add(walk);
-
-    const curbGeo = trackGeo(new THREE.BoxGeometry(0.18, 0.18, effectiveRoadLen));
-    const curb = new THREE.Mesh(curbGeo, curbMat);
-    curb.position.set(side * (roadWidth / 2 + 0.09), 0.07, roadCenterZ);
-    group.add(curb);
-
-    const vergeGeo = trackGeo(new THREE.BoxGeometry(2.0, 0.06, effectiveRoadLen));
-    const verge = new THREE.Mesh(vergeGeo, turfMat);
-    verge.position.set(side * (curbEdge + 1.0), 0.01, roadCenterZ);
-    group.add(verge);
-  }
-
-  // Dashed Yellow Center Line
-  const dashSpacing = 5.0;
-  const dashLength = 2.8;
-  for (let z = 16.0; z < roadLength - 4.0; z += dashSpacing) {
-    const dashGeo = trackGeo(new THREE.BoxGeometry(0.18, 0.02, dashLength));
-    const dash = new THREE.Mesh(dashGeo, yellowRoadMarkingMat);
-    dash.position.set(0, 0.065, z + dashLength / 2);
-    group.add(dash);
-  }
-
-  // Solid White Shoulder Lines
-  for (const side of [-1, 1]) {
-    const lineGeo = trackGeo(new THREE.BoxGeometry(0.14, 0.02, effectiveRoadLen));
-    const line = new THREE.Mesh(lineGeo, whiteRoadMarkingMat);
-    line.position.set(side * (roadWidth / 2 - 0.22), 0.065, roadCenterZ);
-    group.add(line);
-  }
-
-  // Pedestrian Zebra Crossing (Z = 18.2m)
-  const zebraZ = 18.2;
-  for (let x = -roadWidth / 2 + 0.5; x <= roadWidth / 2 - 0.5; x += 0.85) {
-    const barGeo = trackGeo(new THREE.BoxGeometry(0.50, 0.02, 3.2));
-    const bar = new THREE.Mesh(barGeo, whiteRoadMarkingMat);
-    bar.position.set(x, 0.066, zebraZ);
-    group.add(bar);
-  }
-
-  // ───────────────────────────────────────────────────────────────────────────
-  // 3. PROCEDURAL 3D NEIGHBORING BUILDINGS
+  // 2. PROCEDURAL 3D NEIGHBORING BUILDINGS
   // ───────────────────────────────────────────────────────────────────────────
   const beaconLights: THREE.Mesh[] = [];
 
@@ -342,12 +228,12 @@ export function createStreetNeighborhood(
   group.add(hedge);
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 4. ROADSIDE 3D TREES & STREETLIGHTS WITH NIGHT LIGHT CONES
+  // 3. ROADSIDE 3D TREES & STREETLIGHTS (Flanking the OSM Street Corridor)
   // ───────────────────────────────────────────────────────────────────────────
   const treeSpacing = 16.0;
   const startZ = 16.0;
   const endZ = roadLength - 6.0;
-  const treeX = curbEdge + 1.2;
+  const treeX = roadCorridorHalfWidth + 1.6;
 
   let treeCount = 0;
   for (let z = startZ; z <= endZ; z += treeSpacing) {
@@ -374,7 +260,7 @@ export function createStreetNeighborhood(
     for (const side of [-1, 1]) {
       const lamp = createStreetLightMesh();
       lamp.scale.set(0.95, 0.95, 0.95);
-      const lampX = side * (curbEdge - 0.25);
+      const lampX = side * (roadCorridorHalfWidth + 0.4);
       lamp.position.set(lampX, 0, z);
       lamp.rotation.y = side === 1 ? -Math.PI / 2 : Math.PI / 2;
       group.add(lamp);
@@ -394,9 +280,6 @@ export function createStreetNeighborhood(
   // Dynamic Day/Night Mode Switcher
   const setNightMode = (isDark: boolean) => {
     turfMat.color.setHex(isDark ? 0x0f291e : 0x245838);
-    asphaltMat.color.setHex(isDark ? 0x0f172a : 0x334155);
-    sidewalkMat.color.setHex(isDark ? 0x334155 : 0x94a3b8);
-    curbMat.color.setHex(isDark ? 0x1e293b : 0x64748b);
     concreteDarkMat.color.setHex(isDark ? 0x1e2530 : 0x334155);
     limestoneWarmMat.color.setHex(isDark ? 0x333842 : 0xe2e8f0);
     wallBoundaryMat.color.setHex(isDark ? 0x1e293b : 0x64748b);

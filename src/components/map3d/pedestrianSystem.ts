@@ -180,8 +180,8 @@ export function createPedestrianSystem(
   const minZ = Math.max(16.0, startZ);
   const maxZ = Math.max(minZ + 15, streetLength - 6.0);
 
-  // Balanced natural crowd (4 well-spaced authentic citizens)
-  const pedestrianCount = 4;
+  // Calm, authentic citizen presence (2 well-spaced citizens on sidewalk)
+  const pedestrianCount = 2;
   const pedestrians: Pedestrian[] = [];
 
   for (let i = 0; i < pedestrianCount; i++) {
@@ -190,15 +190,15 @@ export function createPedestrianSystem(
 
     const isLeftSidewalk = i % 2 === 0;
     // Strict sidewalk positioning so NPCs walk strictly along designated sidewalk
-    const lateralJitter = (Math.random() - 0.5) * 0.15;
+    const lateralJitter = (Math.random() - 0.5) * 0.10;
     const x = (isLeftSidewalk ? -sidewalkOffset : sidewalkOffset) + lateralJitter;
     // Evenly distribute along the road length
     const segment = (maxZ - minZ) / pedestrianCount;
-    const z = minZ + (i * segment) + Math.random() * (segment * 0.6);
+    const z = minZ + (i * segment) + Math.random() * (segment * 0.5);
     const direction = i % 2 === 0 ? 1 : -1;
-    const speed = 2.0 + Math.random() * 0.8;
+    const speed = 1.4 + Math.random() * 0.4; // Relaxed pedestrian stroll
 
-    parts.root.position.set(x, 0.08, z);
+    parts.root.position.set(x, 0.02, z);
     parts.root.rotation.y = direction === 1 ? 0 : Math.PI;
 
     group.add(parts.root);

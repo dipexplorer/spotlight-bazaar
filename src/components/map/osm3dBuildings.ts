@@ -217,39 +217,11 @@ export function createAccessRoadConnectorMesh(
   const roadGroup = new THREE.Group();
   roadGroup.name = "automated_road_connector";
 
-  const curbMat = new THREE.MeshStandardMaterial({ color: isDark ? 0x475569 : 0x64748b, roughness: 0.8 });
-  const sidewalkMat = new THREE.MeshStandardMaterial({ color: isDark ? 0x1e293b : 0xe2e8f0, roughness: 0.75 });
-
-  // 1. Driveway Entrance Apron at Gateway (14m)
-  const apronGeo = new THREE.BoxGeometry(roadWidth + 2.0, 0.10, 2.5);
-  const apronMesh = new THREE.Mesh(
-    apronGeo,
-    new THREE.MeshStandardMaterial({ color: isDark ? 0x0f172a : 0x1e293b, roughness: 0.85 })
-  );
-  apronMesh.position.set(0, 0.05, startOffset);
-  roadGroup.add(apronMesh);
-
-  // 2. Gateway Entrance Curbs & Modern Streetlights Framing the Studio Portal
-  const gatewaySpan = 6.0;
-  const gatewayCenterZ = startOffset + gatewaySpan / 2;
-
+  // Modern Streetlights framing the studio entrance portal
   for (const side of [-1, 1]) {
-    const curbX = side * (roadWidth / 2 + 0.12);
-    const curbGeo = new THREE.BoxGeometry(0.24, 0.14, gatewaySpan);
-    const curbMesh = new THREE.Mesh(curbGeo, curbMat);
-    curbMesh.position.set(curbX, 0.07, gatewayCenterZ);
-    roadGroup.add(curbMesh);
-
-    const walkX = side * (roadWidth / 2 + 0.24 + sidewalkWidth / 2);
-    const walkGeo = new THREE.BoxGeometry(sidewalkWidth, 0.12, gatewaySpan);
-    const walkMesh = new THREE.Mesh(walkGeo, sidewalkMat);
-    walkMesh.position.set(walkX, 0.06, gatewayCenterZ);
-    roadGroup.add(walkMesh);
-
-    // Modern Streetlight at the entrance gateway
     const lamp = createStreetLightMesh();
     lamp.scale.set(0.9, 0.9, 0.9);
-    lamp.position.set(side * (roadWidth / 2 + sidewalkWidth + 0.3), 0, startOffset + 3.0);
+    lamp.position.set(side * (roadWidth / 2 + 0.8), 0, startOffset + 3.0);
     lamp.rotation.y = side === 1 ? -Math.PI / 2 : Math.PI / 2;
     roadGroup.add(lamp);
   }

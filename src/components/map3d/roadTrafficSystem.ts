@@ -175,25 +175,15 @@ export function createRoadTrafficSystem(roadLength: number, roadAngle: number, i
   const minZ = 16.0;
   const maxZ = Math.max(minZ + 20, roadLength);
   const laneLeftX = -1.35; // Inbound lane
-  const laneRightX = 1.35; // Outbound lane
 
-  // Vehicle 1: Auto-Rickshaw (heading toward gate +Z)
+  // Vehicle: Authentic Indian Auto-Rickshaw (smoothly cruising down the lane)
   const auto = createAutoRickshaw();
   auto.group.position.set(laneLeftX, 0, minZ + 8.0);
   auto.group.rotation.y = 0; // facing +Z
   group.add(auto.group);
 
-  // Vehicle 2: Compact Car (heading away from gate -Z)
-  const car = createCompactCar();
-  car.group.position.set(laneRightX, 0, maxZ - 12.0);
-  car.group.rotation.y = Math.PI; // facing -Z
-  group.add(car.group);
-
-  const autoSpeed = 8.5; // ~30 km/h
-  const carSpeed = 10.5; // ~38 km/h
-
+  const autoSpeed = 5.5; // Calm, relaxed ~20 km/h
   let autoZ = minZ + 8.0;
-  let carZ = maxZ - 12.0;
 
   // Align whole traffic system to road connector orientation
   group.rotation.y = roadAngle;
@@ -205,7 +195,7 @@ export function createRoadTrafficSystem(roadLength: number, roadAngle: number, i
   };
 
   const update = (delta: number) => {
-    // 1. Move Auto-Rickshaw (+Z forward toward storefront)
+    // Move Auto-Rickshaw (+Z forward along approach lane)
     autoZ += autoSpeed * delta;
     if (autoZ > maxZ) {
       autoZ = minZ;
@@ -214,17 +204,6 @@ export function createRoadTrafficSystem(roadLength: number, roadAngle: number, i
     // Rotate wheels
     for (const w of auto.wheels) {
       w.rotation.x -= autoSpeed * delta * 4.2;
-    }
-
-    // 2. Move Compact Car (-Z backward toward OSM road)
-    carZ -= carSpeed * delta;
-    if (carZ < minZ) {
-      carZ = maxZ;
-    }
-    car.group.position.z = carZ;
-    // Rotate wheels
-    for (const w of car.wheels) {
-      w.rotation.x += carSpeed * delta * 3.8;
     }
   };
 
