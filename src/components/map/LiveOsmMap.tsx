@@ -54,6 +54,10 @@ import {
   TerrainApron,
 } from "@/components/map3d/terrainApron";
 import {
+  createStreetNeighborhood,
+  StreetNeighborhood,
+} from "@/components/map3d/streetNeighborhood";
+import {
   createRoadTrafficSystem,
   RoadTrafficSystem,
 } from "@/components/map3d/roadTrafficSystem";
@@ -1111,10 +1115,11 @@ export function LiveOsmMap({
           villa.rotation.y = roadAngle; // Perfectly aligned with the road and driveway!
           colonyGroup.add(villa);
 
-          // 0. Photorealistic Landscaped Terrain Skirt & Roadside Trees (eliminates white void)
-          const terrainApron = createPlotTerrainApron(roadLength, roadAngle);
-          colonyGroup.add(terrainApron.group);
-          (this as any).terrainApron = terrainApron;
+          // 0. GTA VI-Style Realistic 3D Street Neighborhood (replaces flat 2D satellite photo clutter with 3D buildings & streetscape)
+          const streetNeighborhood = createStreetNeighborhood(roadLength, roadAngle, isNightModeRef.current);
+          streetNeighborhood.group.rotation.y = roadAngle; // Perfectly aligned with the road corridor and villa!
+          colonyGroup.add(streetNeighborhood.group);
+          (this as any).streetNeighborhood = streetNeighborhood;
 
           // 6. Controllable 3D Player Character Avatar outside Nerqiva Studio
           const player3D = createPlayerCharacter3D();
@@ -1276,10 +1281,10 @@ export function LiveOsmMap({
             p3d.group.scale.set(1.25 * zoomFactor, 1.25 * zoomFactor, 1.25 * zoomFactor);
           }
 
-          // Photorealistic Landscaped Terrain Skirt (visible at street & city zoom >= 13.8)
-          const terrainApron = (this as any).terrainApron as TerrainApron | undefined;
-          if (terrainApron) {
-            terrainApron.group.visible = currentZoom >= 13.8;
+          // GTA VI-Style Realistic 3D Street Neighborhood (visible at street & city zoom >= 13.5)
+          const streetNeighborhood = (this as any).streetNeighborhood as StreetNeighborhood | undefined;
+          if (streetNeighborhood) {
+            streetNeighborhood.group.visible = currentZoom >= 13.5;
           }
 
           // Living Indian Citizens & Ambient Pedestrian Simulation (Balanced & on sidewalks)
@@ -1554,9 +1559,10 @@ export function LiveOsmMap({
                 "raster-opacity": [
                   "interpolate", ["linear"], ["zoom"],
                   3.5, 0.95,
-                  7.0, 0.90,
-                  14.0, 0.86,
-                  18.0, 0.84,
+                  8.5, 0.90,
+                  10.2, 0.35,
+                  11.5, 0.00,
+                  22.0, 0.00,
                 ],
                 "raster-contrast": 0.14,
                 "raster-saturation": 0.10,
@@ -1569,184 +1575,115 @@ export function LiveOsmMap({
         console.warn("[LiveOsmMap] Satellite layer warning:", satErr);
       }
 
-      // 2. High-Contrast Production Road & Basemap Styling (Fixes washed-out / invisible roads in Day theme)
+      // 2. High-Contrast Production Road & Basemap Styling (GTA VI-Style Realistic Vector Environment)
       try {
-        if (!isDark) {
-          if (map.getLayer("background")) {
-            map.setPaintProperty("background", "background-color", [
-              "interpolate", ["linear"], ["zoom"],
-              6.0, "#081b33",
-              8.8, "#0a192f",
-              16.0, "#0a192f",
-            ]);
-          }
-          if (map.getLayer("water")) {
-            map.setPaintProperty("water", "fill-color", [
-              "interpolate", ["linear"], ["zoom"],
-              4.0, "#081b33",
-              7.5, "#0b264a",
-              9.5, "#0284c7",
-              12.0, "#38bdf8",
-            ] as any);
-            map.setPaintProperty("water", "fill-opacity", 1.0);
-          }
-          if (map.getLayer("landcover")) {
-            map.setPaintProperty("landcover", "fill-opacity", 0.12);
-          }
-          if (map.getLayer("landuse_residential")) {
-            map.setPaintProperty("landuse_residential", "fill-opacity", 0.06);
-          }
-          if (map.getLayer("landuse")) {
-            map.setPaintProperty("landuse", "fill-opacity", 0.08);
-          }
-          if (map.getLayer("park_national_park")) {
-            map.setPaintProperty("park_national_park", "fill-opacity", 0.12);
-          }
-          if (map.getLayer("park_nature_reserve")) {
-            map.setPaintProperty("park_nature_reserve", "fill-opacity", 0.12);
-          }
+        const groundColor = isDark ? "#0d131d" : "#1e2632";
+        const parkColor = isDark ? "#133827" : "#1b4332";
+        const roadSurfaceColor = isDark ? "#18202c" : "#2d3748";
+        const curbColor = isDark ? "#334155" : "#475569";
 
-          // Physically accurate zoom-adaptive width matching 3.0m fill and 3.76m casing across all zooms
-          const minorCaseWidth: any = [
-            "interpolate", ["exponential", 2], ["zoom"],
-            14, 2.5,
-            15, 3.2,
-            16, 4.5,
-            17, 6.5,
-            18, 10.5,
-            19, 18.0,
-            20, 32.5,
-            21, 63.0,
-            22, 125.0
-          ];
-          const minorFillWidth: any = [
-            "interpolate", ["exponential", 2], ["zoom"],
-            14, 1.5,
-            15, 2.0,
-            16, 3.0,
-            17, 4.5,
-            18, 7.5,
-            19, 13.0,
-            20, 24.5,
-            21, 47.5,
-            22, 95.0
-          ];
-          const secCaseWidth: any = ["interpolate", ["linear"], ["zoom"], 14, 4, 16, 8, 18, 18];
-          const secFillWidth: any = ["interpolate", ["linear"], ["zoom"], 14, 2.5, 16, 6, 18, 14];
-
-          if (map.getLayer("road_minor_case")) {
-            map.setLayoutProperty("road_minor_case", "line-cap", "round");
-            map.setPaintProperty("road_minor_case", "line-color", "#64748b");
-            map.setPaintProperty("road_minor_case", "line-width", minorCaseWidth);
-            map.setPaintProperty("road_minor_case", "line-opacity", 1.0);
-          }
-          if (map.getLayer("road_minor_fill")) {
-            map.setLayoutProperty("road_minor_fill", "line-cap", "round");
-            map.setPaintProperty("road_minor_fill", "line-color", "#ffffff");
-            map.setPaintProperty("road_minor_fill", "line-width", minorFillWidth);
-            map.setPaintProperty("road_minor_fill", "line-opacity", 1.0);
-          }
-          if (map.getLayer("road_service_case")) {
-            map.setLayoutProperty("road_service_case", "line-cap", "round");
-            map.setPaintProperty("road_service_case", "line-color", "#94a3b8");
-            map.setPaintProperty("road_service_case", "line-width", minorCaseWidth);
-            map.setPaintProperty("road_service_case", "line-opacity", 0.9);
-          }
-          if (map.getLayer("road_service_fill")) {
-            map.setLayoutProperty("road_service_fill", "line-cap", "round");
-            map.setPaintProperty("road_service_fill", "line-color", "#ffffff");
-            map.setPaintProperty("road_service_fill", "line-width", minorFillWidth);
-            map.setPaintProperty("road_service_fill", "line-opacity", 1.0);
-          }
-          if (map.getLayer("road_path")) {
-            map.setPaintProperty("road_path", "line-color", "#94a3b8");
-            map.setPaintProperty("road_path", "line-width", 2.2);
-          }
-          if (map.getLayer("road_sec_case_noramp")) {
-            map.setPaintProperty("road_sec_case_noramp", "line-color", "#334155");
-            map.setPaintProperty("road_sec_case_noramp", "line-width", secCaseWidth);
-          }
-          if (map.getLayer("road_sec_fill_noramp")) {
-            map.setPaintProperty("road_sec_fill_noramp", "line-color", "#fed7aa");
-            map.setPaintProperty("road_sec_fill_noramp", "line-width", secFillWidth);
-          }
-          if (map.getLayer("road_pri_case_noramp")) {
-            map.setPaintProperty("road_pri_case_noramp", "line-color", "#1e293b");
-            map.setPaintProperty("road_pri_case_noramp", "line-width", secCaseWidth);
-          }
-          if (map.getLayer("road_pri_fill_noramp")) {
-            map.setPaintProperty("road_pri_fill_noramp", "line-color", "#fef08a");
-            map.setPaintProperty("road_pri_fill_noramp", "line-width", secFillWidth);
-          }
-        } else {
-          // Night mode: maintain butt line-cap, matching width stops, and dark slate colors
-          if (map.getLayer("background")) {
-            map.setPaintProperty("background", "background-color", "#020b18");
-          }
-          if (map.getLayer("water")) {
-            map.setPaintProperty("water", "fill-color", [
+        if (map.getLayer("background")) {
+          map.setPaintProperty("background", "background-color", [
+            "interpolate", ["linear"], ["zoom"],
+            4.0, "#081b33",
+            8.8, isDark ? "#081b33" : "#0d1829",
+            12.0, groundColor,
+            16.0, groundColor,
+          ]);
+        }
+        if (map.getLayer("water")) {
+          map.setPaintProperty("water", "fill-color", [
+            "interpolate", ["linear"], ["zoom"],
+            4.0, "#081b33",
+            7.5, "#0b264a",
+            9.5, "#0284c7",
+            12.0, "#0284c7",
+          ] as any);
+          map.setPaintProperty("water", "fill-opacity", 1.0);
+        }
+        for (const greenLayer of ["landcover", "landuse", "landuse_residential", "park_national_park", "park_nature_reserve"]) {
+          if (map.getLayer(greenLayer)) {
+            map.setPaintProperty(greenLayer, "fill-color", parkColor);
+            map.setPaintProperty(greenLayer, "fill-opacity", [
               "interpolate", ["linear"], ["zoom"],
-              4.0, "#020b18",
-              9.5, "#020b18",
-              12.0, "#0c243d",
+              10.5, 0.20,
+              12.5, 0.85,
+              18.0, 0.85,
             ] as any);
           }
-          if (map.getLayer("landcover")) {
-            map.setPaintProperty("landcover", "fill-opacity", 0.0);
-          }
-          if (map.getLayer("landuse_residential")) {
-            map.setPaintProperty("landuse_residential", "fill-opacity", 0.15);
-          }
+        }
 
-          const minorCaseWidthNight: any = [
-            "interpolate", ["exponential", 2], ["zoom"],
-            14, 2.5,
-            15, 3.2,
-            16, 4.5,
-            17, 6.5,
-            18, 10.5,
-            19, 18.0,
-            20, 32.5,
-            21, 63.0,
-            22, 125.0
-          ];
-          const minorFillWidthNight: any = [
-            "interpolate", ["exponential", 2], ["zoom"],
-            14, 1.5,
-            15, 2.0,
-            16, 3.0,
-            17, 4.5,
-            18, 7.5,
-            19, 13.0,
-            20, 24.5,
-            21, 47.5,
-            22, 95.0
-          ];
+        // Physically accurate zoom-adaptive width matching real-world 2-lane road dimensions
+        const minorCaseWidth: any = [
+          "interpolate", ["exponential", 2], ["zoom"],
+          13, 3.0,
+          15, 6.0,
+          16, 10.0,
+          17, 16.0,
+          18, 26.0,
+          19, 48.0,
+          20, 88.0,
+          21, 160.0,
+          22, 280.0,
+        ];
+        const minorFillWidth: any = [
+          "interpolate", ["exponential", 2], ["zoom"],
+          13, 2.0,
+          15, 4.5,
+          16, 7.5,
+          17, 12.0,
+          18, 20.0,
+          19, 38.0,
+          20, 72.0,
+          21, 136.0,
+          22, 240.0,
+        ];
+        const secCaseWidth: any = ["interpolate", ["linear"], ["zoom"], 14, 5, 16, 12, 18, 28];
+        const secFillWidth: any = ["interpolate", ["linear"], ["zoom"], 14, 3.5, 16, 9, 18, 22];
 
-          if (map.getLayer("road_minor_case")) {
-            map.setLayoutProperty("road_minor_case", "line-cap", "round");
-            map.setPaintProperty("road_minor_case", "line-color", "#1e293b");
-            map.setPaintProperty("road_minor_case", "line-width", minorCaseWidthNight);
-          }
-          if (map.getLayer("road_minor_fill")) {
-            map.setLayoutProperty("road_minor_fill", "line-cap", "round");
-            map.setPaintProperty("road_minor_fill", "line-color", "#0f172a");
-            map.setPaintProperty("road_minor_fill", "line-width", minorFillWidthNight);
-          }
-          if (map.getLayer("road_service_case")) {
-            map.setLayoutProperty("road_service_case", "line-cap", "round");
-            map.setPaintProperty("road_service_case", "line-width", minorCaseWidthNight);
-          }
-          if (map.getLayer("road_service_fill")) {
-            map.setLayoutProperty("road_service_fill", "line-cap", "round");
-            map.setPaintProperty("road_service_fill", "line-width", minorFillWidthNight);
-          }
-          if (map.getLayer("road_sec_case_noramp")) {
-            map.setPaintProperty("road_sec_case_noramp", "line-color", "#38bdf8");
-          }
-          if (map.getLayer("road_sec_fill_noramp")) {
-            map.setPaintProperty("road_sec_fill_noramp", "line-color", "#0369a1");
-          }
+        if (map.getLayer("road_minor_case")) {
+          map.setLayoutProperty("road_minor_case", "line-cap", "round");
+          map.setPaintProperty("road_minor_case", "line-color", curbColor);
+          map.setPaintProperty("road_minor_case", "line-width", minorCaseWidth);
+          map.setPaintProperty("road_minor_case", "line-opacity", 1.0);
+        }
+        if (map.getLayer("road_minor_fill")) {
+          map.setLayoutProperty("road_minor_fill", "line-cap", "round");
+          map.setPaintProperty("road_minor_fill", "line-color", roadSurfaceColor);
+          map.setPaintProperty("road_minor_fill", "line-width", minorFillWidth);
+          map.setPaintProperty("road_minor_fill", "line-opacity", 1.0);
+        }
+        if (map.getLayer("road_service_case")) {
+          map.setLayoutProperty("road_service_case", "line-cap", "round");
+          map.setPaintProperty("road_service_case", "line-color", curbColor);
+          map.setPaintProperty("road_service_case", "line-width", minorCaseWidth);
+          map.setPaintProperty("road_service_case", "line-opacity", 0.9);
+        }
+        if (map.getLayer("road_service_fill")) {
+          map.setLayoutProperty("road_service_fill", "line-cap", "round");
+          map.setPaintProperty("road_service_fill", "line-color", roadSurfaceColor);
+          map.setPaintProperty("road_service_fill", "line-width", minorFillWidth);
+          map.setPaintProperty("road_service_fill", "line-opacity", 1.0);
+        }
+        if (map.getLayer("road_path")) {
+          map.setPaintProperty("road_path", "line-color", curbColor);
+          map.setPaintProperty("road_path", "line-width", 2.2);
+        }
+        if (map.getLayer("road_sec_case_noramp")) {
+          map.setPaintProperty("road_sec_case_noramp", "line-color", isDark ? "#334155" : "#4b5563");
+          map.setPaintProperty("road_sec_case_noramp", "line-width", secCaseWidth);
+        }
+        if (map.getLayer("road_sec_fill_noramp")) {
+          map.setPaintProperty("road_sec_fill_noramp", "line-color", isDark ? "#243042" : "#374151");
+          map.setPaintProperty("road_sec_fill_noramp", "line-width", secFillWidth);
+        }
+        if (map.getLayer("road_pri_case_noramp")) {
+          map.setPaintProperty("road_pri_case_noramp", "line-color", isDark ? "#1e293b" : "#3b82f6");
+          map.setPaintProperty("road_pri_case_noramp", "line-width", secCaseWidth);
+        }
+        if (map.getLayer("road_pri_fill_noramp")) {
+          map.setPaintProperty("road_pri_fill_noramp", "line-color", isDark ? "#0f172a" : "#60a5fa");
+          map.setPaintProperty("road_pri_fill_noramp", "line-width", secFillWidth);
         }
       } catch (roadErr) {
         console.warn("[LiveOsmMap] Road contrast enhance:", roadErr);
@@ -1950,10 +1887,10 @@ export function LiveOsmMap({
                   "interpolate",
                   ["linear"],
                   ["coalesce", ["get", "render_height"], ["get", "height"], 12],
-                  0, "#e2e8f0",
-                  15, "#cbd5e1",
-                  35, "#94a3b8",
-                  70, "#64748b"
+                  0, isDark ? "#1e293b" : "#e2e8f0",
+                  15, isDark ? "#334155" : "#cbd5e1",
+                  35, isDark ? "#475569" : "#94a3b8",
+                  70, isDark ? "#64748b" : "#64748b"
                 ],
                 "fill-extrusion-height": [
                   "interpolate",
@@ -1963,7 +1900,7 @@ export function LiveOsmMap({
                   15.0, ["coalesce", ["get", "render_height"], ["get", "height"], 12]
                 ],
                 "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], ["get", "min_height"], 0],
-                "fill-extrusion-opacity": 0.82,
+                "fill-extrusion-opacity": isDark ? 0.92 : 0.88,
               },
             },
             labelLayerId
