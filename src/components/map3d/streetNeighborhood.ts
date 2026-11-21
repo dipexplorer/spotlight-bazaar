@@ -228,59 +228,77 @@ export function createStreetNeighborhood(
   group.add(hedge);
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 3. ROADSIDE 3D TREES & STREETLIGHTS (Flanking the OSM Street Corridor)
+  // 3. ASYMMETRICAL ORGANIC INDIAN STREET TREES & STREETLIGHTS
   // ───────────────────────────────────────────────────────────────────────────
-  const treeSpacing = 16.0;
-  const startZ = 16.0;
-  const endZ = roadLength - 6.0;
-  const treeX = roadCorridorHalfWidth + 1.6;
+  // Staggered, non-symmetrical tree placement along both sides of the corridor
+  const leftTreeZs = [15.0, 29.0, 45.0, 61.0, 78.0, 95.0, 112.0];
+  const rightTreeZs = [22.0, 37.0, 53.0, 69.0, 86.0, 104.0, 122.0];
+  const speciesList: ("gulmohar" | "neem" | "ashoka")[] = ["gulmohar", "neem", "ashoka", "neem", "gulmohar"];
 
-  let treeCount = 0;
-  for (let z = startZ; z <= endZ; z += treeSpacing) {
-    for (const side of [-1, 1]) {
-      if (side === 0 || (z >= 18 && z <= 26 && side === 1)) continue;
-      const treeType = treeCount % 2 === 0 ? "round" : "pine";
-      const tree = createTreeMesh(treeType);
-      const scale = 0.95 + Math.sin(z * 1.8) * 0.15;
-      tree.scale.set(scale, scale, scale);
-      tree.position.set(side * treeX, 0, z);
-      tree.rotation.y = (z * 0.4) % (Math.PI * 2);
-      group.add(tree);
-      treeCount++;
-    }
+  let tIdx = 0;
+  // Left side trees (staggered)
+  for (const z of leftTreeZs) {
+    if (z > roadLength + 30.0) break;
+    const species = speciesList[tIdx % speciesList.length];
+    const tree = createTreeMesh(species);
+    const scale = 0.88 + (Math.sin(z * 1.5) + 1) * 0.16; // 0.88 to 1.20 natural scale
+    tree.scale.set(scale, scale, scale);
+    const x = -(roadCorridorHalfWidth + 1.6 + (Math.sin(z * 2.3) * 0.4));
+    tree.position.set(x, 0, z + Math.cos(z * 0.7) * 1.2);
+    tree.rotation.y = (z * 0.53) % (Math.PI * 2);
+    group.add(tree);
+    tIdx++;
   }
 
-  // Modern Architectural Streetlights with Volumetric Cones and Ground Pools
+  // Right side trees (staggered at alternate Z intervals)
+  for (const z of rightTreeZs) {
+    if (z > roadLength + 30.0) break;
+    const species = speciesList[(tIdx + 1) % speciesList.length];
+    const tree = createTreeMesh(species);
+    const scale = 0.85 + (Math.cos(z * 1.7) + 1) * 0.17;
+    tree.scale.set(scale, scale, scale);
+    const x = roadCorridorHalfWidth + 1.6 + (Math.cos(z * 2.1) * 0.4);
+    tree.position.set(x, 0, z + Math.sin(z * 0.9) * 1.2);
+    tree.rotation.y = (z * 0.71) % (Math.PI * 2);
+    group.add(tree);
+    tIdx++;
+  }
+
+  // Modern Architectural Streetlights with Physics-Based Downward Expanding Cones
+  // CylinderGeometry(radiusTop, radiusBottom, height) guarantees:
+  // - radiusTop (0.08m): narrow source directly at the lantern head (Y = 5.8m)
+  // - radiusBottom (2.6m): wide illuminated circle on the road (Y = 0m)
   const coneHeight = 5.8;
-  const coneRadius = 2.4;
-  // Three.js ConeGeometry has apex at +H/2 (top) and base at -H/2 (bottom) - exactly what we want for downward lighting!
-  const coneGeo = trackGeo(new THREE.ConeGeometry(coneRadius, coneHeight, 14, 1, true));
-  const poolGeo = trackGeo(new THREE.CircleGeometry(coneRadius, 16));
+  const coneRadiusTop = 0.08;
+  const coneRadiusBottom = 2.6;
+  const coneGeo = trackGeo(new THREE.CylinderGeometry(coneRadiusTop, coneRadiusBottom, coneHeight, 16, 1, true));
+  const poolGeo = trackGeo(new THREE.CircleGeometry(coneRadiusBottom, 16));
   poolGeo.rotateX(-Math.PI / 2);
 
-  for (let z = startZ + 6.0; z <= endZ; z += treeSpacing * 1.6) {
+  const startZ = 16.0;
+  const endZ = roadLength + 20.0;
+  const lampSpacing = 24.0;
+
+  for (let z = startZ + 6.0; z <= endZ; z += lampSpacing) {
     for (const side of [-1, 1]) {
       const lamp = createStreetLightMesh();
       lamp.scale.set(0.95, 0.95, 0.95);
       const lampX = side * (roadCorridorHalfWidth + 0.4);
       lamp.position.set(lampX, 0, z);
       
-      // Orient the overhanging lantern arm towards the road (road is at X = 0):
-      // createStreetLightMesh has arm extending along +X in local space.
-      // - Left side (side = -1): road is towards +X -> rotation.y = 0 points arm into road.
-      // - Right side (side = 1): road is towards -X -> rotation.y = Math.PI points arm into road.
+      // Orient lantern arm towards the street centerline (road is at X = 0)
       lamp.rotation.y = side === 1 ? Math.PI : 0;
       group.add(lamp);
 
-      // Overhanging lantern head world X position (arm length is ~1.14m inward)
+      // Overhanging lantern head world X position (arm extends inward by 1.14m)
       const bulbX = lampX - side * 1.14;
 
-      // Downward Volumetric Light Cone emanating from lantern head down to pavement
+      // Downward Volumetric Light Beam: Narrow at lantern head (Y=5.8m), wide at pavement (Y=0m)
       const cone = new THREE.Mesh(coneGeo, lightConeMat);
       cone.position.set(bulbX, coneHeight / 2, z);
       group.add(cone);
 
-      // Warm Ground Light Pool on Road Surface directly below lantern head
+      // Warm Illuminated Pavement Pool directly below the lantern head
       const pool = new THREE.Mesh(poolGeo, lightPoolMat);
       pool.position.set(bulbX, 0.04, z);
       group.add(pool);

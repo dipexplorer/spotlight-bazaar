@@ -1584,61 +1584,96 @@ export function createFreePlotMesh(plotNum = "1"): THREE.Group {
 }
 
 /**
- * Builds charming low-poly trees: Pine, Round Deciduous, or Flowering Gulmohar
+ * Builds authentic Indian street trees: Spreading Gulmohar, Dense Neem, or Architectural Ashoka
  */
-export function createTreeMesh(type: "pine" | "round" | "flowering" = "pine"): THREE.Group {
+export function createTreeMesh(type: "gulmohar" | "neem" | "ashoka" | "pine" | "round" | "flowering" = "neem"): THREE.Group {
   const tree = new THREE.Group();
   tree.name = "roadside_tree";
 
-  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.9 });
-  const foliageMat1 = new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.75 });
-  const foliageMat2 = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.75 });
-  const foliageMat3 = new THREE.MeshStandardMaterial({ color: 0x4ade80, roughness: 0.75 });
-  const flowerMat = new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.7 }); // Orange flowering
+  const barkMat = new THREE.MeshStandardMaterial({ color: 0x3d2b1f, roughness: 0.95 });
+  const deepFoliageMat = new THREE.MeshStandardMaterial({ color: 0x1b4332, roughness: 0.82 }); // Deep forest jade
+  const midFoliageMat = new THREE.MeshStandardMaterial({ color: 0x2d6a4f, roughness: 0.80 }); // Leafy emerald
+  const lightFoliageMat = new THREE.MeshStandardMaterial({ color: 0x40916c, roughness: 0.78 }); // Sunlit canopy tip
+  const flowerBlossomMat = new THREE.MeshStandardMaterial({ color: 0xd9381e, roughness: 0.75 }); // Gulmohar scarlet blossom
 
-  // Contact shadow
-  tree.add(createGroundShadow(3.0, 3.0));
+  // Soft organic contact shadow on the ground
+  tree.add(createGroundShadow(3.6, 3.6));
 
-  // Trunk
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.4, 2.0, 7), trunkMat);
-  trunk.position.y = 1.0;
-  tree.add(trunk);
+  if (type === "ashoka" || type === "pine") {
+    // Slender cascading architectural Ashoka tree (Polyalthia longifolia)
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 4.2, 8), barkMat);
+    trunk.position.y = 2.1;
+    tree.add(trunk);
 
-  if (type === "pine") {
-    // 3-tiered low-poly pine tree
-    const cone1 = new THREE.Mesh(new THREE.ConeGeometry(1.8, 2.2, 7), foliageMat1);
-    cone1.position.y = 2.4;
-    tree.add(cone1);
+    const tier1 = new THREE.Mesh(new THREE.ConeGeometry(1.5, 2.2, 8), deepFoliageMat);
+    tier1.position.y = 2.6;
+    tree.add(tier1);
 
-    const cone2 = new THREE.Mesh(new THREE.ConeGeometry(1.4, 1.9, 7), foliageMat2);
-    cone2.position.y = 3.6;
-    tree.add(cone2);
+    const tier2 = new THREE.Mesh(new THREE.ConeGeometry(1.25, 2.0, 8), midFoliageMat);
+    tier2.position.y = 3.9;
+    tree.add(tier2);
 
-    const cone3 = new THREE.Mesh(new THREE.ConeGeometry(0.95, 1.5, 7), foliageMat3);
-    cone3.position.y = 4.6;
-    tree.add(cone3);
-  } else if (type === "flowering") {
-    // Lush architectural canopy shade tree (layered emerald & sage foliage)
-    const sphere1 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.65, 1), foliageMat1);
-    sphere1.position.set(0, 2.7, 0);
-    tree.add(sphere1);
+    const tier3 = new THREE.Mesh(new THREE.ConeGeometry(0.9, 1.8, 8), lightFoliageMat);
+    tier3.position.y = 5.0;
+    tree.add(tier3);
 
-    const sphere2 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.25, 1), foliageMat2);
-    sphere2.position.set(0.35, 3.4, -0.2);
-    tree.add(sphere2);
+    const tier4 = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.4, 7), midFoliageMat);
+    tier4.position.y = 6.0;
+    tree.add(tier4);
+  } else if (type === "gulmohar" || type === "flowering") {
+    // Spreading umbrella Gulmohar shade tree (Delonix regia) with scarlet blossom accents
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.42, 2.2, 8), barkMat);
+    trunk.position.y = 1.1;
+    tree.add(trunk);
 
-    const sphere3 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.85, 1), foliageMat3);
-    sphere3.position.set(-0.25, 3.9, 0.2);
-    tree.add(sphere3);
+    // Main branching forks
+    for (const angle of [0.4, 2.5, 4.6]) {
+      const branch = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 1.6, 6), barkMat);
+      branch.position.set(Math.cos(angle) * 0.4, 2.3, Math.sin(angle) * 0.4);
+      branch.rotation.z = Math.cos(angle) * 0.45;
+      branch.rotation.x = Math.sin(angle) * 0.45;
+      tree.add(branch);
+    }
+
+    // Wide horizontal layered canopy clusters
+    const pad1 = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.6, 0.65, 8), deepFoliageMat);
+    pad1.position.set(0, 3.2, 0);
+    tree.add(pad1);
+
+    const pad2 = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.0, 0.55, 8), midFoliageMat);
+    pad2.position.set(0.35, 3.8, -0.2);
+    tree.add(pad2);
+
+    const pad3 = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.4, 0.45, 8), lightFoliageMat);
+    pad3.position.set(-0.25, 4.3, 0.25);
+    tree.add(pad3);
+
+    // Scarlet blossom flower clusters
+    for (const [bx, by, bz] of [[-1.2, 3.5, 0.8], [1.4, 3.6, -0.6], [0.2, 4.2, 1.1], [-0.5, 4.4, -0.9]]) {
+      const blossom = new THREE.Mesh(new THREE.DodecahedronGeometry(0.38, 1), flowerBlossomMat);
+      blossom.position.set(bx, by, bz);
+      tree.add(blossom);
+    }
   } else {
-    // Stylized rounded deciduous tree
-    const sphere = new THREE.Mesh(new THREE.DodecahedronGeometry(1.6, 1), foliageMat1);
-    sphere.position.y = 2.8;
-    tree.add(sphere);
+    // Dense lush rounded Indian Neem tree (Azadirachta indica)
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.38, 2.0, 8), barkMat);
+    trunk.position.y = 1.0;
+    tree.add(trunk);
 
-    const topFoliage = new THREE.Mesh(new THREE.DodecahedronGeometry(1.1, 1), foliageMat2);
-    topFoliage.position.set(0.3, 3.8, 0.2);
-    tree.add(topFoliage);
+    // Asymmetric multi-sphere canopy clusters
+    const clusters = [
+      { x: 0, y: 2.8, z: 0, r: 1.5, mat: deepFoliageMat },
+      { x: 0.6, y: 3.3, z: 0.4, r: 1.25, mat: midFoliageMat },
+      { x: -0.5, y: 3.4, z: -0.3, r: 1.2, mat: deepFoliageMat },
+      { x: 0.1, y: 4.1, z: -0.2, r: 1.1, mat: lightFoliageMat },
+      { x: -0.3, y: 3.9, z: 0.4, r: 0.95, mat: midFoliageMat },
+    ];
+
+    for (const c of clusters) {
+      const sphere = new THREE.Mesh(new THREE.DodecahedronGeometry(c.r, 1), c.mat);
+      sphere.position.set(c.x, c.y, c.z);
+      tree.add(sphere);
+    }
   }
 
   return tree;
