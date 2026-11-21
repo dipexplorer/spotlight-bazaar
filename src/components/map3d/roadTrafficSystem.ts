@@ -1,12 +1,13 @@
 import * as THREE from "three";
+import { osmRoadSpline } from "./osmRoadSpline";
 
 /**
  * Living Indian Road Traffic System with Dynamic Day/Night Headlight Beams
  * Features:
- * - 1 Authentic Bajaj RE-style Green/Yellow Auto-Rickshaw (Inbound Lane)
- * - 1 Modern White Compact Cab (Outbound Lane)
+ * - 1 Authentic Bajaj RE-style Green/Yellow Auto-Rickshaw (Outbound Lane)
+ * - 1 Modern White Compact Cab (Inbound Lane)
  * - Dynamic night headlight beams projecting forward onto the road
- * - Rotating wheels and continuous road lane navigation
+ * - Exact navigation along the curved OpenStreetMap road network via OsmRoadSpline
  */
 
 export interface RoadTrafficSystem {
@@ -189,28 +190,23 @@ export function createRoadTrafficSystem(roadLength: number, roadAngle: number, i
   const group = new THREE.Group();
   group.name = "living_road_traffic_system";
 
-  // Extended continuous route connecting driveway all the way into the OpenStreetMap street network
-  const minZ = 12.0;
-  const maxZ = roadLength + 90.0; // Extends ~160m to 180m into the OSM street corridor
-  const laneLeftX = -1.25; // Outbound lane (towards OSM street)
-  const laneRightX = 1.25;  // Inbound lane (from OSM street towards studio)
+  // Navigation bounds along the continuous surveyed OSM road spline (0 to totalLength ~180m)
+  const minS = 4.0;
+  const maxS = osmRoadSpline.totalLength - 4.0;
+  const laneOffset = 1.25; // Standard Indian lane offset from centerline (m)
 
   // 1. Outbound Vehicle: Authentic Bajaj RE Auto-Rickshaw (cruising from studio towards OSM street)
   const auto = createAutoRickshaw();
-  auto.group.position.set(laneLeftX, 0, minZ + 8.0);
-  auto.group.rotation.y = 0; // Facing +Z (outbound towards OSM street)
   group.add(auto.group);
 
   // 2. Inbound Vehicle: Modern White Indian Compact Cab (cruising from OSM street towards studio)
   const cab = createCompactCar();
-  cab.group.position.set(laneRightX, 0, maxZ - 12.0);
-  cab.group.rotation.y = Math.PI; // Facing -Z (inbound towards studio)
   group.add(cab.group);
 
   const autoSpeed = 5.6; // ~20 km/h calm cruising speed
   const cabSpeed = 6.8;  // ~24 km/h
-  let autoZ = minZ + 8.0;
-  let cabZ = maxZ - 12.0;
+  let autoS = minS + 12.0;
+  let cabS = maxS - 14.0;
 
   // Align whole traffic system to road corridor orientation
   group.rotation.y = roadAngle;
@@ -222,16 +218,20 @@ export function createRoadTrafficSystem(roadLength: number, roadAngle: number, i
   };
 
   const update = (delta: number) => {
-    // 1. Move Auto-Rickshaw Outbound (+Z forward towards OSM street)
-    autoZ += autoSpeed * delta;
-    if (autoZ > maxZ) {
-      autoZ = minZ;
+    // 1. Move Auto-Rickshaw Outbound along the exact curved OSM road
+    autoS += autoSpeed * delta;
+    if (autoS > maxS) {
+      autoS = minS;
     }
-    auto.group.position.z = autoZ;
+    const autoPose = osmRoadSpline.getPoseAtDistance(autoS);
+    // Left-hand drive: left lane is along -normal
+    auto.group.position.copy(autoPose.position).addScaledVector(autoPose.normal, -laneOffset);
+    auto.group.rotation.y = autoPose.heading;
 
     // Smooth distance scale fade at distant horizons so vehicle never abruptly pops
-    const autoDistFade = Math.min(1.0, Math.max(0.0, (autoZ - minZ) / 8.0)) *
-                         Math.min(1.0, Math.max(0.0, (maxZ - autoZ) / 12.0));
+    const autoDistFade =
+      Math.min(1.0, Math.max(0.0, (autoS - minS) / 10.0)) *
+      Math.min(1.0, Math.max(0.0, (maxS - autoS) / 14.0));
     const autoScale = Math.max(0.001, autoDistFade);
     auto.group.scale.set(autoScale, autoScale, autoScale);
 
@@ -240,15 +240,20 @@ export function createRoadTrafficSystem(roadLength: number, roadAngle: number, i
       w.rotation.x -= autoSpeed * delta * 4.2;
     }
 
-    // 2. Move Compact Cab Inbound (-Z towards commercial plot)
-    cabZ -= cabSpeed * delta;
-    if (cabZ < minZ) {
-      cabZ = maxZ;
+    // 2. Move Compact Cab Inbound along the exact curved OSM road
+    cabS -= cabSpeed * delta;
+    if (cabS < minS) {
+      cabS = maxS;
     }
-    cab.group.position.z = cabZ;
+    const cabPose = osmRoadSpline.getPoseAtDistance(cabS);
+    // Inbound left-hand drive: inbound left lane is along +normal
+    cab.group.position.copy(cabPose.position).addScaledVector(cabPose.normal, laneOffset);
+    // Heading rotated 180 degrees to face inbound towards studio
+    cab.group.rotation.y = cabPose.heading + Math.PI;
 
-    const cabDistFade = Math.min(1.0, Math.max(0.0, (cabZ - minZ) / 8.0)) *
-                        Math.min(1.0, Math.max(0.0, (maxZ - cabZ) / 12.0));
+    const cabDistFade =
+      Math.min(1.0, Math.max(0.0, (cabS - minS) / 10.0)) *
+      Math.min(1.0, Math.max(0.0, (maxS - cabS) / 14.0));
     const cabScale = Math.max(0.001, cabDistFade);
     cab.group.scale.set(cabScale, cabScale, cabScale);
 

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { createTreeMesh, createStreetLightMesh } from "@/components/map/osm3dBuildings";
+import { osmRoadSpline } from "./osmRoadSpline";
 
 /**
  * GTA VI-Style Realistic 3D Street Neighborhood Environment
@@ -228,46 +229,53 @@ export function createStreetNeighborhood(
   group.add(hedge);
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 3. ASYMMETRICAL ORGANIC INDIAN STREET TREES & STREETLIGHTS
+  // 3. ASYMMETRICAL ORGANIC INDIAN STREET TREES & STREETLIGHTS (SPLINE-CONTOURED)
   // ───────────────────────────────────────────────────────────────────────────
-  // Staggered, non-symmetrical tree placement along both sides of the corridor
-  const leftTreeZs = [15.0, 29.0, 45.0, 61.0, 78.0, 95.0, 112.0];
-  const rightTreeZs = [22.0, 37.0, 53.0, 69.0, 86.0, 104.0, 122.0];
+  // Staggered, non-symmetrical tree placement strictly contoured along the curved OSM road spline
+  // Guarantees zero encroachment onto the asphalt regardless of road bends
+  const leftTreeSs = [16.0, 30.0, 46.0, 62.0, 78.0, 96.0, 114.0];
+  const rightTreeSs = [22.0, 37.0, 53.0, 69.0, 86.0, 105.0, 124.0];
   const speciesList: ("gulmohar" | "neem" | "ashoka")[] = ["gulmohar", "neem", "ashoka", "neem", "gulmohar"];
 
   let tIdx = 0;
-  // Left side trees (staggered)
-  for (const z of leftTreeZs) {
-    if (z > roadLength + 30.0) break;
+  // Left side trees (staggered along -normal)
+  for (const s of leftTreeSs) {
+    if (s > osmRoadSpline.totalLength - 10.0) break;
     const species = speciesList[tIdx % speciesList.length];
     const tree = createTreeMesh(species);
-    const scale = 0.88 + (Math.sin(z * 1.5) + 1) * 0.16; // 0.88 to 1.20 natural scale
+    const scale = 0.88 + (Math.sin(s * 1.5) + 1) * 0.16; // 0.88 to 1.20 natural scale
     tree.scale.set(scale, scale, scale);
-    const x = -(roadCorridorHalfWidth + 1.6 + (Math.sin(z * 2.3) * 0.4));
-    tree.position.set(x, 0, z + Math.cos(z * 0.7) * 1.2);
-    tree.rotation.y = (z * 0.53) % (Math.PI * 2);
+
+    const pose = osmRoadSpline.getPoseAtDistance(s);
+    const lateralDist = -(roadCorridorHalfWidth + 1.8 + (Math.sin(s * 2.3) * 0.35));
+    const treePos = pose.position.clone().addScaledVector(pose.normal, lateralDist);
+    tree.position.set(treePos.x, 0, treePos.z);
+    tree.rotation.y = (s * 0.53) % (Math.PI * 2);
     group.add(tree);
     tIdx++;
   }
 
-  // Right side trees (staggered at alternate Z intervals)
-  for (const z of rightTreeZs) {
-    if (z > roadLength + 30.0) break;
+  // Right side trees (staggered along +normal)
+  for (const s of rightTreeSs) {
+    if (s > osmRoadSpline.totalLength - 10.0) break;
     const species = speciesList[(tIdx + 1) % speciesList.length];
     const tree = createTreeMesh(species);
-    const scale = 0.85 + (Math.cos(z * 1.7) + 1) * 0.17;
+    const scale = 0.85 + (Math.cos(s * 1.7) + 1) * 0.17;
     tree.scale.set(scale, scale, scale);
-    const x = roadCorridorHalfWidth + 1.6 + (Math.cos(z * 2.1) * 0.4);
-    tree.position.set(x, 0, z + Math.sin(z * 0.9) * 1.2);
-    tree.rotation.y = (z * 0.71) % (Math.PI * 2);
+
+    const pose = osmRoadSpline.getPoseAtDistance(s);
+    const lateralDist = roadCorridorHalfWidth + 1.8 + (Math.cos(s * 2.1) * 0.35);
+    const treePos = pose.position.clone().addScaledVector(pose.normal, lateralDist);
+    tree.position.set(treePos.x, 0, treePos.z);
+    tree.rotation.y = (s * 0.71) % (Math.PI * 2);
     group.add(tree);
     tIdx++;
   }
 
   // Modern Architectural Streetlights with Physics-Based Downward Expanding Cones
-  // CylinderGeometry(radiusTop, radiusBottom, height) guarantees:
-  // - radiusTop (0.08m): narrow source directly at the lantern head (Y = 5.8m)
-  // - radiusBottom (2.6m): wide illuminated circle on the road (Y = 0m)
+  // Placed strictly along the road normal on the verge (curbOffset = 4.0m)
+  // Arm overhangs inward (1.14m), placing lantern head at 2.86m from centerline (over gutter/curb)
+  // NEVER encroaches into the road asphalt.
   const coneHeight = 5.8;
   const coneRadiusTop = 0.08;
   const coneRadiusBottom = 2.6;
@@ -275,32 +283,38 @@ export function createStreetNeighborhood(
   const poolGeo = trackGeo(new THREE.CircleGeometry(coneRadiusBottom, 16));
   poolGeo.rotateX(-Math.PI / 2);
 
-  const startZ = 16.0;
-  const endZ = roadLength + 20.0;
-  const lampSpacing = 24.0;
+  const lampDistances = [14.0, 36.0, 58.0];
+  const curbOffset = roadCorridorHalfWidth + 0.8; // 4.0m from road centerline (safely on the verge)
 
-  for (let z = startZ + 6.0; z <= endZ; z += lampSpacing) {
+  for (const s of lampDistances) {
+    const pose = osmRoadSpline.getPoseAtDistance(s);
+
     for (const side of [-1, 1]) {
       const lamp = createStreetLightMesh();
       lamp.scale.set(0.95, 0.95, 0.95);
-      const lampX = side * (roadCorridorHalfWidth + 0.4);
-      lamp.position.set(lampX, 0, z);
-      
-      // Orient lantern arm towards the street centerline (road is at X = 0)
-      lamp.rotation.y = side === 1 ? Math.PI : 0;
+
+      // Pole position on verge
+      const polePos = pose.position.clone().addScaledVector(pose.normal, side * curbOffset);
+      lamp.position.set(polePos.x, 0, polePos.z);
+
+      // Arm extends along local +X in createStreetLightMesh.
+      // For left side (side === -1), pointing along +normal points inward toward road centerline.
+      // For right side (side === 1), pointing along -normal points inward toward road centerline.
+      lamp.rotation.y = side === -1 ? pose.heading : pose.heading + Math.PI;
       group.add(lamp);
 
-      // Overhanging lantern head world X position (arm extends inward by 1.14m)
-      const bulbX = lampX - side * 1.14;
+      // Overhanging lantern head world position (arm extends inward by 1.14m)
+      const bulbOffset = side * (curbOffset - 1.14);
+      const bulbPos = pose.position.clone().addScaledVector(pose.normal, bulbOffset);
 
       // Downward Volumetric Light Beam: Narrow at lantern head (Y=5.8m), wide at pavement (Y=0m)
       const cone = new THREE.Mesh(coneGeo, lightConeMat);
-      cone.position.set(bulbX, coneHeight / 2, z);
+      cone.position.set(bulbPos.x, coneHeight / 2, bulbPos.z);
       group.add(cone);
 
       // Warm Illuminated Pavement Pool directly below the lantern head
       const pool = new THREE.Mesh(poolGeo, lightPoolMat);
-      pool.position.set(bulbX, 0.04, z);
+      pool.position.set(bulbPos.x, 0.04, bulbPos.z);
       group.add(pool);
     }
   }

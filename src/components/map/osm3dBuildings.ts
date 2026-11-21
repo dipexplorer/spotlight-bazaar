@@ -217,15 +217,7 @@ export function createAccessRoadConnectorMesh(
   const roadGroup = new THREE.Group();
   roadGroup.name = "automated_road_connector";
 
-  // Modern Streetlights framing the studio entrance portal
-  for (const side of [-1, 1]) {
-    const lamp = createStreetLightMesh();
-    lamp.scale.set(0.9, 0.9, 0.9);
-    lamp.position.set(side * (roadWidth / 2 + 0.8), 0, startOffset + 3.0);
-    lamp.rotation.y = side === 1 ? -Math.PI / 2 : Math.PI / 2;
-    roadGroup.add(lamp);
-  }
-
+  // Street lighting is unified and procedurally placed along the OSM road spline in streetNeighborhood.ts
   return roadGroup;
 }
 
