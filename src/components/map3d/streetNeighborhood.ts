@@ -251,9 +251,11 @@ export function createStreetNeighborhood(
   }
 
   // Modern Architectural Streetlights with Volumetric Cones and Ground Pools
-  const coneGeo = trackGeo(new THREE.ConeGeometry(2.4, 4.5, 12, 1, true));
-  coneGeo.rotateX(Math.PI); // Point downward
-  const poolGeo = trackGeo(new THREE.CircleGeometry(2.5, 16));
+  const coneHeight = 5.8;
+  const coneRadius = 2.4;
+  // Three.js ConeGeometry has apex at +H/2 (top) and base at -H/2 (bottom) - exactly what we want for downward lighting!
+  const coneGeo = trackGeo(new THREE.ConeGeometry(coneRadius, coneHeight, 14, 1, true));
+  const poolGeo = trackGeo(new THREE.CircleGeometry(coneRadius, 16));
   poolGeo.rotateX(-Math.PI / 2);
 
   for (let z = startZ + 6.0; z <= endZ; z += treeSpacing * 1.6) {
@@ -262,17 +264,25 @@ export function createStreetNeighborhood(
       lamp.scale.set(0.95, 0.95, 0.95);
       const lampX = side * (roadCorridorHalfWidth + 0.4);
       lamp.position.set(lampX, 0, z);
-      lamp.rotation.y = side === 1 ? -Math.PI / 2 : Math.PI / 2;
+      
+      // Orient the overhanging lantern arm towards the road (road is at X = 0):
+      // createStreetLightMesh has arm extending along +X in local space.
+      // - Left side (side = -1): road is towards +X -> rotation.y = 0 points arm into road.
+      // - Right side (side = 1): road is towards -X -> rotation.y = Math.PI points arm into road.
+      lamp.rotation.y = side === 1 ? Math.PI : 0;
       group.add(lamp);
 
-      // Downward Volumetric Light Cone
+      // Overhanging lantern head world X position (arm length is ~1.14m inward)
+      const bulbX = lampX - side * 1.14;
+
+      // Downward Volumetric Light Cone emanating from lantern head down to pavement
       const cone = new THREE.Mesh(coneGeo, lightConeMat);
-      cone.position.set(lampX, 2.25, z);
+      cone.position.set(bulbX, coneHeight / 2, z);
       group.add(cone);
 
-      // Warm Ground Light Pool on Sidewalk / Road
+      // Warm Ground Light Pool on Road Surface directly below lantern head
       const pool = new THREE.Mesh(poolGeo, lightPoolMat);
-      pool.position.set(lampX, 0.07, z);
+      pool.position.set(bulbX, 0.04, z);
       group.add(pool);
     }
   }

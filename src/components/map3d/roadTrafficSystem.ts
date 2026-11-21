@@ -76,17 +76,28 @@ function createAutoRickshaw(): { group: THREE.Group; wheels: THREE.Group[] } {
   windshield.rotation.x = -0.25;
   group.add(windshield);
 
-  // Front Headlight
+  // Front Headlight (Apex of beam starts here)
   const light = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.14, 0.05), headlightMat);
   light.position.set(0, 0.48, 1.16);
   group.add(light);
 
-  // Volumetric Headlight Beam (+Z forward)
-  const beamGeo = new THREE.ConeGeometry(1.4, 8.5, 10, 1, true);
-  beamGeo.rotateX(Math.PI / 2);
+  // Volumetric Headlight Beam (+Z forward towards destination)
+  // Rotating around X by -Math.PI / 2 points the apex at -Z (headlight) and base at +Z (forward down the street)
+  const beamLength = 7.5;
+  const beamRadius = 1.35;
+  const beamGeo = new THREE.ConeGeometry(beamRadius, beamLength, 12, 1, true);
+  beamGeo.rotateX(-Math.PI / 2);
   const beam = new THREE.Mesh(beamGeo, beamMat);
-  beam.position.set(0, 0.42, 5.4);
+  beam.position.set(0, 0.38, 1.16 + beamLength / 2);
+  beam.rotation.x = 0.04; // Gentle downward pitch illuminating road surface ahead
   group.add(beam);
+
+  // Road Surface Illumination Pool in front of vehicle
+  const carPoolGeo = new THREE.CircleGeometry(1.4, 12);
+  carPoolGeo.rotateX(-Math.PI / 2);
+  const carPool = new THREE.Mesh(carPoolGeo, beamMat);
+  carPool.position.set(0, 0.03, 5.2);
+  group.add(carPool);
 
   // Rear Taillights
   for (const side of [-1, 1]) {

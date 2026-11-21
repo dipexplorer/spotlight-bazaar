@@ -1597,11 +1597,12 @@ export function LiveOsmMap({
         console.warn("[LiveOsmMap] Satellite layer warning:", satErr);
       }
 
-      // 2. High-Contrast Production Road & Basemap Styling (Clean Photorealistic Vector Environment)
-      const groundColor = isDark ? "#0b141d" : "#245838";
-      const parkColor = isDark ? "#0a2215" : "#15803d";
-      const roadSurfaceColor = isDark ? "#0f172a" : "#2c3542";
-      const curbColor = isDark ? "#334155" : "#94a3b8";
+      // 2. High-Taste Cartographic & Vector Environment (No Monochromatic Green Soup)
+      const groundColor = isDark ? "#0a101d" : "#e8ebe6"; // Realistic natural muted urban terrain
+      const residentialColor = isDark ? "#0f1827" : "#dfe4de"; // Differentiated residential parcels
+      const parkColor = isDark ? "#0a1a12" : "#3d7350"; // Natural foliage green (ONLY for parks/reserves)
+      const roadSurfaceColor = isDark ? "#0f172a" : "#334155"; // Realistic dark matte asphalt
+      const curbColor = isDark ? "#1e293b" : "#cbd5e1"; // Clean concrete curb/casing
 
       // Physically accurate zoom-adaptive width matching real-world 2-lane road dimensions
       const minorCaseWidth: any = [
@@ -1649,15 +1650,18 @@ export function LiveOsmMap({
           ] as any);
           map.setPaintProperty("water", "fill-opacity", 1.0);
         }
-        for (const greenLayer of ["landcover", "landuse", "landuse_residential", "park_national_park", "park_nature_reserve"]) {
-          if (map.getLayer(greenLayer)) {
-            map.setPaintProperty(greenLayer, "fill-color", parkColor);
-            map.setPaintProperty(greenLayer, "fill-opacity", [
-              "interpolate", ["linear"], ["zoom"],
-              10.5, 0.20,
-              12.5, 0.85,
-              18.0, 0.85,
-            ] as any);
+        // ONLY designated parks, nature reserves & green spaces get foliage green
+        for (const parkLayer of ["park_national_park", "park_nature_reserve", "landcover"]) {
+          if (map.getLayer(parkLayer)) {
+            map.setPaintProperty(parkLayer, "fill-color", parkColor);
+            map.setPaintProperty(parkLayer, "fill-opacity", isDark ? 0.35 : 0.45);
+          }
+        }
+        // Residential parcels and urban landuse use subtle natural earth/parcel tones (NOT green!)
+        for (const resLayer of ["landuse", "landuse_residential"]) {
+          if (map.getLayer(resLayer)) {
+            map.setPaintProperty(resLayer, "fill-color", residentialColor);
+            map.setPaintProperty(resLayer, "fill-opacity", isDark ? 0.45 : 0.60);
           }
         }
 
@@ -1846,7 +1850,9 @@ export function LiveOsmMap({
 
       // 4. Add 3D Building Extrusions from Carto vector tiles for surrounding city context
       try {
-        if (!map.getLayer("3d-city-buildings") && map.getSource("protomaps")) {
+        const bSource = map.getSource("carto") ? "carto" : map.getSource("openmaptiles") ? "openmaptiles" : map.getSource("protomaps") ? "protomaps" : null;
+        if (!map.getLayer("3d-city-buildings") && bSource) {
+          const bSourceLayer = bSource === "carto" ? "building" : "buildings";
           const layers = map.getStyle().layers;
           let labelLayerId: string | undefined;
           for (let i = 0; i < (layers?.length || 0); i++) {
@@ -1858,8 +1864,8 @@ export function LiveOsmMap({
           map.addLayer(
             {
               id: "3d-city-buildings",
-              source: "protomaps",
-              "source-layer": "buildings",
+              source: bSource,
+              "source-layer": bSourceLayer,
               type: "fill-extrusion",
               minzoom: 13.5,
               paint: {
