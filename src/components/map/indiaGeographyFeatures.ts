@@ -124,3 +124,4 @@ export const INDIA_GEOGRAPHY_REGIONS_GEOJSON: GeoJSON.FeatureCollection<GeoJSON.
     },
   })),
 };
+

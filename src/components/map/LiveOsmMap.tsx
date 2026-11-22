@@ -3663,376 +3663,402 @@ export function LiveOsmMap({
     [flyToPlace, flyToStorefront]
   );
 
+  const handleResetToIndia = useCallback(() => {
+    if (mapRef.current) {
+      clearSearchPin();
+      handleStopMove();
+      setIsWalkMode(false);
+      isWalkModeRef.current = false;
+      setFocusedRegion(null);
+      setFocusedStorefront(null);
+      isFlightActiveRef.current = true;
+      setIs3DMode(true);
+      mapRef.current.flyTo({
+        center: [82.5, 21.5],
+        zoom: 4.3,
+        pitch: 42,
+        bearing: -4,
+        duration: 1400,
+      });
+      mapRef.current.once("moveend", () => {
+        isFlightActiveRef.current = false;
+      });
+      onCitySelect(null);
+      showToast("🇮🇳 Viewing 3D India Map");
+    }
+  }, [clearSearchPin, handleStopMove, onCitySelect]);
+
+  const toggle3DRelief = useCallback(() => {
+    if (!mapRef.current) return;
+    const map = mapRef.current;
+    const curPitch = map.getPitch();
+    const nextPitch = curPitch > 25 ? 0 : 58;
+    const nextBearing = curPitch > 25 ? 0 : -14;
+    setIs3DMode(nextPitch > 0);
+    map.easeTo({
+      pitch: nextPitch,
+      bearing: nextBearing,
+      duration: 1000,
+    });
+    bazaarAudio.playStorefrontChime();
+    showToast(nextPitch > 0 ? "🏔️ 3D Physical Relief Enabled" : "🗺️ 2D Plan View");
+  }, []);
+
   return (
     <div className="relative w-full h-full overflow-hidden bg-[#0a1120]">
       {/* 1. MAPLIBRE GL CONTAINER — REAL OPENSTREETMAP BASE (IMAGE 1 BASED) */}
       <div ref={mapContainerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
-      {/* 2. TOP UNIFIED BAR */}
-      <div className="absolute top-4 inset-x-4 z-20 flex items-center justify-between gap-3 pointer-events-none">
-        {/* Left: Brand + See All of India Button */}
-        <div className="flex items-center gap-2 pointer-events-auto shrink-0">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800 shadow-2xl">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/mascot.jpg"
-              alt="Spotlight Mascot"
-              className="w-6 h-6 rounded-lg object-cover border border-amber-500/40"
-            />
-            <span className="hidden sm:inline text-xs font-bold text-white tracking-wide">
-              Spotlight <span className="text-amber-400">Bazaar</span>
-            </span>
-          </div>
+      {/* 2. TOP UNIFIED COMMAND BAR (Bespoke Human-Crafted Architecture) */}
+      <header className="absolute top-3 sm:top-4 inset-x-3 sm:inset-x-5 z-20 pointer-events-none flex justify-center">
+        <div className="w-full max-w-7xl h-12 px-2 sm:px-3 rounded-2xl bg-neutral-950/90 backdrop-blur-2xl border border-white/10 shadow-[0_12px_36px_rgba(0,0,0,0.55)] flex items-center justify-between gap-2 sm:gap-3 pointer-events-auto transition-all">
+          {/* Left: Brand + Spatial Breadcrumb + Pulse */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <Link
+              href="/"
+              onClick={(e) => {
+                if (viewLevel !== "india") {
+                  e.preventDefault();
+                  handleResetToIndia();
+                }
+              }}
+              className="flex items-center gap-2 px-2 py-1 rounded-xl hover:bg-white/5 transition-colors group"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/mascot.jpg"
+                alt="Spotlight Mascot"
+                className="w-6 h-6 rounded-lg object-cover ring-1 ring-amber-500/40 group-hover:ring-amber-500/80 transition-all"
+              />
+              <span className="text-[13px] font-semibold text-white tracking-tight">
+                Spotlight <span className="text-amber-400 font-bold">Bazaar</span>
+              </span>
+            </Link>
 
-          {viewLevel !== "india" && (
+            {viewLevel !== "india" && (
+              <>
+                <span className="h-4 w-px bg-white/10 hidden sm:block" />
+                <button
+                  type="button"
+                  onClick={handleResetToIndia}
+                  title="Return to 3D India Overview"
+                  className="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 hover:text-amber-200 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline">India</span>
+                </button>
+              </>
+            )}
+
             <button
               type="button"
-              onClick={() => {
-                if (mapRef.current) {
-                  clearSearchPin();
-                  handleStopMove();
-                  setIsWalkMode(false);
-                  isWalkModeRef.current = false;
-                  setFocusedRegion(null);
-                  setFocusedStorefront(null);
-                  isFlightActiveRef.current = true;
-                  setIs3DMode(true);
-                  mapRef.current.flyTo({
-                    center: [82.5, 21.5],
-                    zoom: 4.3,
-                    pitch: 42,
-                    bearing: -4,
-                    duration: 1400,
-                  });
-                  mapRef.current.once("moveend", () => {
-                    isFlightActiveRef.current = false;
-                  });
-                  onCitySelect(null);
-                  showToast("🇮🇳 Viewing 3D India Map");
-                }
-              }}
-              className="px-3 py-1.5 rounded-2xl bg-neutral-950/90 hover:bg-neutral-900 border border-amber-500/60 text-amber-400 text-xs font-bold flex items-center gap-1.5 shadow-2xl backdrop-blur-xl transition-all"
+              onClick={() => setShowBroadcastsDrawer(true)}
+              title="Live street broadcasts & deals across India"
+              className="px-2 py-1 rounded-lg hover:bg-white/5 text-neutral-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">See all of India</span>
-              <span className="sm:hidden">India</span>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <span className="hidden xl:inline text-[11px] font-medium text-neutral-300">Pulse</span>
+              {liveBroadcastEntries.length > 0 && (
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-300 tabular-nums font-semibold">
+                  {liveBroadcastEntries.length}
+                </span>
+              )}
             </button>
-          )}
+          </div>
 
-          {/* Live Street Broadcasts Pulse Trigger */}
-          <button
-            type="button"
-            onClick={() => setShowBroadcastsDrawer(true)}
-            title="Live deals, coupons, hiring & service requests across India"
-            className="px-3 py-1.5 rounded-2xl bg-neutral-950/92 hover:bg-neutral-900 border border-emerald-500/45 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 shadow-2xl backdrop-blur-xl transition-all"
-          >
-            <Radio className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden md:inline">Live Pulse</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-[10px] font-mono tabular-nums text-emerald-300">
-              {liveBroadcastEntries.length}
-            </span>
-          </button>
-        </div>
-
-        {/* Center: Dynamic Hybrid Omnibox Search (Businesses + States + Cities + Areas + 6-Digit PIN Codes) */}
-        <div ref={searchBoxRef} className="relative flex-1 max-w-md pointer-events-auto">
-          <div className="relative flex items-center">
-            <Search className="absolute left-3.5 w-4 h-4 text-neutral-300 pointer-events-none" />
-            <input
-              id="spotlight-bazaar-search"
-              name="searchQuery"
-              type="text"
-              aria-label="Search business, city, state, area, or PIN code"
-              placeholder="Search business, city, state, area, or PIN code..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setSearchFocused(true);
-              }}
-              onFocus={() => setSearchFocused(true)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  setSearchFocused(false);
-                  return;
-                }
-                if (e.key === "ArrowDown") {
-                  e.preventDefault();
-                  setActiveSuggestionIdx((prev) =>
-                    flatSuggestions.length === 0 ? -1 : (prev + 1) % flatSuggestions.length
-                  );
-                } else if (e.key === "ArrowUp") {
-                  e.preventDefault();
-                  setActiveSuggestionIdx((prev) =>
-                    flatSuggestions.length === 0 ? -1 : prev <= 0 ? flatSuggestions.length - 1 : prev - 1
-                  );
-                } else if (e.key === "Enter" && flatSuggestions.length > 0) {
-                  e.preventDefault();
-                  const chosen = flatSuggestions[activeSuggestionIdx >= 0 ? activeSuggestionIdx : 0];
-                  if (chosen) selectSuggestion(chosen);
-                }
-              }}
-              className="w-full pl-10 pr-14 py-2 rounded-2xl bg-neutral-950/90 backdrop-blur-2xl border border-white/10 text-white text-xs font-medium placeholder:text-neutral-400 focus:outline-none focus:border-amber-400/80 focus:ring-1 focus:ring-amber-400/50 shadow-2xl transition-all"
-            />
-            {searchQuery ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery("");
-                  setRemoteGeoResults([]);
-                  setActiveSuggestionIdx(-1);
+          {/* Center: Inset Omnibox Command Search */}
+          <div ref={searchBoxRef} className="relative flex-1 max-w-sm lg:max-w-md mx-1 sm:mx-2">
+            <div className="relative flex items-center">
+              <Search className="absolute left-3 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
+              <input
+                id="spotlight-bazaar-search"
+                name="searchQuery"
+                type="text"
+                aria-label="Search business, city, state, area, or PIN code"
+                placeholder="Search business, city, state, or PIN..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setSearchFocused(true);
                 }}
-                className="absolute right-2.5 p-1 rounded-full text-neutral-400 hover:text-white"
-                aria-label="Clear search"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            ) : (
-              <div className="absolute right-3 hidden sm:flex items-center gap-0.5 pointer-events-none text-[10px] font-mono text-neutral-400 bg-neutral-900/80 border border-neutral-700/60 px-1.5 py-0.5 rounded-md">
-                <span>⌘K</span>
+                onFocus={() => setSearchFocused(true)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setSearchFocused(false);
+                    return;
+                  }
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setActiveSuggestionIdx((prev) =>
+                      flatSuggestions.length === 0 ? -1 : (prev + 1) % flatSuggestions.length
+                    );
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setActiveSuggestionIdx((prev) =>
+                      flatSuggestions.length === 0 ? -1 : prev <= 0 ? flatSuggestions.length - 1 : prev - 1
+                    );
+                  } else if (e.key === "Enter" && flatSuggestions.length > 0) {
+                    e.preventDefault();
+                    const chosen = flatSuggestions[activeSuggestionIdx >= 0 ? activeSuggestionIdx : 0];
+                    if (chosen) selectSuggestion(chosen);
+                  }
+                }}
+                className="w-full pl-9 pr-12 h-8 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] focus:bg-neutral-900 border border-white/5 focus:border-amber-500/50 text-white text-xs placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-amber-500/30 transition-all"
+              />
+              {searchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setRemoteGeoResults([]);
+                    setActiveSuggestionIdx(-1);
+                  }}
+                  className="absolute right-2 p-1 rounded-md text-neutral-400 hover:text-white"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <div className="absolute right-2.5 hidden sm:flex items-center pointer-events-none text-[10px] font-mono text-neutral-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
+                  <span>⌘K</span>
+                </div>
+              )}
+            </div>
+
+            {/* Grouped Autocomplete Results */}
+            {searchFocused && q.length >= 2 && (
+              <div className="absolute top-full mt-2 inset-x-0 rounded-2xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800 shadow-2xl p-2 max-h-72 overflow-y-auto z-30 flex flex-col gap-1.5">
+                {businessSearchResults.length > 0 && (
+                  <div>
+                    <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-400/80">
+                      Live Businesses
+                    </div>
+                    {businessSearchResults.map((b, idx) => (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => selectSuggestion({ type: "business", data: b })}
+                        className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between gap-2 text-xs text-white transition-colors ${
+                          activeSuggestionIdx === idx ? "bg-neutral-800/90" : "hover:bg-neutral-900"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/35 flex items-center justify-center text-amber-400 shrink-0">
+                            <Store className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-bold truncate">
+                              {b.name}
+                              {b.plot_config?.roofSignText ? ` · ${b.plot_config.roofSignText}` : ""}
+                            </span>
+                            <span className="text-[10px] text-neutral-400 truncate">
+                              {b.city_name}{b.pincode ? ` · PIN ${b.pincode}` : ""} · {b.tagline || "Live Plot"}
+                            </span>
+                          </div>
+                        </div>
+                        {(b.plot_level || 1) >= 3 ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold shrink-0 tabular-nums">
+                            LVL 3
+                          </span>
+                        ) : (b.plot_level || 1) === 2 ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold shrink-0 tabular-nums">
+                            LVL 2
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold shrink-0">
+                            3D Plot
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {placeSearchResults.length > 0 && (
+                  <div>
+                    <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-400/80">
+                      Places, States &amp; PIN Codes
+                    </div>
+                    {placeSearchResults.map((p, idx) => {
+                      const flatIdx = businessSearchResults.length + idx;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => selectSuggestion({ type: "place", data: p })}
+                          className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between gap-2 text-xs text-white transition-colors ${
+                            activeSuggestionIdx === flatIdx ? "bg-neutral-800/90" : "hover:bg-neutral-900"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-7 h-7 rounded-lg bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+                              <MapPin className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-semibold truncate">{p.name}</span>
+                              <span className="text-[10px] text-neutral-400 truncate">{p.subtitle}</span>
+                            </div>
+                          </div>
+                          <span className="text-[10px] uppercase tracking-wide text-neutral-400 font-mono shrink-0">
+                            {p.kind}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {isSearchingGeo && (
+                  <div className="px-3 py-2 text-[11px] text-neutral-400 flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+                    <span>Searching India places &amp; PIN codes...</span>
+                  </div>
+                )}
+
+                {!isSearchingGeo && businessSearchResults.length === 0 && placeSearchResults.length === 0 && (
+                  <div className="px-3 py-2.5 text-xs text-neutral-400">
+                    No exact match found in India for <span className="text-white font-semibold">&ldquo;{searchQuery.trim()}&rdquo;</span>.
+                    {/^\d{6}$/.test(searchQuery.trim()) && (
+                      <span className="block text-[10px] text-neutral-500 mt-0.5">
+                        Verify the 6-digit Indian PIN code or try searching the town/district name.
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* Grouped Autocomplete Results + Live Status / Empty Feedback */}
-          {searchFocused && q.length >= 2 && (
-            <div className="absolute top-full mt-2 inset-x-0 rounded-2xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800 shadow-2xl p-2 max-h-72 overflow-y-auto z-30 flex flex-col gap-1.5">
-              {businessSearchResults.length > 0 && (
-                <div>
-                  <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-400/80">
-                    Live Businesses
-                  </div>
-                  {businessSearchResults.map((b, idx) => (
-                    <button
-                      key={b.id}
-                      type="button"
-                      onClick={() => selectSuggestion({ type: "business", data: b })}
-                      className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between gap-2 text-xs text-white transition-colors ${
-                        activeSuggestionIdx === idx ? "bg-neutral-800/90" : "hover:bg-neutral-900"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/35 flex items-center justify-center text-amber-400 shrink-0">
-                          <Store className="w-3.5 h-3.5" />
-                        </div>
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-bold truncate">
-                            {b.name}
-                            {b.plot_config?.roofSignText ? ` · ${b.plot_config.roofSignText}` : ""}
-                          </span>
-                          <span className="text-[10px] text-neutral-400 truncate">
-                            {b.city_name}{b.pincode ? ` · PIN ${b.pincode}` : ""} · {b.tagline || "Live Plot"}
-                          </span>
-                        </div>
-                      </div>
-                      {(b.plot_level || 1) >= 3 ? (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold shrink-0 tabular-nums">
-                          LVL 3
-                        </span>
-                      ) : (b.plot_level || 1) === 2 ? (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold shrink-0 tabular-nums">
-                          LVL 2
-                        </span>
+          {/* Right: Weather Telemetry + Segmented Tools Rail + Primary Actions */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Dynamic Regional Weather Telemetry */}
+            {currentWeather && (
+              <div
+                title={`Live Regional Weather: ${currentWeather.cityName} (${currentWeather.temperature}°C · ${currentWeather.conditionText})`}
+                className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 text-xs text-neutral-300"
+              >
+                {(() => {
+                  const isDayEffective = currentWeather.isDay && !isNightMode;
+                  const displayCondition = isNightMode
+                    ? currentWeather.conditionText.replace(/Clear & Sunny|Sunny/gi, "Clear Night").replace(/Overcast/gi, "Overcast Night")
+                    : currentWeather.conditionText;
+                  return (
+                    <>
+                      {currentWeather.isRaining ? (
+                        <CloudRain className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
+                      ) : currentWeather.isFoggy ? (
+                        <CloudFog className="w-3.5 h-3.5 text-slate-300" />
+                      ) : currentWeather.conditionIcon === "cloud" ? (
+                        <Cloud className="w-3.5 h-3.5 text-blue-300" />
+                      ) : isDayEffective ? (
+                        <Sun className="w-3.5 h-3.5 text-amber-400" />
                       ) : (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold shrink-0">
-                          3D Plot
-                        </span>
+                        <Moon className="w-3.5 h-3.5 text-cyan-300" />
                       )}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {placeSearchResults.length > 0 && (
-                <div>
-                  <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-400/80">
-                    Places, States &amp; PIN Codes
-                  </div>
-                  {placeSearchResults.map((p, idx) => {
-                    const flatIdx = businessSearchResults.length + idx;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => selectSuggestion({ type: "place", data: p })}
-                        className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between gap-2 text-xs text-white transition-colors ${
-                          activeSuggestionIdx === flatIdx ? "bg-neutral-800/90" : "hover:bg-neutral-900"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-7 h-7 rounded-lg bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
-                            <MapPin className="w-3.5 h-3.5" />
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-semibold truncate">{p.name}</span>
-                            <span className="text-[10px] text-neutral-400 truncate">{p.subtitle}</span>
-                          </div>
-                        </div>
-                        <span className="text-[10px] uppercase tracking-wide text-neutral-400 font-mono shrink-0">
-                          {p.kind}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {isSearchingGeo && (
-                <div className="px-3 py-2 text-[11px] text-neutral-400 flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
-                  <span>Searching India places &amp; PIN codes...</span>
-                </div>
-              )}
-
-              {!isSearchingGeo && businessSearchResults.length === 0 && placeSearchResults.length === 0 && (
-                <div className="px-3 py-2.5 text-xs text-neutral-400">
-                  No exact match found in India for <span className="text-white font-semibold">&ldquo;{searchQuery.trim()}&rdquo;</span>.
-                  {/^\d{6}$/.test(searchQuery.trim()) && (
-                    <span className="block text-[10px] text-neutral-500 mt-0.5">
-                      Verify the 6-digit Indian PIN code or try searching the town/district name.
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Right: Controls & CTA */}
-        <div className="flex items-center gap-1.5 pointer-events-auto shrink-0">
-          {/* Dynamic Regional Weather Telemetry Chip */}
-          {currentWeather && (
-            <div
-              title={`Live Regional Weather: ${currentWeather.cityName} (${currentWeather.temperature}°C · ${currentWeather.conditionText} · Wind ${currentWeather.windSpeed} km/h · Humidity ${currentWeather.humidity}%)`}
-              className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-neutral-950/90 backdrop-blur-2xl border border-white/10 shadow-2xl text-xs font-semibold text-neutral-200 pointer-events-auto shrink-0 transition-all"
-            >
-              {(() => {
-                const isDayEffective = currentWeather.isDay && !isNightMode;
-                const displayCondition = isNightMode
-                  ? currentWeather.conditionText.replace(/Clear & Sunny|Sunny/gi, "Clear Night").replace(/Overcast/gi, "Overcast Night")
-                  : currentWeather.conditionText;
-                return (
-                  <>
-                    {currentWeather.isRaining ? (
-                      <CloudRain className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
-                    ) : currentWeather.isFoggy ? (
-                      <CloudFog className="w-3.5 h-3.5 text-slate-300" />
-                    ) : currentWeather.conditionIcon === "cloud" ? (
-                      <Cloud className="w-3.5 h-3.5 text-blue-300" />
-                    ) : isDayEffective ? (
-                      <Sun className="w-3.5 h-3.5 text-amber-400" />
-                    ) : (
-                      <Moon className="w-3.5 h-3.5 text-cyan-300" />
-                    )}
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-white font-bold">{currentWeather.cityName}</span>
+                      <span className="font-medium text-white">{currentWeather.cityName}</span>
                       <span className="text-neutral-500">·</span>
-                      <span className="text-amber-400 font-mono font-bold">{currentWeather.temperature}°C</span>
+                      <span className="text-amber-400 font-semibold">{currentWeather.temperature}°C</span>
                       <span className="hidden xl:inline text-neutral-500">·</span>
-                      <span className="hidden xl:inline text-neutral-300 font-normal">{displayCondition}</span>
-                    </div>
-                  </>
-                );
-              })()}
+                      <span className="hidden xl:inline text-neutral-400">{displayCondition}</span>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
+            {onToggle3DMap && (
+              <button
+                type="button"
+                onClick={onToggle3DMap}
+                title="Switch to 3D Town View"
+                className="hidden xl:flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-amber-300 text-xs font-semibold border border-white/5 transition-all"
+              >
+                <span>🏢 3D Town</span>
+              </button>
+            )}
+
+            {/* Integrated Segmented Map Tools Rail */}
+            <div className="flex items-center bg-white/[0.05] p-0.5 rounded-xl border border-white/5">
+              {/* 3D Physical Relief Toggle */}
+              <button
+                onClick={toggle3DRelief}
+                title="Toggle 3D Physical Relief View"
+                aria-label="Toggle 3D Physical Relief View"
+                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center justify-center transition-all ${
+                  is3DMode
+                    ? "text-amber-400 bg-white/10 shadow-sm"
+                    : "text-neutral-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <Mountain className="w-3.5 h-3.5" />
+              </button>
+
+              {/* 3D Drone Perspective Toggle */}
+              <button
+                onClick={toggle3DDrone}
+                title={is3DMode ? "Switch to 2D Top-Down View" : "Switch to 3D Drone View"}
+                aria-label={is3DMode ? "Switch to 2D Top-Down View" : "Switch to 3D Drone View"}
+                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center justify-center transition-all ${
+                  is3DMode
+                    ? "text-amber-400 bg-white/10 shadow-sm"
+                    : "text-neutral-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <Compass className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Day / Night Theme */}
+              <button
+                onClick={toggleNightMode}
+                title="Toggle Day / Night Map Theme"
+                aria-label="Toggle Day / Night Map Theme"
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 flex items-center justify-center transition-colors"
+              >
+                {isNightMode ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-cyan-400" />}
+              </button>
+
+              {/* Dynamic Recenter & Reset */}
+              <button
+                onClick={handleDynamicResetView}
+                title={
+                  activeStreetBusiness || focusedStorefront
+                    ? `Recenter on ${(activeStreetBusiness || focusedStorefront)?.name}`
+                    : focusedRegion
+                    ? `Recenter on ${focusedRegion.name}`
+                    : nearestToCenter && nearestToCenter.distKm < 60
+                    ? `Focus on nearest plot (${nearestToCenter.storefront.name})`
+                    : "Reset to India Overview"
+                }
+                aria-label="Reset or recenter map view"
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 flex items-center justify-center transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-neutral-300" />
+              </button>
             </div>
-          )}
 
-          {onToggle3DMap && (
-            <button
-              type="button"
-              onClick={onToggle3DMap}
-              title="Switch to 3D Town View"
-              className="px-2.5 py-1.5 rounded-2xl bg-neutral-950/90 hover:bg-neutral-900 border border-amber-500/50 text-amber-400 text-xs font-bold flex items-center gap-1 shadow-2xl backdrop-blur-xl transition-all"
+            <Link
+              href="/dashboard"
+              title="Manage your registered business plot"
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-white/5 text-neutral-300 hover:text-white font-medium text-xs transition-colors"
             >
-              <span>🏢 3D Town</span>
-            </button>
-          )}
+              <Store className="w-3.5 h-3.5 text-amber-400/80" />
+              <span>My Business</span>
+            </Link>
 
-          <div className="flex items-center gap-1 p-1 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800 shadow-2xl">
-            {/* 3D Physical Relief Perspective Toggle */}
-            <button
-              onClick={() => {
-                if (!mapRef.current) return;
-                const map = mapRef.current;
-                const curPitch = map.getPitch();
-                const nextPitch = curPitch > 25 ? 0 : 58;
-                const nextBearing = curPitch > 25 ? 0 : -14;
-                setIs3DMode(nextPitch > 0);
-                map.easeTo({
-                  pitch: nextPitch,
-                  bearing: nextBearing,
-                  duration: 1000,
-                });
-                bazaarAudio.playStorefrontChime();
-                showToast(nextPitch > 0 ? "🏔️ 3D Physical Relief Enabled" : "🗺️ 2D Plan View");
-              }}
-              title="Toggle 3D Physical Relief View"
-              aria-label="Toggle 3D Physical Relief View"
-              className={`min-h-[40px] min-w-[40px] sm:min-h-[36px] sm:min-w-[36px] p-2 rounded-xl text-xs font-semibold flex items-center justify-center transition-all ${
-                is3DMode ? "text-sky-400 bg-sky-500/15" : "text-neutral-300 hover:text-white hover:bg-neutral-900"
-              }`}
+            <Link
+              href="/register"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs shadow-md shadow-amber-950/40 hover:shadow-amber-500/25 transition-all"
             >
-              <Mountain className="w-4 h-4" />
-            </button>
-
-            {/* 3D Drone Perspective Toggle */}
-            <button
-              onClick={toggle3DDrone}
-              title={is3DMode ? "Switch to 2D Top-Down View" : "Switch to 3D Drone View"}
-              aria-label={is3DMode ? "Switch to 2D Top-Down View" : "Switch to 3D Drone View"}
-              className={`min-h-[40px] min-w-[40px] sm:min-h-[36px] sm:min-w-[36px] p-2 rounded-xl text-xs font-semibold flex items-center justify-center transition-all ${
-                is3DMode ? "text-amber-400 bg-amber-500/15" : "text-neutral-300 hover:text-white hover:bg-neutral-900"
-              }`}
-            >
-              <Compass className="w-4 h-4" />
-            </button>
-
-            {/* Day / Night Theme */}
-            <button
-              onClick={toggleNightMode}
-              title="Toggle Map Style"
-              aria-label="Toggle Day / Night Map Theme"
-              className="min-h-[40px] min-w-[40px] sm:min-h-[36px] sm:min-w-[36px] p-2 rounded-xl text-neutral-300 hover:text-white hover:bg-neutral-900 flex items-center justify-center transition-colors"
-            >
-              {isNightMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-cyan-400" />}
-            </button>
-
-            {/* Dynamic Recenter & Reset */}
-            <button
-              onClick={handleDynamicResetView}
-              title={
-                activeStreetBusiness || focusedStorefront
-                  ? `Recenter on ${(activeStreetBusiness || focusedStorefront)?.name}`
-                  : focusedRegion
-                  ? `Recenter on ${focusedRegion.name}`
-                  : nearestToCenter && nearestToCenter.distKm < 60
-                  ? `Focus on nearest plot (${nearestToCenter.storefront.name})`
-                  : "Reset to India Overview"
-              }
-              aria-label="Reset or recenter map view"
-              className="min-h-[40px] min-w-[40px] sm:min-h-[36px] sm:min-w-[36px] p-2 rounded-xl text-neutral-300 hover:text-white hover:bg-neutral-900 flex items-center justify-center transition-colors"
-            >
-              <RotateCcw className="w-4 h-4 text-neutral-200" />
-            </button>
+              <Plus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Open a Shop</span>
+              <span className="sm:hidden">Open</span>
+            </Link>
           </div>
-
-          <Link
-            href="/dashboard"
-            title="Manage your registered business plot"
-            className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-neutral-950/90 hover:bg-neutral-900 border border-neutral-800 text-neutral-200 hover:text-white font-semibold text-xs shadow-2xl backdrop-blur-xl transition-all"
-          >
-            <Store className="w-3.5 h-3.5 text-amber-400" />
-            <span>My Business</span>
-          </Link>
-
-          <Link
-            href="/register"
-            className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs shadow-2xl transition-all"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Open a Shop</span>
-          </Link>
         </div>
-      </div>
+      </header>
 
       {/* TOAST PILL */}
       {toastMessage && (
@@ -4164,39 +4190,41 @@ export function LiveOsmMap({
         {/* STATE C: STREET / SINGLE BUSINESS PLOT VIEW (Dynamic for whichever business is focused — never falsely shows Nerqiva in another city!) */}
         {viewLevel === "street" && activeStreetBusiness && (
           <>
-            <div className="w-full max-w-lg p-3 sm:p-4 rounded-3xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800/90 shadow-2xl flex flex-col gap-3 pointer-events-auto">
+            <div className="w-full max-w-lg p-3.5 sm:p-4 rounded-2xl bg-neutral-950/92 backdrop-blur-2xl border border-white/10 shadow-[0_16px_40px_rgba(0,0,0,0.65)] flex flex-col gap-3 pointer-events-auto">
               {/* Status Row */}
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
-                    <Store className="w-4 h-4" />
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-400 shrink-0">
+                    <Store className="w-5 h-5" />
                   </div>
                   <div className="flex flex-col text-left min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-white tracking-tight truncate">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm sm:text-base font-bold text-white tracking-tight truncate">
                         {activeStreetBusiness.name}
                       </span>
                       {activeStreetBusiness.is_verified && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-semibold flex items-center gap-1 shrink-0">
-                          <ShieldCheck className="w-3 h-3 text-cyan-400" />
-                          <span>Verified</span>
+                        <span title="Verified Business" className="inline-flex shrink-0">
+                          <ShieldCheck className="w-4 h-4 text-sky-400" />
                         </span>
                       )}
                       {activeStreetBusiness.is_featured && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold shrink-0">
-                          ★ Featured
+                        <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold shrink-0">
+                          Featured
                         </span>
                       )}
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold flex items-center gap-1 shrink-0">
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-neutral-400 truncate mt-0.5">
+                      <span>
+                        {activeStreetBusiness.slug === "nerqiva-studio" ? "North Guwahati" : activeStreetBusiness.city_name}
+                        {activeStreetBusiness.state_name ? `, ${activeStreetBusiness.state_name}` : ""}
+                        {activeStreetBusiness.pincode ? ` · PIN ${activeStreetBusiness.pincode}` : ""}
+                      </span>
+                      <span className="text-neutral-600">·</span>
+                      <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 font-medium shrink-0">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        Live Plot
+                        Live 3D Plot
                       </span>
                     </div>
-                    <span className="text-[11px] text-neutral-400 truncate">
-                      {activeStreetBusiness.slug === "nerqiva-studio" ? "North Guwahati" : activeStreetBusiness.city_name}
-                      {activeStreetBusiness.state_name ? `, ${activeStreetBusiness.state_name}` : ""}
-                      {activeStreetBusiness.pincode ? ` · PIN ${activeStreetBusiness.pincode}` : ""} · Clear {isNightMode ? "night" : "day"}
-                    </span>
                   </div>
                 </div>
 
@@ -4207,13 +4235,12 @@ export function LiveOsmMap({
                       target="_blank"
                       rel="noopener noreferrer"
                       title={`Visit ${formatWebsiteDisplay(activeStreetBusiness.website_url)}`}
-                      className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/35 text-[11px] font-medium text-amber-300 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-medium text-neutral-200 hover:text-white transition-colors"
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                      <span className="max-w-[140px] truncate">
+                      <span className="max-w-[130px] truncate">
                         {formatWebsiteDisplay(activeStreetBusiness.website_url)}
                       </span>
-                      <ExternalLink className="w-3 h-3 opacity-80" />
+                      <ExternalLink className="w-3 h-3 text-neutral-400" />
                     </a>
                   )}
                   {getGoogleMapsUrl(activeStreetBusiness) && (
@@ -4223,7 +4250,7 @@ export function LiveOsmMap({
                       rel="noopener noreferrer"
                       title="Open in Google Maps"
                       aria-label={`Open ${activeStreetBusiness.name} in Google Maps`}
-                      className="p-1.5 rounded-full bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 transition-colors"
+                      className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-neutral-300 hover:text-white transition-colors"
                     >
                       <Navigation className="w-3.5 h-3.5" />
                     </a>
@@ -4239,10 +4266,10 @@ export function LiveOsmMap({
                     if (onStorefrontSelect) onStorefrontSelect(activeStreetBusiness);
                     bazaarAudio.playStorefrontChime();
                   }}
-                  className="flex-1 py-2.5 px-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-950/30"
+                  className="flex-1 h-9 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-950/30"
                 >
-                  <Sparkles className="w-4 h-4" />
-                  <span>View {activeStreetBusiness.name}</span>
+                  <Store className="w-4 h-4" />
+                  <span>View Storefront</span>
                 </button>
 
                 <button
@@ -4257,10 +4284,10 @@ export function LiveOsmMap({
                       handleResetCamera();
                     }
                   }}
-                  className={`py-2.5 px-3.5 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                  className={`h-9 px-3.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
                     isWalkMode
                       ? "bg-amber-500/20 text-amber-300 border border-amber-500/60 shadow-lg shadow-amber-500/20"
-                      : "bg-neutral-900 hover:bg-neutral-800 text-white border border-neutral-800"
+                      : "bg-white/[0.06] hover:bg-white/[0.12] text-white border border-white/10"
                   }`}
                 >
                   <Footprints className="w-4 h-4 text-amber-400" />
@@ -4270,7 +4297,7 @@ export function LiveOsmMap({
                 <button
                   type="button"
                   onClick={() => setDialogueStorefront(activeStreetBusiness)}
-                  className="py-2.5 px-3.5 rounded-2xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-800"
+                  className="h-9 px-3.5 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all bg-white/[0.06] hover:bg-white/[0.12] text-neutral-200 hover:text-white border border-white/10"
                   title={`Talk to ${activeStreetBusiness.name}`}
                 >
                   <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
@@ -4285,7 +4312,7 @@ export function LiveOsmMap({
                       showToast(`🔗 ${activeStreetBusiness.name} map link copied!`);
                     }
                   }}
-                  className="p-2.5 rounded-2xl text-xs font-medium flex items-center justify-center transition-all bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-800"
+                  className="h-9 w-9 rounded-xl flex items-center justify-center text-neutral-400 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 transition-colors shrink-0"
                   title="Share Link"
                 >
                   <Share2 className="w-3.5 h-3.5" />
