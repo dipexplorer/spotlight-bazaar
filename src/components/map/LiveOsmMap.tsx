@@ -450,7 +450,7 @@ export function LiveOsmMap({
       let far = 14.0;
 
       if (isFoggy) {
-        // High zoom: dense mist [0.5, 5.0]; Plot zoom: clears out to [3.4, 28.0]
+        // Dense mist: clears progressively at street level
         const t = Math.max(0, Math.min(1, (z - 11.5) / 5.0));
         near = 0.5 + t * 2.9;
         far = 5.0 + t * 23.0;
@@ -459,9 +459,15 @@ export function LiveOsmMap({
         near = 0.8 + t * 2.4;
         far = 9.0 + t * 19.0;
       } else {
-        const t = Math.max(0, Math.min(1, (z - 12.0) / 4.5));
-        near = 1.0 + t * 2.2;
-        far = 14.0 + t * 16.0;
+        // Clear sky: wide cosmic horizon at national zoom, crisp storefront at street level
+        if (z < 9.0) {
+          near = 2.0;
+          far = 24.0;
+        } else {
+          const t = Math.max(0, Math.min(1, (z - 9.0) / 7.5));
+          near = 1.2 + t * 2.2;
+          far = 16.0 + t * 14.0;
+        }
       }
 
       (map as any).setFog?.({
@@ -1316,10 +1322,25 @@ export function LiveOsmMap({
             }
           }
 
-          // Dynamic 3D Rain Particle System (active when raining and zoomed in)
+          // Dynamic 3D Rain Particle System & Weather-Responsive Wet Pavement (active when raining)
+          const isRainingNow = Boolean(weather?.isRaining);
+          if ((this as any)._lastIsRaining !== isRainingNow) {
+            (this as any)._lastIsRaining = isRainingNow;
+            if (streetNeighborhood) streetNeighborhood.setWeatherMode(isRainingNow);
+            if (traffic) traffic.setWeatherMode(isRainingNow);
+          }
+
+          // Dynamic Real-Time Day/Night Subsystem Synchronization (Streetlights, Headlights, Building Windows)
+          const isDarkNow = Boolean(isNightModeRef.current);
+          if ((this as any)._lastIsDark !== isDarkNow) {
+            (this as any)._lastIsDark = isDarkNow;
+            if (streetNeighborhood) streetNeighborhood.setNightMode(isDarkNow);
+            if (traffic) traffic.setNightMode(isDarkNow);
+          }
+
           const rain = (this as any).rain as RainSystem | undefined;
           if (rain) {
-            if (weather?.isRaining && currentZoom >= 14.3) {
+            if (isRainingNow && currentZoom >= 14.3) {
               rain.mesh.visible = true;
               rain.update(delta, weather?.windSpeed || 8);
             } else {
@@ -1524,12 +1545,20 @@ export function LiveOsmMap({
         console.warn("[LiveOsmMap] setSky/setFog warning:", e);
       }
 
-      // Update Three.js sub-systems for Day/Night immediately
+      // Update Three.js sub-systems for Day/Night and Weather immediately
       try {
+        const weather = currentWeatherRef.current;
+        const isRainingNow = Boolean(weather?.isRaining);
         const sn = (custom3DLayer as any).streetNeighborhood as StreetNeighborhood | undefined;
-        if (sn) sn.setNightMode(isDark);
+        if (sn) {
+          sn.setNightMode(isDark);
+          sn.setWeatherMode(isRainingNow);
+        }
         const tr = (custom3DLayer as any).traffic as RoadTrafficSystem | undefined;
-        if (tr) tr.setNightMode(isDark);
+        if (tr) {
+          tr.setNightMode(isDark);
+          tr.setWeatherMode(isRainingNow);
+        }
       } catch (subErr) {
         // ignore
       }
@@ -1554,6 +1583,7 @@ export function LiveOsmMap({
       }
 
       // 1c. Photorealistic Satellite Landcover Layer (Continuous from National to Street Level, Below roads & buildings)
+      // Features: Dynamic Day/Night "Earth at Night" Tone-Mapping (No midday desert glow in the midnight ocean!)
       try {
         if (!map.getSource("satellite-imagery-source")) {
           map.addSource("satellite-imagery-source", {
@@ -1569,6 +1599,20 @@ export function LiveOsmMap({
           l.id.startsWith("road_") || l.id.startsWith("bridge_") || l.id.startsWith("tunnel_") || l.id === "3d-city-buildings"
         )?.id;
 
+        const satBrightnessMax = isDark ? 0.42 : 1.0;
+        const satContrast = isDark ? 0.32 : 0.14;
+        const satSaturation = isDark ? -0.30 : 0.10;
+        const satOpacity: any = [
+          "interpolate", ["linear"], ["zoom"],
+          3.5, 0.95,
+          8.5, 0.92,
+          9.5, 0.82,
+          10.5, 0.55,
+          11.5, 0.22,
+          12.5, 0.00,
+          22.0, 0.00,
+        ];
+
         if (!map.getLayer("satellite-imagery-layer")) {
           map.addLayer(
             {
@@ -1578,20 +1622,19 @@ export function LiveOsmMap({
               minzoom: 0,
               maxzoom: 22,
               paint: {
-                "raster-opacity": [
-                  "interpolate", ["linear"], ["zoom"],
-                  3.5, 0.95,
-                  8.5, 0.90,
-                  10.2, 0.35,
-                  11.5, 0.00,
-                  22.0, 0.00,
-                ],
-                "raster-contrast": 0.14,
-                "raster-saturation": 0.10,
+                "raster-opacity": satOpacity,
+                "raster-brightness-max": satBrightnessMax,
+                "raster-contrast": satContrast,
+                "raster-saturation": satSaturation,
               },
             },
             roadBeforeLayer || undefined
           );
+        } else {
+          map.setPaintProperty("satellite-imagery-layer", "raster-opacity", satOpacity);
+          map.setPaintProperty("satellite-imagery-layer", "raster-brightness-max", satBrightnessMax);
+          map.setPaintProperty("satellite-imagery-layer", "raster-contrast", satContrast);
+          map.setPaintProperty("satellite-imagery-layer", "raster-saturation", satSaturation);
         }
       } catch (satErr) {
         console.warn("[LiveOsmMap] Satellite layer warning:", satErr);
@@ -2091,13 +2134,26 @@ export function LiveOsmMap({
           }
         });
 
-        // Layer D: Major Indian Metros National HUD (New Delhi, Mumbai, Bengaluru, Chennai, Kolkata)
+        // Layer D: Major Indian Metros National HUD (New Delhi, Mumbai, Bengaluru, Chennai, Kolkata, Guwahati)
+        // Night: Golden nocturnal urban light cluster constellation glow; Day: High-tech cyan-blue beacon
         if (!map.getSource("major-city-hubs-source")) {
           map.addSource("major-city-hubs-source", {
             type: "geojson",
             data: MAJOR_INDIA_HUBS_GEOJSON,
           });
         }
+
+        const haloColor = isDark ? "#f59e0b" : "#38bdf8";
+        const haloOpacity = isDark ? 0.85 : 0.22;
+        const haloBlur = isDark ? 0.75 : 0.60;
+        const haloRadius: any = [
+          "interpolate", ["linear"], ["zoom"],
+          3.5, isDark ? 8.0 : 10.0,
+          7.0, isDark ? 16.0 : 14.0,
+          10.5, isDark ? 22.0 : 16.0,
+        ];
+        const dotColor = isDark ? "#fbbf24" : "#ffffff";
+        const dotStroke = isDark ? "#451a03" : "#080B12";
 
         if (!map.getLayer("major-city-hubs-halo")) {
           map.addLayer(
@@ -2107,14 +2163,19 @@ export function LiveOsmMap({
               source: "major-city-hubs-source",
               maxzoom: 10.5,
               paint: {
-                "circle-color": "#38bdf8",
-                "circle-radius": 14,
-                "circle-opacity": 0.22,
-                "circle-blur": 0.6,
+                "circle-color": haloColor,
+                "circle-radius": haloRadius,
+                "circle-opacity": haloOpacity,
+                "circle-blur": haloBlur,
               },
             },
             beforeCustom3D
           );
+        } else {
+          map.setPaintProperty("major-city-hubs-halo", "circle-color", haloColor);
+          map.setPaintProperty("major-city-hubs-halo", "circle-radius", haloRadius);
+          map.setPaintProperty("major-city-hubs-halo", "circle-opacity", haloOpacity);
+          map.setPaintProperty("major-city-hubs-halo", "circle-blur", haloBlur);
         }
 
         if (!map.getLayer("major-city-hubs-dot")) {
@@ -2125,14 +2186,22 @@ export function LiveOsmMap({
               source: "major-city-hubs-source",
               maxzoom: 10.5,
               paint: {
-                "circle-color": "#ffffff",
-                "circle-radius": 4.0,
+                "circle-color": dotColor,
+                "circle-radius": [
+                  "interpolate", ["linear"], ["zoom"],
+                  3.5, 3.5,
+                  7.0, 4.5,
+                  10.5, 5.0,
+                ],
                 "circle-stroke-width": 2.0,
-                "circle-stroke-color": "#080B12",
+                "circle-stroke-color": dotStroke,
               },
             },
             beforeCustom3D
           );
+        } else {
+          map.setPaintProperty("major-city-hubs-dot", "circle-color", dotColor);
+          map.setPaintProperty("major-city-hubs-dot", "circle-stroke-color", dotStroke);
         }
 
         if (!map.getLayer("major-city-hubs-label")) {
@@ -3605,24 +3674,34 @@ export function LiveOsmMap({
               title={`Live Regional Weather: ${currentWeather.cityName} (${currentWeather.temperature}°C · ${currentWeather.conditionText} · Wind ${currentWeather.windSpeed} km/h · Humidity ${currentWeather.humidity}%)`}
               className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-neutral-950/90 backdrop-blur-2xl border border-white/10 shadow-2xl text-xs font-semibold text-neutral-200 pointer-events-auto shrink-0 transition-all"
             >
-              {currentWeather.isRaining ? (
-                <CloudRain className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
-              ) : currentWeather.isFoggy ? (
-                <CloudFog className="w-3.5 h-3.5 text-slate-300" />
-              ) : currentWeather.conditionIcon === "cloud" ? (
-                <Cloud className="w-3.5 h-3.5 text-blue-300" />
-              ) : currentWeather.isDay ? (
-                <Sun className="w-3.5 h-3.5 text-amber-400" />
-              ) : (
-                <Moon className="w-3.5 h-3.5 text-cyan-300" />
-              )}
-              <div className="flex items-center gap-1.5">
-                <span className="text-white font-bold">{currentWeather.cityName}</span>
-                <span className="text-neutral-500">·</span>
-                <span className="text-amber-400 font-mono font-bold">{currentWeather.temperature}°C</span>
-                <span className="hidden xl:inline text-neutral-500">·</span>
-                <span className="hidden xl:inline text-neutral-300 font-normal">{currentWeather.conditionText}</span>
-              </div>
+              {(() => {
+                const isDayEffective = currentWeather.isDay && !isNightMode;
+                const displayCondition = isNightMode
+                  ? currentWeather.conditionText.replace(/Clear & Sunny|Sunny/gi, "Clear Night").replace(/Overcast/gi, "Overcast Night")
+                  : currentWeather.conditionText;
+                return (
+                  <>
+                    {currentWeather.isRaining ? (
+                      <CloudRain className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
+                    ) : currentWeather.isFoggy ? (
+                      <CloudFog className="w-3.5 h-3.5 text-slate-300" />
+                    ) : currentWeather.conditionIcon === "cloud" ? (
+                      <Cloud className="w-3.5 h-3.5 text-blue-300" />
+                    ) : isDayEffective ? (
+                      <Sun className="w-3.5 h-3.5 text-amber-400" />
+                    ) : (
+                      <Moon className="w-3.5 h-3.5 text-cyan-300" />
+                    )}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-white font-bold">{currentWeather.cityName}</span>
+                      <span className="text-neutral-500">·</span>
+                      <span className="text-amber-400 font-mono font-bold">{currentWeather.temperature}°C</span>
+                      <span className="hidden xl:inline text-neutral-500">·</span>
+                      <span className="hidden xl:inline text-neutral-300 font-normal">{displayCondition}</span>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           )}
 
@@ -3955,13 +4034,13 @@ export function LiveOsmMap({
                   <Share2 className="w-3.5 h-3.5" />
                 </button>
               </div>
-            </div>
 
-            {/* Keyboard Controls Hint Pill — ONLY shown at street level */}
-            <div className="hidden md:flex items-center gap-2 pointer-events-auto">
-              <div className="px-3.5 py-1.5 rounded-xl bg-neutral-950/80 backdrop-blur-md border border-neutral-800/70 text-[10px] text-neutral-300 font-mono flex items-center gap-2 shadow-lg">
-                <span>W A S D walk · Drag look 360° · Scroll zoom · Q / E turn · Shift faster</span>
-              </div>
+              {/* Dynamic Walk Mode Controls Bar — Clean, integrated, non-intrusive */}
+              {isWalkMode && (
+                <div className="flex items-center justify-center gap-2 pt-1 border-t border-neutral-800/70 text-[10px] text-amber-300 font-mono">
+                  <span>🚶 W/S walk · A/D turn · Shift sprint · ESC exit walk</span>
+                </div>
+              )}
             </div>
           </>
         )}

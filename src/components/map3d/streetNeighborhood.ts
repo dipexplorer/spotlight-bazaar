@@ -15,6 +15,7 @@ import { osmRoadSpline } from "./osmRoadSpline";
 export interface StreetNeighborhood {
   group: THREE.Group;
   setNightMode: (isDark: boolean) => void;
+  setWeatherMode: (isRaining: boolean) => void;
   update: (delta: number) => void;
   dispose: () => void;
 }
@@ -128,6 +129,174 @@ export function createStreetNeighborhood(
   // Road Corridor Alignment: Road surface is rendered directly by the OpenStreetMap vector layers,
   // perfectly synced and identical to all neighboring OSM streets (no over-crafted artificial boxes).
   const roadCorridorHalfWidth = 3.2; // 6.4m corridor matching OpenStreetMap minor street
+
+  // 1b. Pedestrian Sidewalks, Plot Courtyard & Ambient Occlusion Ground Materials
+  const sidewalkMat = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: initialDark ? 0x1f2733 : 0xcbd5e1,
+      roughness: 0.82,
+      metalness: 0.08,
+    })
+  );
+
+  const curbEdgeMat = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: initialDark ? 0x2d3748 : 0x94a3b8,
+      roughness: 0.75,
+      metalness: 0.12,
+    })
+  );
+
+  const plazaMat = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: initialDark ? 0x1a2230 : 0xe2e8f0,
+      roughness: 0.78,
+      metalness: 0.10,
+    })
+  );
+
+  const planterMat = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: initialDark ? 0x142018 : 0x245838,
+      roughness: 0.85,
+      metalness: 0.05,
+    })
+  );
+
+  const aoShadowMat = trackMat(
+    new THREE.MeshBasicMaterial({
+      color: 0x020617,
+      transparent: true,
+      opacity: 0.40,
+      depthWrite: false,
+    })
+  );
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // 1c. SPLINE-CONTOURED 3D CURBSIDE SIDEWALKS (Both Left & Right)
+  // ───────────────────────────────────────────────────────────────────────────
+  function buildCurbsideSidewalk(isLeft: boolean): THREE.Mesh {
+    const sStart = 2.0;
+    const sEnd = osmRoadSpline.totalLength - 4.0;
+    const step = 2.0;
+    const numSteps = Math.floor((sEnd - sStart) / step) + 1;
+
+    const innerDist = roadCorridorHalfWidth; // 3.2m
+    const outerDist = roadCorridorHalfWidth + 1.25; // 4.45m
+    const curbHeight = 0.12;
+
+    const positions: number[] = [];
+    const normals: number[] = [];
+    const uvs: number[] = [];
+    const indices: number[] = [];
+
+    let vertexOffset = 0;
+
+    for (let i = 0; i < numSteps; i++) {
+      const s = Math.min(sEnd, sStart + i * step);
+      const pose = osmRoadSpline.getPoseAtDistance(s);
+
+      const sideSign = isLeft ? -1 : 1;
+      const innerOffset = sideSign * innerDist;
+      const outerOffset = sideSign * outerDist;
+
+      const pInnerBot = pose.position.clone().addScaledVector(pose.normal, innerOffset);
+      const pInnerTop = pInnerBot.clone();
+      pInnerTop.y += curbHeight;
+
+      const pOuterTop = pose.position.clone().addScaledVector(pose.normal, outerOffset);
+      pOuterTop.y += curbHeight;
+
+      positions.push(pInnerBot.x, pInnerBot.y, pInnerBot.z);
+      positions.push(pInnerTop.x, pInnerTop.y, pInnerTop.z);
+      positions.push(pOuterTop.x, pOuterTop.y, pOuterTop.z);
+
+      const curbNorm = pose.normal.clone().multiplyScalar(-sideSign);
+      normals.push(curbNorm.x, curbNorm.y, curbNorm.z);
+      normals.push(0, 1, 0);
+      normals.push(0, 1, 0);
+
+      uvs.push(0, s * 0.25);
+      uvs.push(0.2, s * 0.25);
+      uvs.push(1.0, s * 0.25);
+
+      if (i < numSteps - 1) {
+        const v0 = vertexOffset;
+        const v1 = vertexOffset + 1;
+        const v2 = vertexOffset + 2;
+        const nv0 = vertexOffset + 3;
+        const nv1 = vertexOffset + 4;
+        const nv2 = vertexOffset + 5;
+
+        // Curb face quad (v0, v1, nv1, nv0)
+        indices.push(v0, v1, nv1);
+        indices.push(v0, nv1, nv0);
+
+        // Sidewalk top surface quad (v1, v2, nv2, nv1)
+        indices.push(v1, v2, nv2);
+        indices.push(v1, nv2, nv1);
+      }
+      vertexOffset += 3;
+    }
+
+    const geo = trackGeo(new THREE.BufferGeometry());
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
+    geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+
+    const mesh = new THREE.Mesh(geo, sidewalkMat);
+    mesh.receiveShadow = true;
+    return mesh;
+  }
+
+  const leftSidewalk = buildCurbsideSidewalk(true);
+  group.add(leftSidewalk);
+
+  const rightSidewalk = buildCurbsideSidewalk(false);
+  group.add(rightSidewalk);
+
+  // Commercial Plot Landscaped Courtyard Base (Nerqiva Studio Ground Slab)
+  const plazaGeo = trackGeo(new THREE.BoxGeometry(26.0, 0.08, 18.0));
+  const plazaMesh = new THREE.Mesh(plazaGeo, plazaMat);
+  plazaMesh.position.set(0, 0.04, 7.0);
+  plazaMesh.receiveShadow = true;
+  group.add(plazaMesh);
+
+  // Courtyard Planters / Perimeter Curb
+  for (const side of [-1, 1]) {
+    const planterGeo = trackGeo(new THREE.BoxGeometry(0.8, 0.35, 16.0));
+    const planterMesh = new THREE.Mesh(planterGeo, concreteDarkMat);
+    planterMesh.position.set(side * 12.6, 0.18, 7.0);
+    group.add(planterMesh);
+
+    const bushGeo = trackGeo(new THREE.BoxGeometry(0.6, 0.45, 15.6));
+    const bushMesh = new THREE.Mesh(bushGeo, planterMat);
+    bushMesh.position.set(side * 12.6, 0.35, 7.0);
+    group.add(bushMesh);
+  }
+
+  // Soft Ambient Occlusion Shadow Decals beneath buildings
+  const bldgShadowGeo = trackGeo(new THREE.PlaneGeometry(18.0, 16.0));
+  bldgShadowGeo.rotateX(-Math.PI / 2);
+  const leftBldgShadow = new THREE.Mesh(bldgShadowGeo, aoShadowMat);
+  leftBldgShadow.position.set(-26.0, 0.015, 6.0);
+  group.add(leftBldgShadow);
+
+  const rightBldgShadow = new THREE.Mesh(bldgShadowGeo, aoShadowMat);
+  rightBldgShadow.position.set(26.0, 0.015, 6.0);
+  group.add(rightBldgShadow);
+
+  const villaShadowGeo = trackGeo(new THREE.PlaneGeometry(22.0, 16.0));
+  villaShadowGeo.rotateX(-Math.PI / 2);
+  const villaShadow = new THREE.Mesh(villaShadowGeo, aoShadowMat);
+  villaShadow.position.set(0, 0.015, 7.0);
+  group.add(villaShadow);
+
+  // Tree Ambient Occlusion Shadow Decal Geometry
+  const treeShadowGeo = trackGeo(new THREE.CircleGeometry(2.4, 16));
+  treeShadowGeo.rotateX(-Math.PI / 2);
 
   // ───────────────────────────────────────────────────────────────────────────
   // 2. PROCEDURAL 3D NEIGHBORING BUILDINGS
@@ -252,6 +421,12 @@ export function createStreetNeighborhood(
     tree.position.set(treePos.x, 0, treePos.z);
     tree.rotation.y = (s * 0.53) % (Math.PI * 2);
     group.add(tree);
+
+    // Soft ambient occlusion ground contact shadow
+    const tShadow = new THREE.Mesh(treeShadowGeo, aoShadowMat);
+    tShadow.position.set(treePos.x, 0.015, treePos.z);
+    group.add(tShadow);
+
     tIdx++;
   }
 
@@ -269,6 +444,12 @@ export function createStreetNeighborhood(
     tree.position.set(treePos.x, 0, treePos.z);
     tree.rotation.y = (s * 0.71) % (Math.PI * 2);
     group.add(tree);
+
+    // Soft ambient occlusion ground contact shadow
+    const tShadow = new THREE.Mesh(treeShadowGeo, aoShadowMat);
+    tShadow.position.set(treePos.x, 0.015, treePos.z);
+    group.add(tShadow);
+
     tIdx++;
   }
 
@@ -319,23 +500,89 @@ export function createStreetNeighborhood(
     }
   }
 
-  // Dynamic Day/Night Mode Switcher
-  const setNightMode = (isDark: boolean) => {
-    turfMat.color.setHex(isDark ? 0x0f291e : 0x245838);
-    concreteDarkMat.color.setHex(isDark ? 0x1e2530 : 0x334155);
-    limestoneWarmMat.color.setHex(isDark ? 0x333842 : 0xe2e8f0);
-    wallBoundaryMat.color.setHex(isDark ? 0x1e293b : 0x64748b);
+  // Dynamic Day/Night & Weather-Responsive Atmospheric Lighting & Material State
+  let currentIsDark = initialDark;
+  let currentIsRaining = false;
+
+  const applyAtmosphere = () => {
+    // Turf: darkens and softens when wet
+    turfMat.color.setHex(
+      currentIsDark
+        ? (currentIsRaining ? 0x081710 : 0x0f291e)
+        : (currentIsRaining ? 0x1b422a : 0x245838)
+    );
+    turfMat.roughness = currentIsRaining ? 0.60 : 0.88;
+
+    // Concrete & Curb: slick wet asphalt effect with specular reflection
+    concreteDarkMat.color.setHex(
+      currentIsDark
+        ? (currentIsRaining ? 0x121720 : 0x1e2530)
+        : (currentIsRaining ? 0x1e293b : 0x334155)
+    );
+    concreteDarkMat.roughness = currentIsRaining ? 0.22 : 0.75;
+    concreteDarkMat.metalness = currentIsRaining ? 0.35 : 0.15;
+
+    limestoneWarmMat.color.setHex(
+      currentIsDark
+        ? (currentIsRaining ? 0x22262d : 0x333842)
+        : (currentIsRaining ? 0xcbd5e1 : 0xe2e8f0)
+    );
+    limestoneWarmMat.roughness = currentIsRaining ? 0.40 : 0.85;
+
+    wallBoundaryMat.color.setHex(currentIsDark ? 0x1e293b : 0x64748b);
+
+    // Sidewalks & Curb Edge: slick wet appearance when raining
+    sidewalkMat.color.setHex(
+      currentIsDark
+        ? (currentIsRaining ? 0x141a24 : 0x1f2733)
+        : (currentIsRaining ? 0x94a3b8 : 0xcbd5e1)
+    );
+    sidewalkMat.roughness = currentIsRaining ? 0.32 : 0.82;
+    sidewalkMat.metalness = currentIsRaining ? 0.28 : 0.08;
+
+    curbEdgeMat.color.setHex(
+      currentIsDark
+        ? (currentIsRaining ? 0x1a202c : 0x2d3748)
+        : (currentIsRaining ? 0x64748b : 0x94a3b8)
+    );
+
+    // Courtyard Plaza Base
+    plazaMat.color.setHex(
+      currentIsDark
+        ? (currentIsRaining ? 0x101724 : 0x1a2230)
+        : (currentIsRaining ? 0xcbd5e1 : 0xe2e8f0)
+    );
+    plazaMat.roughness = currentIsRaining ? 0.30 : 0.78;
+    plazaMat.metalness = currentIsRaining ? 0.35 : 0.10;
 
     // Building Window Lighting: Warm golden glow at night
-    glassWindowMat.color.setHex(isDark ? 0xfef08a : 0x38bdf8);
-    glassWindowMat.roughness = isDark ? 0.35 : 0.15;
-    glassWindowMat.metalness = isDark ? 0.2 : 0.85;
-    glassWindowMat.emissive.setHex(isDark ? 0xfde047 : 0x0369a1);
-    glassWindowMat.emissiveIntensity = isDark ? 1.6 : 0.15;
+    glassWindowMat.color.setHex(currentIsDark ? 0xfef08a : 0x38bdf8);
+    glassWindowMat.roughness = currentIsDark ? 0.35 : 0.15;
+    glassWindowMat.metalness = currentIsDark ? 0.2 : 0.85;
+    glassWindowMat.emissive.setHex(currentIsDark ? 0xfde047 : 0x0369a1);
+    glassWindowMat.emissiveIntensity = currentIsDark ? 1.6 : 0.15;
 
-    // Streetlight Glow
-    lightConeMat.opacity = isDark ? 0.22 : 0.0;
-    lightPoolMat.opacity = isDark ? 0.28 : 0.0;
+    // Streetlight Glow: enhanced wet ground reflections & rain scatter
+    if (currentIsDark) {
+      lightConeMat.opacity = currentIsRaining ? 0.30 : 0.22;
+      lightPoolMat.opacity = currentIsRaining ? 0.46 : 0.28;
+    } else {
+      lightConeMat.opacity = 0.0;
+      lightPoolMat.opacity = 0.0;
+    }
+  };
+
+  // Initial atmosphere setup matching creation mode
+  applyAtmosphere();
+
+  const setNightMode = (isDark: boolean) => {
+    currentIsDark = isDark;
+    applyAtmosphere();
+  };
+
+  const setWeatherMode = (isRaining: boolean) => {
+    currentIsRaining = isRaining;
+    applyAtmosphere();
   };
 
   let elapsed = 0;
@@ -352,5 +599,5 @@ export function createStreetNeighborhood(
     group.clear();
   };
 
-  return { group, setNightMode, update, dispose };
+  return { group, setNightMode, setWeatherMode, update, dispose };
 }

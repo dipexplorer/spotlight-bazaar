@@ -14,6 +14,7 @@ export interface RoadTrafficSystem {
   group: THREE.Group;
   update: (delta: number) => void;
   setNightMode: (isDark: boolean) => void;
+  setWeatherMode: (isRaining: boolean) => void;
   dispose: () => void;
 }
 
@@ -218,15 +219,35 @@ export function createRoadTrafficSystem(roadLength: number, roadAngle: number, i
   // Align whole traffic system to road corridor orientation
   group.rotation.y = roadAngle;
 
-  beamMat.opacity = initialDark ? 0.14 : 0.0;
+  let currentIsDark = initialDark;
+  let currentIsRaining = false;
+
+  const applyLighting = () => {
+    if (currentIsDark) {
+      beamMat.opacity = currentIsRaining ? 0.24 : 0.14;
+    } else {
+      beamMat.opacity = currentIsRaining ? 0.08 : 0.0;
+    }
+  };
+
+  applyLighting();
 
   const setNightMode = (isDark: boolean) => {
-    beamMat.opacity = isDark ? 0.14 : 0.0;
+    currentIsDark = isDark;
+    applyLighting();
+  };
+
+  const setWeatherMode = (isRaining: boolean) => {
+    currentIsRaining = isRaining;
+    applyLighting();
   };
 
   const update = (delta: number) => {
     // 1. Move Auto-Rickshaw Outbound along the exact curved OSM road
-    autoS += autoSpeed * delta;
+    // Dynamic speed easing: gentle acceleration as it departs commercial plot entrance (s < 22m)
+    const autoSpeedFactor = THREE.MathUtils.smoothstep(autoS, 4.0, 22.0) * 0.45 + 0.55;
+    const currentAutoSpeed = autoSpeed * autoSpeedFactor;
+    autoS += currentAutoSpeed * delta;
     if (autoS > maxS) {
       autoS = minS;
     }
@@ -242,13 +263,16 @@ export function createRoadTrafficSystem(roadLength: number, roadAngle: number, i
     const autoScale = Math.max(0.001, autoDistFade);
     auto.group.scale.set(autoScale, autoScale, autoScale);
 
-    // Rotate Auto wheels
+    // Rotate Auto wheels matching actual velocity
     for (const w of auto.wheels) {
-      w.rotation.x -= autoSpeed * delta * 4.2;
+      w.rotation.x -= currentAutoSpeed * delta * 4.2;
     }
 
     // 2. Move Compact Cab Inbound along the exact curved OSM road
-    cabS -= cabSpeed * delta;
+    // Dynamic speed easing: calm deceleration as it approaches commercial plot entrance (s < 24m)
+    const cabSpeedFactor = THREE.MathUtils.smoothstep(cabS, 4.0, 24.0) * 0.40 + 0.60;
+    const currentCabSpeed = cabSpeed * cabSpeedFactor;
+    cabS -= currentCabSpeed * delta;
     if (cabS < minS) {
       cabS = maxS;
     }
@@ -264,9 +288,9 @@ export function createRoadTrafficSystem(roadLength: number, roadAngle: number, i
     const cabScale = Math.max(0.001, cabDistFade);
     cab.group.scale.set(cabScale, cabScale, cabScale);
 
-    // Rotate Cab wheels
+    // Rotate Cab wheels matching actual velocity
     for (const w of cab.wheels) {
-      w.rotation.x -= cabSpeed * delta * 3.8;
+      w.rotation.x -= currentCabSpeed * delta * 3.8;
     }
   };
 
@@ -274,5 +298,5 @@ export function createRoadTrafficSystem(roadLength: number, roadAngle: number, i
     group.clear();
   };
 
-  return { group, update, setNightMode, dispose };
+  return { group, update, setNightMode, setWeatherMode, dispose };
 }
