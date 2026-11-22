@@ -35,7 +35,12 @@ import {
   CloudRain,
   CloudFog,
   CloudLightning,
+  Mountain,
 } from "lucide-react";
+import {
+  INDIA_GEOGRAPHY_REGIONS_GEOJSON,
+  MAJOR_INDIA_GEOGRAPHY_REGIONS,
+} from "./indiaGeographyFeatures";
 import {
   fetchRegionalWeather,
   WeatherTelemetry,
@@ -138,6 +143,22 @@ const MAJOR_INDIA_HUBS_GEOJSON: GeoJSON.FeatureCollection<GeoJSON.Point> = {
     { type: "Feature", properties: { name: "Chennai", tag: "Coastal Hub", zoom: 12.8, pitch: 50, bearing: 20 }, geometry: { type: "Point", coordinates: [80.2707, 13.0827] } },
     { type: "Feature", properties: { name: "Kolkata", tag: "Eastern Hub", zoom: 12.8, pitch: 52, bearing: -10 }, geometry: { type: "Point", coordinates: [88.3639, 22.5726] } },
   ],
+};
+
+// Dynamic Zoom-Adaptive DEM Elevation Exaggeration Engine
+// At National Orbit (z <= 5.0): 14.5x towering relief sculpts the real Himalayas, Western Ghats & Deccan tablelands
+// As camera descends (z 5.0 -> 12.0): smoothly scales down to 0.0 so city & street road grids are 100% flat
+export const computeTerrainExaggeration = (zoom: number): number => {
+  if (zoom >= 12.0) return 0.0;
+  if (zoom >= 8.5) {
+    const t = (zoom - 8.5) / 3.5;
+    return Math.max(0, (1.0 - t) * 3.0);
+  }
+  if (zoom >= 5.0) {
+    const t = (zoom - 5.0) / 3.5;
+    return 14.5 - t * (14.5 - 3.0);
+  }
+  return 14.5;
 };
 
 // Fallback pure OpenStreetMap raster style (zero external dependencies)
@@ -470,13 +491,23 @@ export function LiveOsmMap({
         }
       }
 
+      const isNationalOrbit = z < 8.0;
+      const spaceColor = isDark
+        ? "#010409"
+        : isNationalOrbit
+          ? "#030c1d"
+          : isOvercast
+            ? "#64748b"
+            : (weather?.visuals.skyColor || "#0284c7");
+      const starIntensity = isDark ? 0.85 : isNationalOrbit ? 0.35 : 0.0;
+
       (map as any).setFog?.({
         range: [near, far],
         color: fogColor,
-        "horizon-blend": isFoggy ? (z >= 16 ? 0.12 : 0.28) : 0.15,
-        "high-color": skyColor,
-        "space-color": isDark ? "#010409" : isOvercast ? "#64748b" : (weather?.visuals.skyColor || "#0284c7"),
-        "star-intensity": isDark ? 0.75 : 0.0,
+        "horizon-blend": isFoggy ? (z >= 16 ? 0.12 : 0.28) : (isNationalOrbit ? 0.08 : 0.15),
+        "high-color": isNationalOrbit ? (isDark ? "#020617" : "#051329") : skyColor,
+        "space-color": spaceColor,
+        "star-intensity": starIntensity,
       });
     } catch (e) {
       // ignore
@@ -1574,10 +1605,14 @@ export function LiveOsmMap({
             encoding: TERRAIN_ENCODING,
           });
         }
-        map.setTerrain({
-          source: "elevation-terrain-source",
-          exaggeration: 1.65,
-        });
+        const initialZoom = map.getZoom();
+        const initialExaggeration = computeTerrainExaggeration(initialZoom);
+        if (initialExaggeration > 0.05) {
+          map.setTerrain({
+            source: "elevation-terrain-source",
+            exaggeration: initialExaggeration,
+          });
+        }
       } catch (demErr) {
         console.warn("[LiveOsmMap] DEM setTerrain warning:", demErr);
       }
@@ -1635,6 +1670,44 @@ export function LiveOsmMap({
           map.setPaintProperty("satellite-imagery-layer", "raster-brightness-max", satBrightnessMax);
           map.setPaintProperty("satellite-imagery-layer", "raster-contrast", satContrast);
           map.setPaintProperty("satellite-imagery-layer", "raster-saturation", satSaturation);
+        }
+
+        // 1d. PBR Multidirectional Hillshading (Accentuates physical Himalayan crests, valleys & Western Ghats)
+        try {
+          if (!map.getSource("elevation-hillshade-source")) {
+            map.addSource("elevation-hillshade-source", {
+              type: "raster-dem",
+              tiles: [TERRAIN_TILE_URL],
+              tileSize: TERRAIN_TILE_SIZE,
+              maxzoom: TERRAIN_MAX_ZOOM,
+              encoding: TERRAIN_ENCODING,
+            });
+          }
+          if (!map.getLayer("terrain-hillshading")) {
+            map.addLayer(
+              {
+                id: "terrain-hillshading",
+                type: "hillshade",
+                source: "elevation-hillshade-source",
+                maxzoom: 12.0,
+                paint: {
+                  "hillshade-exaggeration": 0.85,
+                  "hillshade-shadow-color": isDark ? "#020612" : "#1e293b",
+                  "hillshade-highlight-color": isDark ? "#94a3b8" : "#ffffff",
+                  "hillshade-accent-color": isDark ? "#09152b" : "#334155",
+                  "hillshade-illumination-direction": 315,
+                  "hillshade-illumination-anchor": "viewport",
+                },
+              },
+              roadBeforeLayer || undefined
+            );
+          } else {
+            map.setPaintProperty("terrain-hillshading", "hillshade-shadow-color", isDark ? "#020612" : "#1e293b");
+            map.setPaintProperty("terrain-hillshading", "hillshade-highlight-color", isDark ? "#94a3b8" : "#ffffff");
+            map.setPaintProperty("terrain-hillshading", "hillshade-accent-color", isDark ? "#09152b" : "#334155");
+          }
+        } catch (hillErr) {
+          console.warn("[LiveOsmMap] Hillshading layer warning:", hillErr);
         }
       } catch (satErr) {
         console.warn("[LiveOsmMap] Satellite layer warning:", satErr);
@@ -2070,6 +2143,35 @@ export function LiveOsmMap({
             map.setPaintProperty("india-ocean-mask", "fill-color", oceanColor);
           }
 
+          // Layer: Wide bathymetric continental shelf gradient (deep gradient transition into Indian Ocean)
+          if (!map.getLayer("india-coastal-shelf-outer")) {
+            map.addLayer(
+              {
+                id: "india-coastal-shelf-outer",
+                type: "line",
+                source: "india-land-source",
+                layout: { "line-join": "round", "line-cap": "round" },
+                paint: {
+                  "line-color": "#0369a1",
+                  "line-width": [
+                    "interpolate", ["linear"], ["zoom"],
+                    3.5, 14,
+                    6.5, 10,
+                    9.0, 4,
+                  ],
+                  "line-blur": 6.0,
+                  "line-opacity": [
+                    "interpolate", ["linear"], ["zoom"],
+                    3.5, 0.30,
+                    8.0, 0.18,
+                    9.5, 0.0,
+                  ],
+                },
+              },
+              beforeCustom3D
+            );
+          }
+
           // Layer: Natural subtle coastal shallow shelf (soft tropical aqua, zero neon blur)
           if (!map.getLayer("india-coastal-shelf")) {
             map.addLayer(
@@ -2122,7 +2224,16 @@ export function LiveOsmMap({
             );
           }
 
-          // Ensure Major Indian Metros HUD layers remain on top of the mask
+          // Ensure Major Indian Metros and Geography HUD layers remain on top of the mask
+          if (map.getLayer("india-geography-halo")) {
+            map.moveLayer("india-geography-halo");
+          }
+          if (map.getLayer("india-geography-dot")) {
+            map.moveLayer("india-geography-dot");
+          }
+          if (map.getLayer("india-geography-label")) {
+            map.moveLayer("india-geography-label");
+          }
           if (map.getLayer("major-city-hubs-halo")) {
             map.moveLayer("major-city-hubs-halo");
           }
@@ -2223,6 +2334,88 @@ export function LiveOsmMap({
                 "text-color": "#ffffff",
                 "text-halo-color": "rgba(8,11,18,0.95)",
                 "text-halo-width": 2.5,
+              },
+            },
+            beforeCustom3D
+          );
+        }
+
+        // Layer D-Geo: India's 7 Primary Physiographic & Topographic Regions
+        // Northern Himalayas, Kangchenjunga, Indo-Gangetic Basin, Thar Desert, Deccan Plateau, Western & Eastern Ghats
+        if (!map.getSource("india-geography-source")) {
+          map.addSource("india-geography-source", {
+            type: "geojson",
+            data: INDIA_GEOGRAPHY_REGIONS_GEOJSON,
+          });
+        }
+
+        const geoColor = isDark ? "#38bdf8" : "#0284c7";
+        const geoHaloColor = isDark ? "rgba(56,189,248,0.25)" : "rgba(2,132,199,0.25)";
+
+        if (!map.getLayer("india-geography-halo")) {
+          map.addLayer(
+            {
+              id: "india-geography-halo",
+              type: "circle",
+              source: "india-geography-source",
+              maxzoom: 8.5,
+              paint: {
+                "circle-color": geoHaloColor,
+                "circle-radius": [
+                  "interpolate", ["linear"], ["zoom"],
+                  3.5, 9.0,
+                  6.0, 15.0,
+                  8.0, 20.0,
+                ],
+                "circle-blur": 0.5,
+              },
+            },
+            beforeCustom3D
+          );
+        }
+
+        if (!map.getLayer("india-geography-dot")) {
+          map.addLayer(
+            {
+              id: "india-geography-dot",
+              type: "circle",
+              source: "india-geography-source",
+              maxzoom: 8.5,
+              paint: {
+                "circle-color": geoColor,
+                "circle-radius": [
+                  "interpolate", ["linear"], ["zoom"],
+                  3.5, 3.0,
+                  6.0, 4.0,
+                  8.0, 5.0,
+                ],
+                "circle-stroke-width": 1.5,
+                "circle-stroke-color": isDark ? "#080b12" : "#ffffff",
+              },
+            },
+            beforeCustom3D
+          );
+        }
+
+        if (!map.getLayer("india-geography-label")) {
+          map.addLayer(
+            {
+              id: "india-geography-label",
+              type: "symbol",
+              source: "india-geography-source",
+              maxzoom: 8.5,
+              layout: {
+                "text-field": "{name}",
+                "text-size": 11,
+                "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+                "text-offset": [0, 1.2],
+                "text-anchor": "top",
+                "text-optional": true,
+              },
+              paint: {
+                "text-color": isDark ? "#e2e8f0" : "#0f172a",
+                "text-halo-color": isDark ? "rgba(2,6,23,0.95)" : "rgba(255,255,255,0.95)",
+                "text-halo-width": 2.0,
               },
             },
             beforeCustom3D
@@ -2513,6 +2706,36 @@ export function LiveOsmMap({
         });
       }
 
+      // Interactive hover & click handlers for India 3D Physiographic Regions
+      for (const geoLayer of ["india-geography-dot", "india-geography-label"]) {
+        map.on("mouseenter", geoLayer, () => {
+          map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", geoLayer, () => {
+          map.getCanvas().style.cursor = "";
+        });
+        map.on("click", geoLayer, (e) => {
+          const feat = e.features?.[0];
+          if (!feat || feat.geometry.type !== "Point") return;
+          const coords = feat.geometry.coordinates as [number, number];
+          const props = feat.properties || {};
+          isFlightActiveRef.current = true;
+          setIs3DMode(true);
+          map.flyTo({
+            center: coords,
+            zoom: Number(props.zoom) || 6.5,
+            pitch: Number(props.pitch) || 58,
+            bearing: Number(props.bearing) || -15,
+            duration: 1800,
+          });
+          map.once("moveend", () => {
+            isFlightActiveRef.current = false;
+          });
+          bazaarAudio.playStorefrontChime();
+          showToast(`${props.icon || "🏔️"} ${props.name} (${props.elevation || "Elevated"})`);
+        });
+      }
+
       // Helper to apply 4-Tier LOD marker visibility & compact vs flagship styling cleanly on every zoom
       const syncMarkerLOD = (z: number) => {
         if (guwahatiBeaconMarkerRef.current) {
@@ -2570,15 +2793,23 @@ export function LiveOsmMap({
         syncMarkerLOD(z);
         applyDynamicWeatherFog(z, currentWeatherRef.current, isNightModeRef.current);
 
-        // Manage 3D elevation terrain: active at national zoom for realistic India relief; null at city/street level for 100% clean flat OSM roads
+        // Manage dynamic 3D elevation terrain:
+        // 14.5x towering relief at national orbit (z <= 5.0), tapering down smoothly
+        // null at street level (z >= 12.0) for 100% clean flat OSM roads
         try {
-          if (z >= 9.2) {
+          const targetExaggeration = computeTerrainExaggeration(z);
+          if (targetExaggeration <= 0.05) {
             if (map.getTerrain()) {
               map.setTerrain(null);
             }
           } else {
-            if (!map.getTerrain() && map.getSource("elevation-terrain-source")) {
-              map.setTerrain({ source: "elevation-terrain-source", exaggeration: 1.5 });
+            const curTerrain = map.getTerrain();
+            const curExaggeration = (curTerrain as any)?.exaggeration ?? 0;
+            if (!curTerrain || Math.abs(curExaggeration - targetExaggeration) >= 0.8) {
+              map.setTerrain({
+                source: "elevation-terrain-source",
+                exaggeration: Math.round(targetExaggeration * 10) / 10,
+              });
             }
           }
         } catch (e) {}
@@ -3717,6 +3948,32 @@ export function LiveOsmMap({
           )}
 
           <div className="flex items-center gap-1 p-1 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800 shadow-2xl">
+            {/* 3D Physical Relief Perspective Toggle */}
+            <button
+              onClick={() => {
+                if (!mapRef.current) return;
+                const map = mapRef.current;
+                const curPitch = map.getPitch();
+                const nextPitch = curPitch > 25 ? 0 : 58;
+                const nextBearing = curPitch > 25 ? 0 : -14;
+                setIs3DMode(nextPitch > 0);
+                map.easeTo({
+                  pitch: nextPitch,
+                  bearing: nextBearing,
+                  duration: 1000,
+                });
+                bazaarAudio.playStorefrontChime();
+                showToast(nextPitch > 0 ? "🏔️ 3D Physical Relief Enabled" : "🗺️ 2D Plan View");
+              }}
+              title="Toggle 3D Physical Relief View"
+              aria-label="Toggle 3D Physical Relief View"
+              className={`min-h-[40px] min-w-[40px] sm:min-h-[36px] sm:min-w-[36px] p-2 rounded-xl text-xs font-semibold flex items-center justify-center transition-all ${
+                is3DMode ? "text-sky-400 bg-sky-500/15" : "text-neutral-300 hover:text-white hover:bg-neutral-900"
+              }`}
+            >
+              <Mountain className="w-4 h-4" />
+            </button>
+
             {/* 3D Drone Perspective Toggle */}
             <button
               onClick={toggle3DDrone}
