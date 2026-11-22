@@ -3709,9 +3709,9 @@ export function LiveOsmMap({
       {/* 1. MAPLIBRE GL CONTAINER — REAL OPENSTREETMAP BASE (IMAGE 1 BASED) */}
       <div ref={mapContainerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
-      {/* 2. TOP UNIFIED COMMAND BAR (Bespoke Decoupled Spatial Architecture) */}
+      {/* 2. TOP UNIFIED COMMAND BAR (Bespoke Decoupled Translucent Spatial Architecture) */}
       <header className="absolute top-3 sm:top-4 inset-x-3 sm:inset-x-5 z-20 pointer-events-none flex justify-center">
-        <div className="w-full max-w-screen-2xl h-14 px-3.5 sm:px-5 rounded-2xl bg-neutral-950/92 backdrop-blur-2xl border border-white/12 shadow-[0_16px_40px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.12)] flex items-center justify-between gap-3 sm:gap-5 pointer-events-auto transition-all">
+        <div className="w-full max-w-screen-2xl h-14 px-3.5 sm:px-5 rounded-2xl bg-neutral-950/40 hover:bg-neutral-950/50 backdrop-blur-xl backdrop-saturate-150 border border-white/15 shadow-[0_12px_36px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.18)] flex items-center justify-between gap-3 sm:gap-5 pointer-events-auto transition-all">
           {/* Left: Brand Identity & Spatial Breadcrumb */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <Link
@@ -3722,11 +3722,11 @@ export function LiveOsmMap({
                   handleResetToIndia();
                 }
               }}
-              className="flex items-center gap-2.5 px-1 py-1 rounded-xl hover:bg-white/[0.06] transition-all group shrink-0"
+              className="flex items-center gap-2.5 px-1 py-1 rounded-xl hover:bg-white/[0.08] transition-all group shrink-0"
             >
               {/* Illuminated 3D Mascot Medallion — High-craft, visible, crystal-clear brand soul */}
-              <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-amber-500/30 via-neutral-900 to-black p-0.5 border border-amber-500/50 shadow-[0_0_16px_rgba(245,158,11,0.35),inset_0_1px_1px_rgba(255,255,255,0.2)] group-hover:border-amber-400 group-hover:shadow-[0_0_22px_rgba(245,158,11,0.55)] transition-all shrink-0 overflow-hidden flex items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-white/10 pointer-events-none z-10" />
+              <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-amber-500/35 via-neutral-900/90 to-black/80 p-0.5 border border-amber-500/50 shadow-[0_0_16px_rgba(245,158,11,0.35),inset_0_1px_1px_rgba(255,255,255,0.25)] group-hover:border-amber-400 group-hover:shadow-[0_0_22px_rgba(245,158,11,0.55)] transition-all shrink-0 overflow-hidden flex items-center justify-center backdrop-blur-sm">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-white/15 pointer-events-none z-10" />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/mascot-avatar.png"
@@ -3737,15 +3737,15 @@ export function LiveOsmMap({
 
               <div className="flex flex-col text-left leading-tight">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm sm:text-[15px] font-bold text-white tracking-tight">
-                    Spotlight <span className="text-amber-400 font-extrabold drop-shadow-[0_0_10px_rgba(245,158,11,0.3)]">Bazaar</span>
+                  <span className="text-sm sm:text-[15px] font-bold text-white tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                    Spotlight <span className="text-amber-400 font-extrabold drop-shadow-[0_0_10px_rgba(245,158,11,0.4)]">Bazaar</span>
                   </span>
-                  <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] font-mono font-bold tracking-wider uppercase bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                  <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] font-mono font-bold tracking-wider uppercase bg-amber-500/20 text-amber-300 border border-amber-500/35 backdrop-blur-sm">
                     3D MAP
                   </span>
                 </div>
                 {viewLevel === "india" && (
-                  <span className="text-[10px] text-neutral-400 tracking-wide hidden xl:block font-medium">
+                  <span className="text-[10px] text-neutral-300 tracking-wide hidden xl:block font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                     India&apos;s Open Business Street
                   </span>
                 )}
@@ -3754,12 +3754,12 @@ export function LiveOsmMap({
 
             {viewLevel !== "india" && (
               <>
-                <span className="h-5 w-px bg-white/10 hidden sm:block" />
+                <span className="h-5 w-px bg-white/15 hidden sm:block" />
                 <button
                   type="button"
                   onClick={handleResetToIndia}
                   title="Return to 3D All-India Overview"
-                  className="h-8.5 px-2.5 sm:px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 hover:text-amber-200 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm shrink-0"
+                  className="h-8.5 px-2.5 sm:px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/45 text-amber-300 hover:text-amber-200 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm shrink-0 backdrop-blur-sm"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">All India</span>
@@ -3768,10 +3768,10 @@ export function LiveOsmMap({
             )}
           </div>
 
-          {/* Center: Unconstrained Omnibox Command Search (Generous Breathing Room) */}
+          {/* Center: Unconstrained Omnibox Command Search (Translucent Frosted Glass) */}
           <div ref={searchBoxRef} className="relative flex-1 max-w-xl lg:max-w-2xl min-w-[240px] mx-2 sm:mx-4">
             <div className="relative flex items-center">
-              <Search className="absolute left-3.5 w-4 h-4 text-neutral-400 pointer-events-none group-focus-within:text-amber-400 transition-colors" />
+              <Search className="absolute left-3.5 w-4 h-4 text-neutral-300 pointer-events-none group-focus-within:text-amber-400 transition-colors" />
               <input
                 id="spotlight-bazaar-search"
                 name="searchQuery"
@@ -3805,7 +3805,7 @@ export function LiveOsmMap({
                     if (chosen) selectSuggestion(chosen);
                   }
                 }}
-                className="w-full pl-10 pr-12 h-10 rounded-xl bg-neutral-900/80 hover:bg-neutral-900 focus:bg-neutral-950 border border-white/10 hover:border-white/20 focus:border-amber-500/60 text-white text-xs sm:text-[13px] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-amber-500/25 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
+                className="w-full pl-10 pr-12 h-10 rounded-xl bg-black/30 hover:bg-black/45 focus:bg-black/60 border border-white/15 hover:border-white/25 focus:border-amber-400/70 text-white text-xs sm:text-[13px] placeholder:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-amber-500/25 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)] backdrop-blur-md"
               />
               {searchQuery ? (
                 <button
@@ -3815,13 +3815,13 @@ export function LiveOsmMap({
                     setRemoteGeoResults([]);
                     setActiveSuggestionIdx(-1);
                   }}
-                  className="absolute right-2.5 p-1 rounded-md text-neutral-400 hover:text-white"
+                  className="absolute right-2.5 p-1 rounded-md text-neutral-300 hover:text-white"
                   aria-label="Clear search"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               ) : (
-                <div className="absolute right-2.5 hidden sm:flex items-center pointer-events-none text-[10px] font-mono text-neutral-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
+                <div className="absolute right-2.5 hidden sm:flex items-center pointer-events-none text-[10px] font-mono text-neutral-300 bg-white/10 px-1.5 py-0.5 rounded border border-white/15 backdrop-blur-sm">
                   <span>⌘K</span>
                 </div>
               )}
@@ -3829,7 +3829,7 @@ export function LiveOsmMap({
 
             {/* Grouped Autocomplete Results */}
             {searchFocused && q.length >= 2 && (
-              <div className="absolute top-full mt-2 inset-x-0 rounded-2xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800 shadow-2xl p-2 max-h-72 overflow-y-auto z-30 flex flex-col gap-1.5">
+              <div className="absolute top-full mt-2 inset-x-0 rounded-2xl bg-neutral-950/90 backdrop-blur-2xl border border-white/15 shadow-2xl p-2 max-h-72 overflow-y-auto z-30 flex flex-col gap-1.5">
                 {businessSearchResults.length > 0 && (
                   <div>
                     <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-400/80">
@@ -3841,11 +3841,11 @@ export function LiveOsmMap({
                         type="button"
                         onClick={() => selectSuggestion({ type: "business", data: b })}
                         className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between gap-2 text-xs text-white transition-colors ${
-                          activeSuggestionIdx === idx ? "bg-neutral-800/90" : "hover:bg-neutral-900"
+                          activeSuggestionIdx === idx ? "bg-white/10" : "hover:bg-white/5"
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/35 flex items-center justify-center text-amber-400 shrink-0">
+                          <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
                             <Store className="w-3.5 h-3.5" />
                           </div>
                           <div className="flex flex-col min-w-0">
@@ -3889,11 +3889,11 @@ export function LiveOsmMap({
                           type="button"
                           onClick={() => selectSuggestion({ type: "place", data: p })}
                           className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between gap-2 text-xs text-white transition-colors ${
-                            activeSuggestionIdx === flatIdx ? "bg-neutral-800/90" : "hover:bg-neutral-900"
+                            activeSuggestionIdx === flatIdx ? "bg-white/10" : "hover:bg-white/5"
                           }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-7 h-7 rounded-lg bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+                            <div className="w-7 h-7 rounded-lg bg-sky-500/20 border border-sky-500/35 flex items-center justify-center text-sky-400 shrink-0">
                               <MapPin className="w-3.5 h-3.5" />
                             </div>
                             <div className="flex flex-col min-w-0">
@@ -3937,7 +3937,7 @@ export function LiveOsmMap({
             {currentWeather && (
               <div
                 title={`Live Regional Weather: ${currentWeather.cityName} (${currentWeather.temperature}°C · ${currentWeather.conditionText})`}
-                className="hidden lg:flex items-center gap-2 h-9 px-3 rounded-xl bg-white/[0.04] border border-white/8 text-xs text-neutral-300 shadow-sm"
+                className="hidden lg:flex items-center gap-2 h-9 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/12 text-xs text-neutral-200 shadow-sm backdrop-blur-sm transition-colors"
               >
                 {(() => {
                   const isDayEffective = currentWeather.isDay && !isNightMode;
@@ -3957,11 +3957,11 @@ export function LiveOsmMap({
                       ) : (
                         <Moon className="w-4 h-4 text-cyan-300" />
                       )}
-                      <span className="font-semibold text-white">{currentWeather.cityName}</span>
-                      <span className="text-neutral-500">·</span>
-                      <span className="text-amber-400 font-bold">{currentWeather.temperature}°C</span>
-                      <span className="hidden 2xl:inline text-neutral-500">·</span>
-                      <span className="hidden 2xl:inline text-neutral-400 text-[11px]">{displayCondition}</span>
+                      <span className="font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{currentWeather.cityName}</span>
+                      <span className="text-neutral-400">·</span>
+                      <span className="text-amber-400 font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{currentWeather.temperature}°C</span>
+                      <span className="hidden 2xl:inline text-neutral-400">·</span>
+                      <span className="hidden 2xl:inline text-neutral-300 text-[11px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{displayCondition}</span>
                     </>
                   );
                 })()}
@@ -3973,15 +3973,15 @@ export function LiveOsmMap({
               type="button"
               onClick={() => setShowBroadcastsDrawer(true)}
               title="Live street broadcasts & deals across India"
-              className="h-9 px-2.5 sm:px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 hover:text-emerald-200 text-xs font-semibold flex items-center gap-2 transition-all shadow-[0_0_12px_rgba(16,185,129,0.15)]"
+              className="h-9 px-2.5 sm:px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/35 text-emerald-300 hover:text-emerald-200 text-xs font-semibold flex items-center gap-2 transition-all shadow-[0_0_14px_rgba(16,185,129,0.2)] backdrop-blur-sm"
             >
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
               </span>
-              <span className="hidden sm:inline text-xs font-semibold text-emerald-300">Pulse</span>
+              <span className="hidden sm:inline text-xs font-semibold text-emerald-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">Pulse</span>
               {liveBroadcastEntries.length > 0 && (
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-400/20 text-emerald-200 tabular-nums font-bold">
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-400/25 text-emerald-100 tabular-nums font-bold">
                   {liveBroadcastEntries.length}
                 </span>
               )}
@@ -3991,16 +3991,16 @@ export function LiveOsmMap({
             <Link
               href="/dashboard"
               title="Manage your registered business plot"
-              className="hidden xl:flex items-center gap-1.5 h-9 px-3 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 text-neutral-300 hover:text-white font-medium text-xs transition-all"
+              className="hidden xl:flex items-center gap-1.5 h-9 px-3 rounded-xl hover:bg-white/10 border border-transparent hover:border-white/15 text-neutral-200 hover:text-white font-medium text-xs transition-all drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
             >
-              <Store className="w-4 h-4 text-amber-400/80" />
+              <Store className="w-4 h-4 text-amber-400" />
               <span>My Business</span>
             </Link>
 
             {/* Primary Commercial CTA */}
             <Link
               href="/register"
-              className="flex items-center gap-1.5 h-9.5 px-3.5 sm:px-4 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:via-amber-400 hover:to-amber-500 text-neutral-950 font-extrabold text-xs shadow-[0_2px_14px_rgba(245,158,11,0.35)] hover:shadow-[0_4px_20px_rgba(245,158,11,0.55)] hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0"
+              className="flex items-center gap-1.5 h-9.5 px-3.5 sm:px-4 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:via-amber-400 hover:to-amber-500 text-neutral-950 font-extrabold text-xs shadow-[0_2px_14px_rgba(245,158,11,0.4)] hover:shadow-[0_4px_22px_rgba(245,158,11,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span className="hidden sm:inline">Open a Shop</span>
@@ -4010,10 +4010,10 @@ export function LiveOsmMap({
         </div>
       </header>
 
-      {/* 2B. FLOATING SPATIAL MAP CONTROLS DOCK (Right Edge — Professional GIS & Spatial Ergonomics) */}
+      {/* 2B. FLOATING SPATIAL MAP CONTROLS DOCK (Right Edge — Translucent Frosted Glass) */}
       <aside
         aria-label="3D Map Viewport Controls"
-        className="absolute top-20 sm:top-22 right-3 sm:right-5 z-20 flex flex-col items-center gap-1.5 p-1 rounded-2xl bg-neutral-950/90 backdrop-blur-2xl border border-white/12 shadow-[0_12px_36px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.12)] pointer-events-auto transition-all"
+        className="absolute top-20 sm:top-22 right-3 sm:right-5 z-20 flex flex-col items-center gap-1.5 p-1 rounded-2xl bg-neutral-950/40 hover:bg-neutral-950/50 backdrop-blur-xl backdrop-saturate-150 border border-white/15 shadow-[0_12px_36px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.18)] pointer-events-auto transition-all"
       >
         {/* 3D Physical Relief Toggle */}
         <button
@@ -4085,25 +4085,25 @@ export function LiveOsmMap({
       <div className="absolute bottom-5 inset-x-4 z-20 flex flex-col items-center gap-2 pointer-events-none">
         {/* STATE A: ALL-INDIA NATIONAL VIEW — Sleek compact 1-row bar (zero Nerqiva hardcoding, zero southern India overlap!) */}
         {viewLevel === "india" && (
-          <div className="px-4 py-2 rounded-full bg-neutral-950/85 backdrop-blur-2xl border border-white/10 shadow-2xl shadow-black/80 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 pointer-events-auto">
+          <div className="px-4 py-2 rounded-full bg-neutral-950/45 hover:bg-neutral-950/55 backdrop-blur-xl backdrop-saturate-150 border border-white/15 shadow-[0_12px_36px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.15)] flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 pointer-events-auto transition-all">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-400">
+              <div className="w-7 h-7 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
                 <Globe2 className="w-3.5 h-3.5" />
               </div>
               <div className="flex items-center gap-1.5 text-xs">
-                <span className="font-bold text-white tracking-wide">India Map</span>
-                <span className="text-neutral-600">·</span>
-                <span className="text-emerald-400 font-semibold">
+                <span className="font-bold text-white tracking-wide drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">India Map</span>
+                <span className="text-neutral-500">·</span>
+                <span className="text-emerald-400 font-semibold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                   {allLiveStorefronts.length} Live {allLiveStorefronts.length === 1 ? "Business" : "Businesses"}
                 </span>
-                <span className="hidden sm:inline text-neutral-600">·</span>
-                <span className="hidden sm:inline text-neutral-400">
+                <span className="hidden sm:inline text-neutral-500">·</span>
+                <span className="hidden sm:inline text-neutral-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                   {activeCityGroups.length} {activeCityGroups.length === 1 ? "City" : "Cities"}
                 </span>
               </div>
             </div>
 
-            <div className="h-4 w-px bg-white/10 hidden sm:block" />
+            <div className="h-4 w-px bg-white/15 hidden sm:block" />
 
             {/* Dynamic Active City Quick-Jump Chips */}
             <div className="flex items-center gap-1.5">
@@ -4125,11 +4125,11 @@ export function LiveOsmMap({
                       });
                     }
                   }}
-                  className="px-2.5 py-1 rounded-full bg-neutral-900/90 hover:bg-neutral-800 border border-amber-500/35 text-[11px] font-semibold text-amber-300 flex items-center gap-1.5 transition-all shadow-sm"
+                  className="px-2.5 py-1 rounded-full bg-black/40 hover:bg-black/60 border border-amber-500/40 text-[11px] font-semibold text-amber-300 flex items-center gap-1.5 transition-all shadow-sm backdrop-blur-sm"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                   <span>{grp.city}</span>
-                  <span className="text-[10px] text-neutral-400 font-mono">({grp.count})</span>
+                  <span className="text-[10px] text-neutral-300 font-mono">({grp.count})</span>
                 </button>
               ))}
             </div>
@@ -4146,27 +4146,27 @@ export function LiveOsmMap({
 
         {/* STATE B: REGION / STATE / CITY / PIN CODE CONTEXT VIEW */}
         {viewLevel === "region" && (
-          <div className="w-full max-w-lg px-4 py-3 rounded-3xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800/90 shadow-2xl flex items-center justify-between gap-3 pointer-events-auto">
+          <div className="w-full max-w-lg px-4 py-3 rounded-3xl bg-neutral-950/50 hover:bg-neutral-950/60 backdrop-blur-xl backdrop-saturate-150 border border-white/15 shadow-[0_16px_40px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.15)] flex items-center justify-between gap-3 pointer-events-auto transition-all">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-2xl bg-sky-500/15 border border-sky-500/35 flex items-center justify-center text-sky-400 shrink-0">
+              <div className="w-9 h-9 rounded-2xl bg-sky-500/20 border border-sky-500/40 flex items-center justify-center text-sky-400 shrink-0">
                 <MapPin className="w-4 h-4" />
               </div>
               <div className="flex flex-col text-left min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-white tracking-tight truncate">
+                  <span className="text-sm font-bold text-white tracking-tight truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                     {focusedRegion ? focusedRegion.name : nearestToCenter && nearestToCenter.distKm < 40 ? nearestToCenter.storefront.city_name || "Guwahati" : "Exploring India"}
                   </span>
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border shrink-0 ${
                       nearbyCount > 0
-                        ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
-                        : "bg-neutral-800 text-neutral-300 border-neutral-700"
+                        ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/35"
+                        : "bg-white/10 text-neutral-200 border-white/15"
                     }`}
                   >
                     {nearbyCount > 0 ? `${nearbyCount} Live Here` : "Open Area"}
                   </span>
                 </div>
-                <span className="text-[11px] text-neutral-400 truncate">
+                <span className="text-[11px] text-neutral-300 truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                   {focusedRegion
                     ? focusedRegion.subtitle
                     : nearbyCount > 0
@@ -4181,7 +4181,7 @@ export function LiveOsmMap({
                 <button
                   type="button"
                   onClick={() => flyToStorefront(nearestToCenter.storefront)}
-                  className="px-3.5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 transition-all"
+                  className="px-3.5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Visit {nearestToCenter.storefront.name}</span>
@@ -4189,7 +4189,7 @@ export function LiveOsmMap({
               ) : (
                 <Link
                   href="/register"
-                  className="px-3.5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 transition-all"
+                  className="px-3.5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Claim First Plot</span>
@@ -4202,7 +4202,7 @@ export function LiveOsmMap({
         {/* STATE C: STREET / SINGLE BUSINESS PLOT VIEW (Dynamic for whichever business is focused — never falsely shows Nerqiva in another city!) */}
         {viewLevel === "street" && activeStreetBusiness && (
           <>
-            <div className="w-full max-w-lg p-3.5 sm:p-4 rounded-2xl bg-neutral-950/92 backdrop-blur-2xl border border-white/10 shadow-[0_16px_40px_rgba(0,0,0,0.65)] flex flex-col gap-3 pointer-events-auto">
+            <div className="w-full max-w-lg p-3.5 sm:p-4 rounded-2xl bg-neutral-950/50 hover:bg-neutral-950/60 backdrop-blur-xl backdrop-saturate-150 border border-white/15 shadow-[0_16px_40px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.15)] flex flex-col gap-3 pointer-events-auto transition-all">
               {/* Status Row */}
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">

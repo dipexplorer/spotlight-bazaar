@@ -903,7 +903,7 @@ export function ThreeMapCanvas({
       <div className="absolute top-4 inset-x-4 z-20 flex items-center justify-between gap-3 pointer-events-none">
         {/* Left: Mascot Brand & Mode Badge / Return to India Map */}
         <div className="flex items-center gap-2 pointer-events-auto shrink-0">
-          <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-neutral-950/92 backdrop-blur-2xl border border-white/12 shadow-2xl">
+          <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-neutral-950/40 hover:bg-neutral-950/50 backdrop-blur-xl backdrop-saturate-150 border border-white/15 shadow-2xl transition-all">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <div className="relative w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/25 via-neutral-900 to-black p-0.5 border border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.35)] shrink-0 overflow-hidden flex items-center justify-center">
               <img
