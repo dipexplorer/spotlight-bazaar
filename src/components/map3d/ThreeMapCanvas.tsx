@@ -903,15 +903,17 @@ export function ThreeMapCanvas({
       <div className="absolute top-4 inset-x-4 z-20 flex items-center justify-between gap-3 pointer-events-none">
         {/* Left: Mascot Brand & Mode Badge / Return to India Map */}
         <div className="flex items-center gap-2 pointer-events-auto shrink-0">
-          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800 shadow-2xl">
+          <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-neutral-950/92 backdrop-blur-2xl border border-white/12 shadow-2xl">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/mascot.jpg"
-              alt="Spotlight Mascot"
-              className="w-6 h-6 rounded-lg object-cover border border-amber-500/40"
-            />
+            <div className="relative w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/25 via-neutral-900 to-black p-0.5 border border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.35)] shrink-0 overflow-hidden flex items-center justify-center">
+              <img
+                src="/mascot-avatar.png"
+                alt="Spotlight Mascot"
+                className="w-full h-full object-cover rounded-md scale-105"
+              />
+            </div>
             <span className="hidden sm:inline text-xs font-bold text-white tracking-wide">
-              Spotlight <span className="text-amber-400">Bazaar</span>
+              Spotlight <span className="text-amber-400 font-extrabold">Bazaar</span>
             </span>
           </div>
 

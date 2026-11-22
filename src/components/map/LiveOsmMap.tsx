@@ -3711,9 +3711,9 @@ export function LiveOsmMap({
 
       {/* 2. TOP UNIFIED COMMAND BAR (Bespoke Human-Crafted Architecture) */}
       <header className="absolute top-3 sm:top-4 inset-x-3 sm:inset-x-5 z-20 pointer-events-none flex justify-center">
-        <div className="w-full max-w-7xl h-12 px-2 sm:px-3 rounded-2xl bg-neutral-950/90 backdrop-blur-2xl border border-white/10 shadow-[0_12px_36px_rgba(0,0,0,0.55)] flex items-center justify-between gap-2 sm:gap-3 pointer-events-auto transition-all">
+        <div className="w-full max-w-7xl h-14 px-2.5 sm:px-4 rounded-2xl bg-neutral-950/92 backdrop-blur-2xl border border-white/12 shadow-[0_16px_40px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.12)] flex items-center justify-between gap-2 sm:gap-3 pointer-events-auto transition-all">
           {/* Left: Brand + Spatial Breadcrumb + Pulse */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <Link
               href="/"
               onClick={(e) => {
@@ -3722,30 +3722,45 @@ export function LiveOsmMap({
                   handleResetToIndia();
                 }
               }}
-              className="flex items-center gap-2 px-2 py-1 rounded-xl hover:bg-white/5 transition-colors group"
+              className="flex items-center gap-2.5 px-1.5 py-1 rounded-xl hover:bg-white/[0.06] transition-all group shrink-0"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/mascot.jpg"
-                alt="Spotlight Mascot"
-                className="w-6 h-6 rounded-lg object-cover ring-1 ring-amber-500/40 group-hover:ring-amber-500/80 transition-all"
-              />
-              <span className="text-[13px] font-semibold text-white tracking-tight">
-                Spotlight <span className="text-amber-400 font-bold">Bazaar</span>
-              </span>
+              {/* Illuminated 3D Mascot Medallion — High-craft, visible, crystal-clear brand soul */}
+              <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-amber-500/30 via-neutral-900 to-black p-0.5 border border-amber-500/50 shadow-[0_0_16px_rgba(245,158,11,0.35),inset_0_1px_1px_rgba(255,255,255,0.2)] group-hover:border-amber-400 group-hover:shadow-[0_0_22px_rgba(245,158,11,0.55)] transition-all shrink-0 overflow-hidden flex items-center justify-center">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-white/10 pointer-events-none z-10" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/mascot-avatar.png"
+                  alt="Spotlight Bazaar Mascot"
+                  className="w-full h-full object-cover rounded-[10px] scale-105 group-hover:scale-110 transition-transform duration-300"
+                />
+              </div>
+
+              <div className="flex flex-col text-left leading-tight">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm sm:text-[15px] font-bold text-white tracking-tight">
+                    Spotlight <span className="text-amber-400 font-extrabold drop-shadow-[0_0_10px_rgba(245,158,11,0.3)]">Bazaar</span>
+                  </span>
+                  <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] font-mono font-bold tracking-wider uppercase bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                    3D MAP
+                  </span>
+                </div>
+                <span className="text-[10px] text-neutral-400 tracking-wide hidden sm:block font-medium">
+                  India&apos;s Open Business Street
+                </span>
+              </div>
             </Link>
 
             {viewLevel !== "india" && (
               <>
-                <span className="h-4 w-px bg-white/10 hidden sm:block" />
+                <span className="h-5 w-px bg-white/10 hidden sm:block" />
                 <button
                   type="button"
                   onClick={handleResetToIndia}
                   title="Return to 3D India Overview"
-                  className="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 hover:text-amber-200 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                  className="h-9 px-2.5 sm:px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 hover:text-amber-200 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline">India</span>
+                  <span className="hidden md:inline">India Overview</span>
                 </button>
               </>
             )}
@@ -3754,15 +3769,15 @@ export function LiveOsmMap({
               type="button"
               onClick={() => setShowBroadcastsDrawer(true)}
               title="Live street broadcasts & deals across India"
-              className="px-2 py-1 rounded-lg hover:bg-white/5 text-neutral-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors"
+              className="h-9 px-2.5 sm:px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 hover:text-emerald-200 text-xs font-semibold flex items-center gap-2 transition-all shadow-[0_0_12px_rgba(16,185,129,0.15)]"
             >
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
               </span>
-              <span className="hidden xl:inline text-[11px] font-medium text-neutral-300">Pulse</span>
+              <span className="hidden md:inline text-xs font-semibold text-emerald-300">Live Pulse</span>
               {liveBroadcastEntries.length > 0 && (
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-300 tabular-nums font-semibold">
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-400/20 text-emerald-200 tabular-nums font-bold">
                   {liveBroadcastEntries.length}
                 </span>
               )}
@@ -3772,13 +3787,13 @@ export function LiveOsmMap({
           {/* Center: Inset Omnibox Command Search */}
           <div ref={searchBoxRef} className="relative flex-1 max-w-sm lg:max-w-md mx-1 sm:mx-2">
             <div className="relative flex items-center">
-              <Search className="absolute left-3 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
+              <Search className="absolute left-3.5 w-4 h-4 text-neutral-400 pointer-events-none" />
               <input
                 id="spotlight-bazaar-search"
                 name="searchQuery"
                 type="text"
                 aria-label="Search business, city, state, area, or PIN code"
-                placeholder="Search business, city, state, or PIN..."
+                placeholder="Search business, city, state, area, or PIN..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -3806,7 +3821,7 @@ export function LiveOsmMap({
                     if (chosen) selectSuggestion(chosen);
                   }
                 }}
-                className="w-full pl-9 pr-12 h-8 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] focus:bg-neutral-900 border border-white/5 focus:border-amber-500/50 text-white text-xs placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-amber-500/30 transition-all"
+                className="w-full pl-10 pr-12 h-9.5 rounded-xl bg-neutral-900/80 hover:bg-neutral-900 focus:bg-neutral-950 border border-white/10 hover:border-white/20 focus:border-amber-500/60 text-white text-xs sm:text-[13px] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-amber-500/25 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
               />
               {searchQuery ? (
                 <button
@@ -3816,13 +3831,13 @@ export function LiveOsmMap({
                     setRemoteGeoResults([]);
                     setActiveSuggestionIdx(-1);
                   }}
-                  className="absolute right-2 p-1 rounded-md text-neutral-400 hover:text-white"
+                  className="absolute right-2.5 p-1 rounded-md text-neutral-400 hover:text-white"
                   aria-label="Clear search"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               ) : (
-                <div className="absolute right-2.5 hidden sm:flex items-center pointer-events-none text-[10px] font-mono text-neutral-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
+                <div className="absolute right-2.5 hidden sm:flex items-center pointer-events-none text-[10px] font-mono text-neutral-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
                   <span>⌘K</span>
                 </div>
               )}
@@ -3933,12 +3948,12 @@ export function LiveOsmMap({
           </div>
 
           {/* Right: Weather Telemetry + Segmented Tools Rail + Primary Actions */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             {/* Dynamic Regional Weather Telemetry */}
             {currentWeather && (
               <div
                 title={`Live Regional Weather: ${currentWeather.cityName} (${currentWeather.temperature}°C · ${currentWeather.conditionText})`}
-                className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 text-xs text-neutral-300"
+                className="hidden lg:flex items-center gap-2 h-9 px-3 rounded-xl bg-white/[0.04] border border-white/8 text-xs text-neutral-300 shadow-sm"
               >
                 {(() => {
                   const isDayEffective = currentWeather.isDay && !isNightMode;
@@ -3948,21 +3963,21 @@ export function LiveOsmMap({
                   return (
                     <>
                       {currentWeather.isRaining ? (
-                        <CloudRain className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
+                        <CloudRain className="w-4 h-4 text-sky-400 animate-pulse" />
                       ) : currentWeather.isFoggy ? (
-                        <CloudFog className="w-3.5 h-3.5 text-slate-300" />
+                        <CloudFog className="w-4 h-4 text-slate-300" />
                       ) : currentWeather.conditionIcon === "cloud" ? (
-                        <Cloud className="w-3.5 h-3.5 text-blue-300" />
+                        <Cloud className="w-4 h-4 text-blue-300" />
                       ) : isDayEffective ? (
-                        <Sun className="w-3.5 h-3.5 text-amber-400" />
+                        <Sun className="w-4 h-4 text-amber-400" />
                       ) : (
-                        <Moon className="w-3.5 h-3.5 text-cyan-300" />
+                        <Moon className="w-4 h-4 text-cyan-300" />
                       )}
-                      <span className="font-medium text-white">{currentWeather.cityName}</span>
+                      <span className="font-semibold text-white">{currentWeather.cityName}</span>
                       <span className="text-neutral-500">·</span>
-                      <span className="text-amber-400 font-semibold">{currentWeather.temperature}°C</span>
+                      <span className="text-amber-400 font-bold">{currentWeather.temperature}°C</span>
                       <span className="hidden xl:inline text-neutral-500">·</span>
-                      <span className="hidden xl:inline text-neutral-400">{displayCondition}</span>
+                      <span className="hidden xl:inline text-neutral-400 text-[11px]">{displayCondition}</span>
                     </>
                   );
                 })()}
@@ -3974,26 +3989,26 @@ export function LiveOsmMap({
                 type="button"
                 onClick={onToggle3DMap}
                 title="Switch to 3D Town View"
-                className="hidden xl:flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-amber-300 text-xs font-semibold border border-white/5 transition-all"
+                className="hidden xl:flex items-center gap-1.5 h-9 px-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-amber-300 text-xs font-semibold border border-white/10 transition-all"
               >
                 <span>🏢 3D Town</span>
               </button>
             )}
 
             {/* Integrated Segmented Map Tools Rail */}
-            <div className="flex items-center bg-white/[0.05] p-0.5 rounded-xl border border-white/5">
+            <div className="flex items-center h-9.5 bg-neutral-900/90 p-1 rounded-xl border border-white/10 shadow-sm gap-0.5">
               {/* 3D Physical Relief Toggle */}
               <button
                 onClick={toggle3DRelief}
                 title="Toggle 3D Physical Relief View"
                 aria-label="Toggle 3D Physical Relief View"
-                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center justify-center transition-all ${
+                className={`w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg text-xs font-semibold flex items-center justify-center transition-all ${
                   is3DMode
-                    ? "text-amber-400 bg-white/10 shadow-sm"
+                    ? "text-amber-300 bg-amber-500/20 border border-amber-500/40 shadow-sm"
                     : "text-neutral-400 hover:text-white hover:bg-white/5"
                 }`}
               >
-                <Mountain className="w-3.5 h-3.5" />
+                <Mountain className="w-4 h-4" />
               </button>
 
               {/* 3D Drone Perspective Toggle */}
@@ -4001,13 +4016,13 @@ export function LiveOsmMap({
                 onClick={toggle3DDrone}
                 title={is3DMode ? "Switch to 2D Top-Down View" : "Switch to 3D Drone View"}
                 aria-label={is3DMode ? "Switch to 2D Top-Down View" : "Switch to 3D Drone View"}
-                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center justify-center transition-all ${
+                className={`w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg text-xs font-semibold flex items-center justify-center transition-all ${
                   is3DMode
-                    ? "text-amber-400 bg-white/10 shadow-sm"
+                    ? "text-amber-300 bg-amber-500/20 border border-amber-500/40 shadow-sm"
                     : "text-neutral-400 hover:text-white hover:bg-white/5"
                 }`}
               >
-                <Compass className="w-3.5 h-3.5" />
+                <Compass className="w-4 h-4" />
               </button>
 
               {/* Day / Night Theme */}
@@ -4015,9 +4030,9 @@ export function LiveOsmMap({
                 onClick={toggleNightMode}
                 title="Toggle Day / Night Map Theme"
                 aria-label="Toggle Day / Night Map Theme"
-                className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 flex items-center justify-center transition-colors"
+                className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 flex items-center justify-center transition-colors"
               >
-                {isNightMode ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-cyan-400" />}
+                {isNightMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-cyan-400" />}
               </button>
 
               {/* Dynamic Recenter & Reset */}
@@ -4033,26 +4048,26 @@ export function LiveOsmMap({
                     : "Reset to India Overview"
                 }
                 aria-label="Reset or recenter map view"
-                className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 flex items-center justify-center transition-colors"
+                className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 flex items-center justify-center transition-colors"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-neutral-300" />
+                <RotateCcw className="w-4 h-4 text-neutral-300" />
               </button>
             </div>
 
             <Link
               href="/dashboard"
               title="Manage your registered business plot"
-              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-white/5 text-neutral-300 hover:text-white font-medium text-xs transition-colors"
+              className="hidden md:flex items-center gap-1.5 h-9.5 px-3 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 text-neutral-300 hover:text-white font-medium text-xs transition-all"
             >
-              <Store className="w-3.5 h-3.5 text-amber-400/80" />
+              <Store className="w-4 h-4 text-amber-400/80" />
               <span>My Business</span>
             </Link>
 
             <Link
               href="/register"
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs shadow-md shadow-amber-950/40 hover:shadow-amber-500/25 transition-all"
+              className="flex items-center gap-1.5 h-9.5 px-3.5 sm:px-4 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:via-amber-400 hover:to-amber-500 text-neutral-950 font-extrabold text-xs shadow-[0_2px_14px_rgba(245,158,11,0.35)] hover:shadow-[0_4px_20px_rgba(245,158,11,0.55)] hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-4 h-4 stroke-[2.5]" />
               <span className="hidden sm:inline">Open a Shop</span>
               <span className="sm:hidden">Open</span>
             </Link>
