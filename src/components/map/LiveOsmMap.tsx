@@ -213,11 +213,31 @@ function computeRoadConnector(
   return { length, angle, targetX, targetZ };
 }
 
-// Converts local Three.js coordinates (X, Z in meters from Nerqiva Studio) to real Mercator GPS coordinates
-function localToLngLat(x: number, z: number): [number, number] {
-  const coord = maplibregl.MercatorCoordinate.fromLngLat(NERQIVA_COORDS, 0);
+// Haversine distance in meters between two [lon, lat] GPS coordinates
+function getDistMeters(lon1: number, lat1: number, lon2: number, lat2: number): number {
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Dynamic 3D Walking Coordinate Anchor (Defaulting to Nerqiva Studio, dynamically updating to ANY storefront or OSM street across India)
+const activeWalkOriginRef: { current: [number, number] } = { current: NERQIVA_COORDS };
+const activeWalkAngleRef: { current: number } = { current: 0.25 };
+const activeWalkShopNameRef: { current: string } = { current: "Nerqiva Studio" };
+
+// Converts local Three.js coordinates (X, Z in meters from active anchor) to real Mercator GPS coordinates
+function localToLngLat(
+  x: number,
+  z: number,
+  origin: [number, number] = activeWalkOriginRef.current,
+  angle: number = activeWalkAngleRef.current
+): [number, number] {
+  const coord = maplibregl.MercatorCoordinate.fromLngLat(origin, 0);
   const scale = coord.meterInMercatorCoordinateUnits();
-  const angle = 0.25; // Aligned with the local street in North Guwahati
   const cosA = Math.cos(angle);
   const sinA = Math.sin(angle);
   const localX = x * cosA + z * sinA;
@@ -402,6 +422,10 @@ export function LiveOsmMap({
   const [mapZoom, setMapZoom] = useState<number>(() => {
     if (typeof window !== "undefined") {
       const p = new URLSearchParams(window.location.search);
+      if (p.get("z")) {
+        const parsedZ = parseFloat(p.get("z")!);
+        if (Number.isFinite(parsedZ)) return parsedZ;
+      }
       if (p.get("city") || p.get("shop")) return 18.2;
     }
     return 4.3;
@@ -409,6 +433,11 @@ export function LiveOsmMap({
   const [mapCenter, setMapCenter] = useState<[number, number]>(() => {
     if (typeof window !== "undefined") {
       const p = new URLSearchParams(window.location.search);
+      if (p.get("lat") && p.get("lon")) {
+        const pLat = parseFloat(p.get("lat")!);
+        const pLon = parseFloat(p.get("lon")!);
+        if (Number.isFinite(pLat) && Number.isFinite(pLon)) return [pLon, pLat];
+      }
       const shopSlug = p.get("shop")?.toLowerCase();
       if (shopSlug) {
         const localMatch = getLocalStorefronts().find(
@@ -613,7 +642,7 @@ export function LiveOsmMap({
     const rad = (bearingDeg * Math.PI) / 180;
     const fwdMercX = Math.sin(rad);
     const fwdMercY = -Math.cos(rad);
-    const angle = 0.25;
+    const angle = activeWalkAngleRef.current;
     const cosA = Math.cos(angle);
     const sinA = Math.sin(angle);
     const fwdColX = fwdMercX * cosA - fwdMercY * sinA;
@@ -625,7 +654,7 @@ export function LiveOsmMap({
   const headingToBearing = useCallback((heading: number): number => {
     const fwdColX = Math.sin(heading);
     const fwdColZ = Math.cos(heading);
-    const angle = 0.25;
+    const angle = activeWalkAngleRef.current;
     const cosA = Math.cos(angle);
     const sinA = Math.sin(angle);
     const fwdMercX = fwdColX * cosA + fwdColZ * sinA;
@@ -638,7 +667,7 @@ export function LiveOsmMap({
     const rad = (bearingDeg * Math.PI) / 180;
     const fwdMercX = Math.sin(rad);
     const fwdMercY = -Math.cos(rad);
-    const angle = 0.25;
+    const angle = activeWalkAngleRef.current;
     const cosA = Math.cos(angle);
     const sinA = Math.sin(angle);
     const fwdColX = fwdMercX * cosA - fwdMercY * sinA;
@@ -646,11 +675,14 @@ export function LiveOsmMap({
     return localToLngLat(px + lookAheadM * fwdColX, pz + lookAheadM * fwdColZ);
   }, []);
 
-  // Compute compass bearing looking from (px, pz) straight toward Nerqiva Studio (0, 0)
-  const getBearingToStudio = useCallback((px: number, pz: number): number => {
+  // Compute compass bearing looking from (px, pz) straight toward origin (0, 0) or down the street
+  const getBearingToOrigin = useCallback((px: number, pz: number): number => {
+    if (Math.hypot(px, pz) < 0.5) {
+      return ((activeWalkAngleRef.current * 180) / Math.PI + 90) % 360;
+    }
     const dx = -px;
     const dz = -pz;
-    const angle = 0.25;
+    const angle = activeWalkAngleRef.current;
     const cosA = Math.cos(angle);
     const sinA = Math.sin(angle);
     const vx = dx * cosA + dz * sinA;
@@ -667,12 +699,82 @@ export function LiveOsmMap({
 
   // Enter true 3rd-person over-the-shoulder eye-view camera behind the character's back
   const enterThirdPersonWalkMode = useCallback(
-    (faceStudio = false) => {
-      if (!mapRef.current) return;
+    (faceOrigin = false) => {
+      const map = mapRef.current;
+      if (!map) return;
+
+      // Dynamically resolve walk origin, street angle, and shop name for ANY storefront or OSM street across India
+      let targetOrigin: [number, number] = NERQIVA_COORDS;
+      let targetAngle = 0.25;
+      let targetShopName = "Nerqiva Studio";
+
+      const center = map.getCenter();
+      const currentZoom = map.getZoom();
+
+      // Check if there is an active storefront within proximity (3km) of current viewport
+      let nearbyShop: BusinessStorefront | null = null;
+      if (focusedStorefront) {
+        const d = getDistMeters(center.lng, center.lat, focusedStorefront.lon, focusedStorefront.lat);
+        if (d <= 3000) {
+          nearbyShop = focusedStorefront;
+        }
+      }
+      if (!nearbyShop && activeStorefront) {
+        const d = getDistMeters(center.lng, center.lat, activeStorefront.lon, activeStorefront.lat);
+        if (d <= 3000) {
+          nearbyShop = activeStorefront;
+        }
+      }
+      if (!nearbyShop && currentZoom >= 14.5) {
+        for (const s of allLiveStorefrontsRef.current) {
+          const d = getDistMeters(center.lng, center.lat, s.lon, s.lat);
+          if (d <= 2500) {
+            nearbyShop = s;
+            break;
+          }
+        }
+      }
+
+      if (nearbyShop) {
+        const resolved = resolvedPlacementsRef.current.get(nearbyShop.slug);
+        const shopLon = resolved ? resolved.lon : nearbyShop.lon;
+        const shopLat = resolved ? resolved.lat : nearbyShop.lat;
+        const anchorLon = resolved?.roadAnchorLon ?? nearbyShop.road_anchor_lon ?? shopLon;
+        const anchorLat = resolved?.roadAnchorLat ?? nearbyShop.road_anchor_lat ?? shopLat;
+        targetOrigin = [anchorLon, anchorLat];
+        const facingDeg = resolved?.facingBearing ?? nearbyShop.facing_bearing ?? 0;
+        targetAngle = (facingDeg * Math.PI) / 180;
+        targetShopName = nearbyShop.name;
+      } else if (currentZoom >= 14.0) {
+        targetOrigin = [center.lng, center.lat];
+        targetAngle = (map.getBearing() * Math.PI) / 180;
+        targetShopName = focusedRegion ? focusedRegion.name : "Street Plot";
+      }
+
+      const isDifferentOrigin =
+        Math.hypot(
+          targetOrigin[0] - activeWalkOriginRef.current[0],
+          targetOrigin[1] - activeWalkOriginRef.current[1]
+        ) > 0.0001;
+
+      activeWalkOriginRef.current = targetOrigin;
+      activeWalkAngleRef.current = targetAngle;
+      activeWalkShopNameRef.current = targetShopName;
+
+      if (isDifferentOrigin) {
+        playerLocalPosRef.current = { x: 0, z: 0, heading: 0 };
+        const [spawnLon, spawnLat] = localToLngLat(0, 0, targetOrigin, targetAngle);
+        playerPosRef.current = [spawnLon, spawnLat];
+        if (playerMarkerRef.current) {
+          playerMarkerRef.current.setLngLat([spawnLon, spawnLat]);
+        }
+      }
+
       setIsWalkMode(true);
       isWalkModeRef.current = true;
+
       const { x, z, heading } = playerLocalPosRef.current;
-      const targetBearing = faceStudio ? getBearingToStudio(x, z) : headingToBearing(heading);
+      const targetBearing = faceOrigin ? getBearingToOrigin(x, z) : headingToBearing(heading);
       walkBearingRef.current = targetBearing;
       playerLocalPosRef.current.heading = bearingToHeading(targetBearing);
 
@@ -685,18 +787,18 @@ export function LiveOsmMap({
       });
 
       isProgrammaticCamRef.current = true;
-      mapRef.current.easeTo({
+      map.easeTo({
         center: getThirdPersonCenter(x, z, targetBearing, WALK_LOOKAHEAD),
         zoom: WALK_ZOOM,
         pitch: WALK_PITCH,
         bearing: targetBearing,
         duration: 750,
       });
-      mapRef.current.once("moveend", () => {
+      map.once("moveend", () => {
         isProgrammaticCamRef.current = false;
       });
     },
-    [bearingToHeading, getBearingToStudio, getThirdPersonCenter, headingToBearing]
+    [focusedStorefront, activeStorefront, focusedRegion, bearingToHeading, getBearingToOrigin, getThirdPersonCenter, headingToBearing]
   );
 
   // Advance one smooth 3rd-person frame: camera ALWAYS stays behind the character's back following eye view
@@ -747,7 +849,7 @@ export function LiveOsmMap({
           nextX = candX;
           nextZ = candZ;
         } else {
-          showToast("📍 Reached colony perimeter (160m) · Active 3D zone around Nerqiva Studio");
+          showToast(`📍 Reached perimeter (160m) · Active 3D zone around ${activeWalkShopNameRef.current}`);
         }
       }
 
@@ -1047,10 +1149,16 @@ export function LiveOsmMap({
       initialCenter = [matchedDeepLinkShop.lon, matchedDeepLinkShop.lat];
       initialZoom = 18.2;
       initialPitch = 58;
-      initialBearing = 22;
+      initialBearing = matchedDeepLinkShop.facing_bearing || 22;
       setFocusedStorefront(matchedDeepLinkShop);
       setMapZoom(initialZoom);
       setMapCenter(initialCenter);
+      activeWalkOriginRef.current = [
+        matchedDeepLinkShop.road_anchor_lon ?? matchedDeepLinkShop.lon,
+        matchedDeepLinkShop.road_anchor_lat ?? matchedDeepLinkShop.lat,
+      ];
+      activeWalkAngleRef.current = ((matchedDeepLinkShop.facing_bearing || 0) * Math.PI) / 180;
+      activeWalkShopNameRef.current = matchedDeepLinkShop.name;
     } else if (urlShopSlug === "nerqiva-studio") {
       initialCenter = NERQIVA_COORDS;
       initialZoom = 18.2;
@@ -1163,11 +1271,21 @@ export function LiveOsmMap({
           colonyGroup.add(streetNeighborhood.group);
           (this as any).streetNeighborhood = streetNeighborhood;
 
-          // 6. Controllable 3D Player Character Avatar outside Nerqiva Studio
+          // 6. Controllable 3D Player Character Avatar outside active walk anchor
+          const playerScene = new THREE.Scene();
+          const playerSun = new THREE.DirectionalLight(0xfff7ed, 3.0);
+          playerSun.position.set(20, 40, 20);
+          playerScene.add(playerSun);
+          const playerAmb = new THREE.AmbientLight(0xdbeafe, 1.6);
+          playerScene.add(playerAmb);
+
           const player3D = createPlayerCharacter3D();
           player3D.group.position.set(playerLocalPosRef.current.x, 0, playerLocalPosRef.current.z);
           player3D.group.scale.set(1.25, 1.25, 1.25);
-          colonyGroup.add(player3D.group);
+          playerScene.add(player3D.group);
+          (this as any).playerScene = playerScene;
+          (this as any).playerSun = playerSun;
+          (this as any).playerAmb = playerAmb;
           (this as any).player3D = player3D;
 
           // 7. Living Indian Citizens & Ambient Pedestrian Simulation (Balanced & on sidewalks)
@@ -1531,6 +1649,49 @@ export function LiveOsmMap({
                 ren.render(entry.scene, cam);
               }
             }
+          }
+
+          // 3. Render Controllable 3D Player Character Avatar at active dynamic walk origin
+          const p3d = (this as any).player3D;
+          const pScene = (this as any).playerScene;
+          if (p3d && pScene && (currentZoom >= 15.0 || isWalkModeRef.current)) {
+            const pSun = (this as any).playerSun as THREE.DirectionalLight | undefined;
+            const pAmb = (this as any).playerAmb as THREE.AmbientLight | undefined;
+            if (isNightModeRef.current) {
+              pSun?.color.setHex(0x38bdf8);
+              if (pSun) pSun.intensity = 0.85;
+              pAmb?.color.setHex(0x1e293b);
+              if (pAmb) pAmb.intensity = 0.65;
+            } else if (weather?.visuals) {
+              pSun?.color.setHex(weather.visuals.sunColor);
+              if (pSun) pSun.intensity = weather.visuals.sunIntensity;
+              pAmb?.color.setHex(weather.visuals.ambientColor);
+              if (pAmb) pAmb.intensity = weather.visuals.ambientIntensity;
+            } else {
+              pSun?.color.setHex(0xfff7ed);
+              if (pSun) pSun.intensity = 3.0;
+              pAmb?.color.setHex(0xdbeafe);
+              if (pAmb) pAmb.intensity = 1.6;
+            }
+
+            const walkOrigin = activeWalkOriginRef.current;
+            const walkAngle = activeWalkAngleRef.current;
+            const walkElev = (map as any).queryTerrainElevation ? ((map as any).queryTerrainElevation(walkOrigin) || 0) : 0;
+            const walkCoord = maplibregl.MercatorCoordinate.fromLngLat(walkOrigin, walkElev);
+            const walkScale = walkCoord.meterInMercatorCoordinateUnits();
+
+            const pRotY = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 1, 0), walkAngle);
+            const pMatrix = new THREE.Matrix4()
+              .makeTranslation(walkCoord.x, walkCoord.y, walkCoord.z)
+              .scale(new THREE.Vector3(walkScale, -walkScale, walkScale))
+              .multiply(rotationX)
+              .multiply(pRotY);
+
+            cam.projectionMatrix = m4.clone().multiply(pMatrix);
+            cam.projectionMatrixInverse.copy(cam.projectionMatrix).invert();
+            gl.clear(gl.DEPTH_BUFFER_BIT);
+            ren.resetState();
+            ren.render(pScene, cam);
           }
         }
         map.triggerRepaint();
@@ -2848,6 +3009,9 @@ export function LiveOsmMap({
             setFocusedRegion(null);
           }
         }
+        if (focusedStorefront && getDistanceKm(c.lat, c.lng, focusedStorefront.lat, focusedStorefront.lon) > 3.0) {
+          setFocusedStorefront(null);
+        }
 
         // Dynamic Weather Refresh on Regional Pan (debounced by distance & TTL)
         const lastW = lastWeatherFetchCoordsRef.current;
@@ -3035,7 +3199,7 @@ export function LiveOsmMap({
     mapRef.current.setStyle(nextNight ? CARTO_DARK_MATTER_STYLE : CARTO_VOYAGER_STYLE);
   }, [isNightMode]);
 
-  // Reset Camera View to Nerqiva Studio
+  // Reset Camera View to Active Storefront, Region, or Nerqiva Studio
   const handleResetCamera = useCallback(() => {
     if (!mapRef.current) return;
     isFlightActiveRef.current = true;
@@ -3049,6 +3213,49 @@ export function LiveOsmMap({
         el.style.pointerEvents = "auto";
       }
     });
+
+    const center = mapRef.current.getCenter();
+    let currentShop: BusinessStorefront | null = null;
+    if (focusedStorefront && getDistMeters(center.lng, center.lat, focusedStorefront.lon, focusedStorefront.lat) <= 3000) {
+      currentShop = focusedStorefront;
+    } else if (activeStorefront && getDistMeters(center.lng, center.lat, activeStorefront.lon, activeStorefront.lat) <= 3000) {
+      currentShop = activeStorefront;
+    }
+    if (currentShop) {
+      const resolved = resolvedPlacementsRef.current.get(currentShop.slug);
+      const targetCoord: [number, number] = [
+        resolved ? resolved.lon : currentShop.lon,
+        resolved ? resolved.lat : currentShop.lat,
+      ];
+      mapRef.current.flyTo({
+        center: targetCoord,
+        zoom: 18.2,
+        pitch: 58,
+        bearing: currentShop.facing_bearing || 25,
+        essential: true,
+      });
+      mapRef.current.once("moveend", () => {
+        isFlightActiveRef.current = false;
+      });
+      showToast(`📍 Focused on ${currentShop.name} · ${currentShop.city_name || "Street View"}`);
+      return;
+    }
+
+    if (focusedRegion) {
+      mapRef.current.flyTo({
+        center: [focusedRegion.lon, focusedRegion.lat],
+        zoom: 15.5,
+        pitch: 52,
+        bearing: 20,
+        essential: true,
+      });
+      mapRef.current.once("moveend", () => {
+        isFlightActiveRef.current = false;
+      });
+      showToast(`📍 Focused on ${focusedRegion.name}`);
+      return;
+    }
+
     mapRef.current.flyTo({
       center: NERQIVA_COORDS,
       zoom: 18.2,
@@ -3060,7 +3267,7 @@ export function LiveOsmMap({
       isFlightActiveRef.current = false;
     });
     showToast("📍 Focused on Nerqiva Studio · North Guwahati (PIN 781030)");
-  }, [showToast]);
+  }, [focusedStorefront, activeStorefront, focusedRegion, showToast]);
 
   // Smooth 60fps 3rd-Person Game Navigation (WASD / Arrows / Q-E) — Camera ALWAYS stays behind character's back following eye view
   useEffect(() => {
@@ -3099,6 +3306,12 @@ export function LiveOsmMap({
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (!mapRef.current) return;
 
+      if (e.code === "Escape" && isWalkModeRef.current) {
+        handleStopMove();
+        handleResetCamera();
+        return;
+      }
+
       shiftHeldRef.current = e.shiftKey;
       if (!MOVE_KEYS.has(e.code)) return;
 
@@ -3108,26 +3321,7 @@ export function LiveOsmMap({
 
       // Automatically enter 3rd-person behind-the-back POV when starting to walk
       if (!isWalkModeRef.current) {
-        setIsWalkMode(true);
-        isWalkModeRef.current = true;
-        const { x, z, heading } = playerLocalPosRef.current;
-        const behindBearing = headingToBearing(heading);
-        walkBearingRef.current = behindBearing;
-        markersRef.current.forEach((m) => {
-          const el = m.getElement();
-          if (el) {
-            el.style.visibility = "hidden";
-            el.style.pointerEvents = "none";
-          }
-        });
-        isProgrammaticCamRef.current = true;
-        mapRef.current.jumpTo({
-          center: getThirdPersonCenter(x, z, behindBearing, WALK_LOOKAHEAD),
-          bearing: behindBearing,
-          zoom: Math.max(mapRef.current.getZoom(), WALK_ZOOM),
-          pitch: Math.max(mapRef.current.getPitch(), WALK_PITCH),
-        });
-        isProgrammaticCamRef.current = false;
+        enterThirdPersonWalkMode(false);
       }
 
       const wasEmpty = pressedKeysRef.current.size === 0;
@@ -3208,11 +3402,28 @@ export function LiveOsmMap({
       isFlightActiveRef.current = true;
       setIs3DMode(true);
       updateWeatherForLocation(b.lat, b.lon, b.city_name || b.name);
+
+      const resolved = resolvedPlacementsRef.current.get(b.slug);
+      const targetLon = resolved ? resolved.lon : b.lon;
+      const targetLat = resolved ? resolved.lat : b.lat;
+      const facing = resolved?.facingBearing ?? b.facing_bearing ?? 25;
+
+      // Prime universal walk anchor to this storefront's snapped road coordinate
+      const anchorLon = resolved?.roadAnchorLon ?? b.road_anchor_lon ?? targetLon;
+      const anchorLat = resolved?.roadAnchorLat ?? b.road_anchor_lat ?? targetLat;
+      activeWalkOriginRef.current = [anchorLon, anchorLat];
+      activeWalkAngleRef.current = (facing * Math.PI) / 180;
+      activeWalkShopNameRef.current = b.name;
+      playerLocalPosRef.current = { x: 0, z: 0, heading: 0 };
+      playerPosRef.current = [anchorLon, anchorLat];
+      setMapCenter([targetLon, targetLat]);
+      setMapZoom(18.2);
+
       mapRef.current.flyTo({
-        center: [b.lon, b.lat],
+        center: [targetLon, targetLat],
         zoom: 18.2,
         pitch: 58,
-        bearing: 25,
+        bearing: facing,
         duration: 1400,
       });
       mapRef.current.once("moveend", () => {
@@ -3241,6 +3452,15 @@ export function LiveOsmMap({
       placeSearchPin(place.name, place.lat, place.lon);
       isFlightActiveRef.current = true;
       updateWeatherForLocation(place.lat, place.lon, place.name);
+
+      // Prime universal walk anchor to searched place coordinate
+      activeWalkOriginRef.current = [place.lon, place.lat];
+      activeWalkAngleRef.current = 0;
+      activeWalkShopNameRef.current = place.name;
+      playerLocalPosRef.current = { x: 0, z: 0, heading: 0 };
+      playerPosRef.current = [place.lon, place.lat];
+      setMapCenter([place.lon, place.lat]);
+      setMapZoom(place.zoom);
       mapRef.current.flyTo({
         center: [place.lon, place.lat],
         zoom: place.zoom,
@@ -3528,7 +3748,13 @@ export function LiveOsmMap({
     if (!mapRef.current) return;
 
     // 1. If currently viewing / focused on a business, re-center on this active business
-    const currentShop = activeStreetBusiness || focusedStorefront;
+    const center = mapRef.current.getCenter();
+    let currentShop: BusinessStorefront | null = null;
+    if (focusedStorefront && getDistMeters(center.lng, center.lat, focusedStorefront.lon, focusedStorefront.lat) <= 3000) {
+      currentShop = focusedStorefront;
+    } else if (activeStorefront && getDistMeters(center.lng, center.lat, activeStorefront.lon, activeStorefront.lat) <= 3000) {
+      currentShop = activeStorefront;
+    }
     if (currentShop) {
       flyToStorefront(currentShop);
       showToast(`📍 Recenter: ${currentShop.name}`);
@@ -3611,15 +3837,21 @@ export function LiveOsmMap({
       const latStr = focusedRegion.lat.toFixed(4);
       const lonStr = focusedRegion.lon.toFixed(4);
       const zStr = mapZoom.toFixed(1);
+      const modeParam = isWalkMode ? "&mode=walk" : "";
       if (focusedRegion.kind === "pincode") {
         const pinCode = focusedRegion.name.replace(/^PIN\s*/i, "").split(/\s+/)[0];
-        nextUrl = `/?pin=${encodeURIComponent(pinCode)}&lat=${latStr}&lon=${lonStr}&z=${zStr}`;
+        nextUrl = `/?pin=${encodeURIComponent(pinCode)}&lat=${latStr}&lon=${lonStr}&z=${zStr}${modeParam}`;
         nextTitle = `${focusedRegion.name} · Spotlight Bazaar`;
       } else {
         const slug = focusedRegion.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-        nextUrl = `/?place=${encodeURIComponent(slug || focusedRegion.name)}&lat=${latStr}&lon=${lonStr}&z=${zStr}`;
+        nextUrl = `/?place=${encodeURIComponent(slug || focusedRegion.name)}&lat=${latStr}&lon=${lonStr}&z=${zStr}${modeParam}`;
         nextTitle = `${focusedRegion.name} · Spotlight Bazaar`;
       }
+    } else if (isWalkMode) {
+      const latStr = activeWalkOriginRef.current[1].toFixed(4);
+      const lonStr = activeWalkOriginRef.current[0].toFixed(4);
+      nextUrl = `/?lat=${latStr}&lon=${lonStr}&z=${mapZoom.toFixed(1)}&mode=walk`;
+      nextTitle = `Walking in India · Spotlight Bazaar`;
     } else if (viewLevel === "region") {
       const nearCity = nearestToCenter && nearestToCenter.distKm < 45 ? nearestToCenter.storefront.city_name : null;
       if (nearCity) {
@@ -4351,27 +4583,59 @@ export function LiveOsmMap({
 
         {/* STATE C2: STREET LEVEL ON AN UNCLAIMED AREA (e.g. searched PIN 400001 / Mumbai street) */}
         {viewLevel === "street" && !activeStreetBusiness && (
-          <div className="w-full max-w-lg px-4 py-3 rounded-3xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800/90 shadow-2xl flex items-center justify-between gap-3 pointer-events-auto">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
-                <MapPin className="w-4 h-4" />
+          <div className="w-full max-w-lg p-3.5 sm:p-4 rounded-2xl bg-neutral-950/60 hover:bg-neutral-950/70 backdrop-blur-xl backdrop-saturate-150 border border-neutral-800/80 shadow-[0_16px_40px_rgba(0,0,0,0.5)] flex flex-col gap-2.5 pointer-events-auto transition-all">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col text-left min-w-0">
+                  <span className="text-sm font-bold text-white truncate">
+                    {focusedRegion ? focusedRegion.name : "Open Street Plot"}
+                  </span>
+                  <span className="text-[11px] text-neutral-400 truncate">
+                    No 3D business claimed on this street yet
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-col text-left min-w-0">
-                <span className="text-sm font-bold text-white truncate">
-                  {focusedRegion ? focusedRegion.name : "Open Street Plot"}
-                </span>
-                <span className="text-[11px] text-neutral-400 truncate">
-                  No 3D business claimed on this street yet
-                </span>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextWalk = !isWalkMode;
+                    if (nextWalk) {
+                      enterThirdPersonWalkMode(false);
+                      showToast("🚶 3rd-Person POV · W/S move · A/D turn · Shift sprint");
+                    } else {
+                      handleStopMove();
+                      handleResetCamera();
+                    }
+                  }}
+                  className={`h-8.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                    isWalkMode
+                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/60 shadow-lg shadow-amber-500/20"
+                      : "bg-white/[0.06] hover:bg-white/[0.12] text-white border border-white/10"
+                  }`}
+                >
+                  <Footprints className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{isWalkMode ? "Exit Walk" : "Walk (WASD)"}</span>
+                </button>
+                <Link
+                  href="/register"
+                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold text-xs flex items-center gap-1.5 shrink-0 transition-all shadow-md"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Claim Plot</span>
+                </Link>
               </div>
             </div>
-            <Link
-              href="/register"
-              className="px-3.5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold text-xs flex items-center gap-1.5 shrink-0 transition-all"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Claim First Plot</span>
-            </Link>
+
+            {/* Dynamic Walk Mode Controls Bar */}
+            {isWalkMode && (
+              <div className="flex items-center justify-center gap-2 pt-1 border-t border-neutral-800/70 text-[10px] text-amber-300 font-mono">
+                <span>🚶 W/S walk · A/D turn · Shift sprint · ESC exit walk</span>
+              </div>
+            )}
           </div>
         )}
       </div>

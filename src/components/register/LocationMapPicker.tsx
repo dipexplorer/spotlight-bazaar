@@ -27,26 +27,29 @@ if (typeof window !== "undefined") {
   config.WORKER_URL = "/maplibre-gl-worker.mjs";
 }
 
-const CARTO_VOYAGER_STYLE =
-  "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
+const CARTO_DARK_MATTER_STYLE =
+  "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
-const OSM_RASTER_FALLBACK: maplibregl.StyleSpecification = {
+const OSM_DARK_RASTER_FALLBACK: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
-    "osm-tiles": {
+    "carto-dark-tiles": {
       type: "raster",
       tiles: [
-        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+        "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+        "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+        "https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
       ],
       tileSize: 256,
-      attribution: "© OpenStreetMap contributors",
+      attribution: "© OpenStreetMap contributors, © CARTO",
     },
   },
   layers: [
     {
-      id: "osm-tiles-layer",
+      id: "carto-dark-tiles-layer",
       type: "raster",
-      source: "osm-tiles",
+      source: "carto-dark-tiles",
       minzoom: 0,
       maxzoom: 19,
     },
@@ -620,7 +623,7 @@ export function LocationMapPicker({
     const hasInitial = typeof lat === "number" && typeof lon === "number";
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: CARTO_VOYAGER_STYLE,
+      style: CARTO_DARK_MATTER_STYLE,
       center: hasInitial ? [lon, lat] : INDIA_CENTER,
       zoom: hasInitial ? 16.5 : 3.05,
       minZoom: 2.7,
@@ -636,63 +639,30 @@ export function LocationMapPicker({
     });
     ro.observe(mapContainerRef.current);
 
-    const applyHighContrastStyle = () => {
+    const applyDarkMatterPalette = () => {
       try {
         if (map.getLayer("background")) {
-          map.setPaintProperty("background", "background-color", "#f8fafc");
+          map.setPaintProperty("background", "background-color", "#09090b");
         }
         if (map.getLayer("water")) {
-          map.setPaintProperty("water", "fill-color", "#0284c7");
+          map.setPaintProperty("water", "fill-color", "#081b2e");
           map.setPaintProperty("water", "fill-opacity", 1.0);
         }
-        if (map.getLayer("landcover")) {
-          map.setPaintProperty("landcover", "fill-color", "#dcfce7");
-          map.setPaintProperty("landcover", "fill-opacity", 0.65);
-        }
         if (map.getLayer("landuse_residential")) {
-          map.setPaintProperty("landuse_residential", "fill-color", "#f1f5f9");
-          map.setPaintProperty("landuse_residential", "fill-opacity", 0.85);
-        }
-
-        const casingLayers = [
-          "road_minor_case", "road_service_case", "road_sec_case_noramp", "road_sec_case_ramp",
-          "road_pri_case_noramp", "road_pri_case_ramp", "road_trunk_case_noramp", "road_trunk_case_ramp",
-          "road_mot_case_noramp", "road_mot_case_ramp",
-          "bridge_minor_case", "bridge_service_case", "bridge_sec_case_noramp", "bridge_pri_case_noramp",
-          "tunnel_minor_case", "tunnel_sec_case_noramp", "tunnel_pri_case_noramp",
-          "road_minor_casing", "road_service_casing", "road_sec_casing",
-          "road_pri_casing", "road_trunk_casing", "road_mot_casing",
-        ];
-        for (const id of casingLayers) {
-          if (map.getLayer(id)) {
-            map.setPaintProperty(id, "line-color", "#64748b");
-            map.setPaintProperty(id, "line-opacity", 1.0);
-          }
-        }
-
-        const fillLayers = [
-          "road_minor_fill", "road_service_fill", "road_sec_fill_noramp",
-          "road_pri_fill_noramp", "road_trunk_fill_noramp", "road_mot_fill_noramp",
-          "bridge_minor_fill", "bridge_service_fill", "bridge_sec_fill_noramp", "bridge_pri_fill_noramp",
-          "tunnel_minor_fill", "tunnel_sec_fill_noramp", "tunnel_pri_fill_noramp",
-        ];
-        for (const id of fillLayers) {
-          if (map.getLayer(id)) {
-            map.setPaintProperty(id, "line-color", "#ffffff");
-            map.setPaintProperty(id, "line-opacity", 1.0);
-          }
+          map.setPaintProperty("landuse_residential", "fill-color", "#11141c");
+          map.setPaintProperty("landuse_residential", "fill-opacity", 0.9);
         }
       } catch {}
     };
 
     map.on("error", (e: { error?: { message?: string } }) => {
       if (e?.error?.message?.toLowerCase().includes("style")) {
-        map.setStyle(OSM_RASTER_FALLBACK);
+        map.setStyle(OSM_DARK_RASTER_FALLBACK);
       }
     });
 
     map.on("load", () => {
-      applyHighContrastStyle();
+      applyDarkMatterPalette();
       ensurePreviewLayers(map);
       setMapReady(true);
       if (hasInitial) {

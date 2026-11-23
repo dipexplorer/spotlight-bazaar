@@ -49,18 +49,15 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
       .catch(() => {});
   }, []);
 
-  // Capture initial deep-link ?shop= once before map URL sync runs
-  const initialShopSlugRef = React.useRef<string | null>(null);
+  // Capture initial deep-link ?shop= once on load without locking subsequent exploration
+  const initialShopProcessedRef = React.useRef<boolean>(false);
   const hasCelebratedNewRef = React.useRef<boolean>(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    if (!initialShopSlugRef.current && params.get("shop")) {
-      initialShopSlugRef.current = params.get("shop");
-    }
     const cityParam = params.get("city");
-    const shopSlug = initialShopSlugRef.current || params.get("shop");
+    const shopSlug = params.get("shop");
     const isNew = params.get("new");
     const viewParam = params.get("view");
 
@@ -79,6 +76,8 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
       if (matched) {
         setSelectedCity(matched.name);
       }
+    } else if (!cityParam) {
+      setSelectedCity("all");
     }
 
     if (shopSlug && storefronts.length > 0) {
@@ -88,6 +87,8 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
       if (targetShop) {
         setActiveStorefront(targetShop);
       }
+    } else if (!shopSlug) {
+      setActiveStorefront(null);
     }
 
     if (isNew === "1" && !hasCelebratedNewRef.current) {
