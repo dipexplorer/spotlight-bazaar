@@ -36,6 +36,8 @@ import {
   CloudFog,
   CloudLightning,
   Mountain,
+  Layers,
+  Tag,
 } from "lucide-react";
 import {
   INDIA_GEOGRAPHY_REGIONS_GEOJSON,
@@ -379,6 +381,25 @@ function loadIndiaBoundaryData(): Promise<IndiaGeoData | null> {
     });
   return cachedIndiaGeoDataPromise;
 }
+
+// Curated Metros for instant zero-query discovery
+const QUICK_JUMP_METROS = [
+  { name: "Guwahati", subtitle: "GS Road & Christian Basti", lat: 26.1445, lon: 91.7362, zoom: 15.8 },
+  { name: "Delhi NCR", subtitle: "Connaught Place", lat: 28.6315, lon: 77.2167, zoom: 15.6 },
+  { name: "Mumbai", subtitle: "Bandra West & Fort", lat: 19.0596, lon: 72.8295, zoom: 15.6 },
+  { name: "Bengaluru", subtitle: "Indiranagar 100ft Rd", lat: 12.9784, lon: 77.6408, zoom: 15.6 },
+  { name: "Kolkata", subtitle: "Park Street & Camac St", lat: 22.5512, lon: 88.3524, zoom: 15.6 },
+  { name: "Hyderabad", subtitle: "HITEC City & Madhapur", lat: 17.4474, lon: 78.3762, zoom: 15.6 },
+];
+
+const DISCOVERY_CATEGORIES = [
+  { id: "tech-freelance", name: "Tech & Freelancers", icon: "💻" },
+  { id: "food-hospitality", name: "Food & Cafes", icon: "☕" },
+  { id: "creative-weddings", name: "Creative & Weddings", icon: "✨" },
+  { id: "artisan-retail", name: "Artisans & Boutiques", icon: "🏺" },
+  { id: "beauty-wellness", name: "Beauty & Wellness", icon: "🌿" },
+  { id: "home-services", name: "Home & Local Services", icon: "🛠️" },
+];
 
 export function LiveOsmMap({
   cities,
@@ -1103,15 +1124,15 @@ export function LiveOsmMap({
     setActiveSuggestionIdx(-1);
   }, [searchQuery]);
 
-  // Dismiss search dropdown on outside click
+  // Dismiss search dropdown on outside pointer/touch/click
   useEffect(() => {
-    const onDocClick = (e: MouseEvent) => {
+    const onDocPointerDown = (e: MouseEvent | TouchEvent | PointerEvent) => {
       if (searchBoxRef.current && !searchBoxRef.current.contains(e.target as Node)) {
         setSearchFocused(false);
       }
     };
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
+    document.addEventListener("pointerdown", onDocPointerDown);
+    return () => document.removeEventListener("pointerdown", onDocPointerDown);
   }, []);
 
   // Initialize MapLibre GL Map locked strictly to India (3D India Island -> Real OSM Street View)
@@ -4044,105 +4065,230 @@ export function LiveOsmMap({
               )}
             </div>
 
-            {/* Grouped Autocomplete Results */}
-            {searchFocused && q.length >= 2 && (
-              <div className="absolute top-full mt-2 inset-x-0 rounded-2xl bg-neutral-950/92 backdrop-blur-2xl shadow-2xl p-2 max-h-72 overflow-y-auto z-30 flex flex-col gap-1.5">
-                {businessSearchResults.length > 0 && (
-                  <div>
-                    <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-400/80">
-                      Live Businesses
-                    </div>
-                    {businessSearchResults.map((b, idx) => (
-                      <button
-                        key={b.id}
-                        type="button"
-                        onClick={() => selectSuggestion({ type: "business", data: b })}
-                        className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between gap-2 text-xs text-white transition-colors ${
-                          activeSuggestionIdx === idx ? "bg-white/10" : "hover:bg-white/5"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-7 h-7 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
-                            <Store className="w-3.5 h-3.5" />
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-bold truncate">
-                              {b.name}
-                              {b.plot_config?.roofSignText ? ` · ${b.plot_config.roofSignText}` : ""}
-                            </span>
-                            <span className="text-[10px] text-neutral-400 truncate">
-                              {b.city_name}{b.pincode ? ` · PIN ${b.pincode}` : ""} · {b.tagline || "Live Plot"}
-                            </span>
-                          </div>
-                        </div>
-                        {(b.plot_level || 1) >= 3 ? (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold shrink-0 tabular-nums">
-                            LVL 3
-                          </span>
-                        ) : (b.plot_level || 1) === 2 ? (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-bold shrink-0 tabular-nums">
-                            LVL 2
-                          </span>
-                        ) : (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 font-semibold shrink-0">
-                            3D Plot
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {placeSearchResults.length > 0 && (
-                  <div>
-                    <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-400/80">
-                      Places, States &amp; PIN Codes
-                    </div>
-                    {placeSearchResults.map((p, idx) => {
-                      const flatIdx = businessSearchResults.length + idx;
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => selectSuggestion({ type: "place", data: p })}
-                          className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between gap-2 text-xs text-white transition-colors ${
-                            activeSuggestionIdx === flatIdx ? "bg-white/10" : "hover:bg-white/5"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-7 h-7 rounded-lg bg-sky-500/20 flex items-center justify-center text-sky-400 shrink-0">
+            {/* Responsive Command Palette: Instant Zero-Query Discovery + High-Fidelity Search Results */}
+            {searchFocused && (
+              <div className="fixed inset-x-3 top-16 sm:absolute sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:top-full sm:mt-2.5 sm:w-[500px] max-w-lg rounded-2xl bg-[#0b0c10]/95 backdrop-blur-2xl border border-white/10 shadow-[0_25px_60px_rgba(0,0,0,0.85)] p-2.5 sm:p-3 max-h-[75vh] sm:max-h-[460px] overflow-y-auto z-50 flex flex-col gap-2.5">
+                {/* State A: Zero Query / Initial Tap Discovery Mode */}
+                {q.length < 2 ? (
+                  <>
+                    {/* Quick Jump High Streets */}
+                    <div className="space-y-1.5">
+                      <div className="px-1 text-[10px] font-bold uppercase tracking-wider text-amber-400/90 flex items-center gap-1.5">
+                        <Sparkles className="w-3 h-3 text-amber-400" />
+                        <span>Quick Jump to High Streets</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {QUICK_JUMP_METROS.map((metro) => (
+                          <button
+                            key={metro.name}
+                            type="button"
+                            onPointerDown={(e) => {
+                              e.preventDefault();
+                              selectSuggestion({
+                                type: "place",
+                                data: {
+                                  id: `metro-${metro.name}`,
+                                  name: metro.name,
+                                  subtitle: metro.subtitle,
+                                  kind: "city",
+                                  lat: metro.lat,
+                                  lon: metro.lon,
+                                  zoom: metro.zoom,
+                                },
+                              });
+                            }}
+                            className="text-left px-2.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] active:bg-amber-500/15 border border-white/5 hover:border-amber-500/30 transition-all flex items-center gap-2 group min-h-[44px]"
+                          >
+                            <div className="w-7 h-7 rounded-lg bg-sky-500/15 text-sky-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                               <MapPin className="w-3.5 h-3.5" />
                             </div>
                             <div className="flex flex-col min-w-0">
-                              <span className="font-semibold truncate">{p.name}</span>
-                              <span className="text-[10px] text-neutral-400 truncate">{p.subtitle}</span>
+                              <span className="text-xs font-semibold text-white truncate">{metro.name}</span>
+                              <span className="text-[10px] text-neutral-400 truncate">{metro.subtitle}</span>
                             </div>
-                          </div>
-                          <span className="text-[10px] uppercase tracking-wide text-neutral-400 font-mono shrink-0">
-                            {p.kind}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-                {isSearchingGeo && (
-                  <div className="px-3 py-2 text-[11px] text-neutral-400 flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
-                    <span>Searching India places &amp; PIN codes...</span>
-                  </div>
-                )}
+                    {/* Explore Categories */}
+                    <div className="space-y-1.5 pt-1 border-t border-white/5">
+                      <div className="px-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
+                        <Layers className="w-3 h-3 text-neutral-400" />
+                        <span>Explore Categories</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {DISCOVERY_CATEGORIES.map((cat) => (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onPointerDown={(e) => {
+                              e.preventDefault();
+                              setSearchQuery(cat.name);
+                              setSearchFocused(true);
+                            }}
+                            className="px-2.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 hover:border-white/20 text-xs text-neutral-200 hover:text-white flex items-center gap-1.5 transition-colors min-h-[36px]"
+                          >
+                            <span>{cat.icon}</span>
+                            <span>{cat.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-                {!isSearchingGeo && businessSearchResults.length === 0 && placeSearchResults.length === 0 && (
-                  <div className="px-3 py-2.5 text-xs text-neutral-400">
-                    No exact match found in India for <span className="text-white font-semibold">&ldquo;{searchQuery.trim()}&rdquo;</span>.
-                    {/^\d{6}$/.test(searchQuery.trim()) && (
-                      <span className="block text-[10px] text-neutral-500 mt-0.5">
-                        Verify the 6-digit Indian PIN code or try searching the town/district name.
-                      </span>
+                    {/* Featured Live 3D Storefront */}
+                    {allLiveStorefronts.length > 0 && (
+                      <div className="space-y-1.5 pt-1 border-t border-white/5">
+                        <div className="px-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400/90 flex items-center gap-1.5">
+                          <Store className="w-3 h-3 text-emerald-400" />
+                          <span>Live 3D Storefronts</span>
+                        </div>
+                        <div className="space-y-1">
+                          {allLiveStorefronts.slice(0, 2).map((biz) => (
+                            <button
+                              key={biz.id}
+                              type="button"
+                              onPointerDown={(e) => {
+                                e.preventDefault();
+                                selectSuggestion({ type: "business", data: biz });
+                              }}
+                              className="w-full text-left px-3 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 hover:border-amber-500/30 transition-all flex items-center justify-between gap-2 text-xs text-white min-h-[44px]"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                                  <Store className="w-3.5 h-3.5" />
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                  <span className="font-bold truncate text-white">{biz.name}</span>
+                                  <span className="text-[10px] text-neutral-400 truncate">
+                                    {biz.city_name} · {biz.starting_price || biz.tagline || "3D Digital Storefront"}
+                                  </span>
+                                </div>
+                              </div>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold shrink-0">
+                                Fly to 3D Plot
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     )}
-                  </div>
+                  </>
+                ) : (
+                  /* State B: Active Query Search Results */
+                  <>
+                    {businessSearchResults.length > 0 && (
+                      <div>
+                        <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-400/90 flex items-center gap-1.5">
+                          <Store className="w-3 h-3 text-amber-400" />
+                          <span>Live Businesses ({businessSearchResults.length})</span>
+                        </div>
+                        {businessSearchResults.map((b, idx) => (
+                          <button
+                            key={b.id}
+                            type="button"
+                            onPointerDown={(e) => {
+                              e.preventDefault();
+                              selectSuggestion({ type: "business", data: b });
+                            }}
+                            className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between gap-2 text-xs text-white transition-colors min-h-[44px] ${
+                              activeSuggestionIdx === idx ? "bg-amber-500/15 border border-amber-500/30" : "hover:bg-white/5"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+                                <Store className="w-4 h-4" />
+                              </div>
+                              <div className="flex flex-col min-w-0">
+                                <span className="font-bold truncate text-white">
+                                  {b.name}
+                                  {b.plot_config?.roofSignText ? ` · ${b.plot_config.roofSignText}` : ""}
+                                </span>
+                                <span className="text-[11px] text-neutral-400 truncate">
+                                  {b.city_name}{b.pincode ? ` · PIN ${b.pincode}` : ""} · {b.starting_price || b.tagline || "3D Plot"}
+                                </span>
+                              </div>
+                            </div>
+                            {(b.plot_level || 1) >= 3 ? (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold shrink-0 tabular-nums">
+                                LVL 3
+                              </span>
+                            ) : (b.plot_level || 1) === 2 ? (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-bold shrink-0 tabular-nums">
+                                LVL 2
+                              </span>
+                            ) : (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 font-semibold shrink-0">
+                                3D Plot
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {placeSearchResults.length > 0 && (
+                      <div>
+                        <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-400/90 flex items-center gap-1.5">
+                          <MapPin className="w-3 h-3 text-sky-400" />
+                          <span>Places, States &amp; PIN Codes ({placeSearchResults.length})</span>
+                        </div>
+                        {placeSearchResults.map((p, idx) => {
+                          const flatIdx = businessSearchResults.length + idx;
+                          return (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onPointerDown={(e) => {
+                                e.preventDefault();
+                                selectSuggestion({ type: "place", data: p });
+                              }}
+                              className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between gap-2 text-xs text-white transition-colors min-h-[44px] ${
+                                activeSuggestionIdx === flatIdx ? "bg-sky-500/15 border border-sky-500/30" : "hover:bg-white/5"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-8 h-8 rounded-lg bg-sky-500/20 flex items-center justify-center text-sky-400 shrink-0">
+                                  <MapPin className="w-4 h-4" />
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                  <span className="font-semibold truncate text-white">{p.name}</span>
+                                  <span className="text-[11px] text-neutral-400 truncate">{p.subtitle}</span>
+                                </div>
+                              </div>
+                              <span className="text-[10px] uppercase tracking-wide text-neutral-400 font-mono px-2 py-0.5 rounded bg-white/5 shrink-0">
+                                {p.kind}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {isSearchingGeo && (
+                      <div className="px-3 py-2.5 text-xs text-neutral-400 flex items-center gap-2">
+                        <span className="w-3.5 h-3.5 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+                        <span>Searching India places &amp; PIN codes...</span>
+                      </div>
+                    )}
+
+                    {!isSearchingGeo && businessSearchResults.length === 0 && placeSearchResults.length === 0 && (
+                      <div className="px-3 py-3 text-xs text-neutral-400 space-y-1">
+                        <div>
+                          No exact match found in India for <span className="text-white font-semibold">&ldquo;{searchQuery.trim()}&rdquo;</span>.
+                        </div>
+                        {/^\d{6}$/.test(searchQuery.trim()) ? (
+                          <p className="text-[11px] text-neutral-500">
+                            Verify the 6-digit Indian PIN code or search for the nearby town/district name.
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-neutral-500">
+                            Try searching a city (e.g. Mumbai, Delhi, Bengaluru), a high street, or a 6-digit PIN code.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -4590,15 +4736,17 @@ export function LiveOsmMap({
                   <MapPin className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col text-left min-w-0">
-                  <span className="text-sm font-bold text-white truncate">
+                  <span className="text-xs sm:text-sm font-bold text-white truncate">
                     {focusedRegion ? focusedRegion.name : "Open Street Plot"}
                   </span>
-                  <span className="text-[11px] text-neutral-400 truncate">
-                    No 3D business claimed on this street yet
+                  <span className="text-[10px] sm:text-[11px] text-neutral-400 truncate">
+                    <span className="hidden sm:inline">No 3D business claimed on this street yet · </span>
+                    <span className="sm:hidden text-amber-400/90 font-medium">Unclaimed plot</span>
+                    <span className="hidden sm:inline">Open for registration</span>
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => {
@@ -4611,21 +4759,21 @@ export function LiveOsmMap({
                       handleResetCamera();
                     }
                   }}
-                  className={`h-8.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                  className={`h-8.5 px-2.5 sm:px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
                     isWalkMode
                       ? "bg-amber-500/20 text-amber-300 border border-amber-500/60 shadow-lg shadow-amber-500/20"
                       : "bg-white/[0.06] hover:bg-white/[0.12] text-white border border-white/10"
                   }`}
                 >
                   <Footprints className="w-3.5 h-3.5 text-amber-400" />
-                  <span>{isWalkMode ? "Exit Walk" : "Walk (WASD)"}</span>
+                  <span>{isWalkMode ? "Exit" : "Walk"}<span className="hidden sm:inline"> (WASD)</span></span>
                 </button>
                 <Link
                   href="/register"
-                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold text-xs flex items-center gap-1.5 shrink-0 transition-all shadow-md"
+                  className="px-3 sm:px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold text-xs flex items-center gap-1 sm:gap-1.5 shrink-0 transition-all shadow-md"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Claim Plot</span>
+                  <span>Claim<span className="hidden sm:inline"> Plot</span></span>
                 </Link>
               </div>
             </div>
