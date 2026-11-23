@@ -53,9 +53,17 @@ import {
 } from "@/components/register/LocationMapPicker";
 
 const STEPS = [
-  { id: 1, label: "Plot & Location" },
-  { id: 2, label: "Rates & Contact" },
-  { id: 3, label: "Review & Claim" },
+  { id: 1, label: "Plot & Location", icon: Building2 },
+  { id: 2, label: "Rates & Contact", icon: Phone },
+  { id: 3, label: "Review & Claim", icon: ShieldCheck },
+] as const;
+
+const QUICK_PRICE_PRESETS = [
+  "Starts ₹499",
+  "Starts ₹1,499",
+  "₹5,000 / project",
+  "₹15,000 / build",
+  "Custom Quote",
 ] as const;
 
 export default function RegisterPage() {
@@ -341,18 +349,18 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-[#09090b] text-neutral-100 flex flex-col antialiased">
       {/* Top Navigation & Stepper Header */}
-      <header className="sticky top-0 z-20 border-b border-neutral-800/80 bg-[#09090b]/92 backdrop-blur-md">
+      <header className="sticky top-0 z-20 border-b border-white/[0.08] bg-[#09090b]/92 backdrop-blur-xl">
         <div className="max-w-2xl mx-auto px-4 sm:px-6">
           <div className="h-14 flex items-center justify-between gap-4">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 min-h-[44px] -ml-2 px-2 rounded-lg text-sm font-medium text-neutral-300 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+              className="inline-flex items-center gap-2 min-h-[44px] -ml-2 px-2.5 rounded-lg text-sm font-medium text-neutral-300 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back to India Map</span>
             </Link>
 
-            <span className="text-xs font-medium text-neutral-400 tabular-nums">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 tabular-nums">
               Step {step} of {STEPS.length}
             </span>
           </div>
@@ -363,6 +371,7 @@ export default function RegisterPage() {
               {STEPS.map((s) => {
                 const isCompleted = s.id < step;
                 const isCurrent = s.id === step;
+                const StepIcon = s.icon;
                 return (
                   <li key={s.id}>
                     <button
@@ -374,26 +383,41 @@ export default function RegisterPage() {
                           setStep(s.id);
                         }
                       }}
-                      className={`w-full text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 rounded ${
-                        isCompleted ? "cursor-pointer" : "cursor-default"
+                      className={`w-full text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 rounded-lg p-1 transition-colors ${
+                        isCompleted ? "cursor-pointer hover:bg-white/[0.03]" : "cursor-default"
                       }`}
                     >
                       <div
-                        className={`h-1 rounded-full transition-colors duration-200 ${
-                          isCurrent || isCompleted ? "bg-amber-500" : "bg-neutral-800"
+                        className={`h-1.5 rounded-full transition-all duration-300 ${
+                          isCurrent
+                            ? "bg-gradient-to-r from-amber-500 to-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.6)]"
+                            : isCompleted
+                              ? "bg-emerald-500"
+                              : "bg-neutral-800"
                         }`}
                       />
-                      <span
-                        className={`mt-1.5 block text-[11px] font-medium truncate transition-colors ${
-                          isCurrent
-                            ? "text-amber-400"
-                            : isCompleted
-                              ? "text-neutral-300 group-hover:text-white"
-                              : "text-neutral-500"
-                        }`}
-                      >
-                        {s.label}
-                      </span>
+                      <div className="mt-1.5 flex items-center gap-1.5 truncate">
+                        <StepIcon
+                          className={`w-3.5 h-3.5 shrink-0 transition-colors ${
+                            isCurrent
+                              ? "text-amber-400"
+                              : isCompleted
+                                ? "text-emerald-400"
+                                : "text-neutral-500"
+                          }`}
+                        />
+                        <span
+                          className={`text-[11px] font-semibold truncate transition-colors ${
+                            isCurrent
+                              ? "text-amber-300"
+                              : isCompleted
+                                ? "text-neutral-200 group-hover:text-white"
+                                : "text-neutral-500"
+                          }`}
+                        >
+                          {s.label}
+                        </span>
+                      </div>
                     </button>
                   </li>
                 );
@@ -404,11 +428,11 @@ export default function RegisterPage() {
       </header>
 
       {/* Main Form Workspace */}
-      <main className="flex-1 w-full max-w-2xl mx-auto px-4 sm:px-6 py-7 sm:py-10">
+      <main className="flex-1 w-full max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-9">
         {errorMsg && (
           <div
             role="alert"
-            className="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/35 text-sm text-red-200 flex items-start gap-2.5"
+            className="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/35 text-sm text-red-200 flex items-start gap-2.5 shadow-sm"
           >
             <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
             <span>{errorMsg}</span>
@@ -435,7 +459,7 @@ export default function RegisterPage() {
               <div className="space-y-1.5">
                 <label
                   htmlFor="business-name"
-                  className="block text-sm font-medium text-neutral-100"
+                  className="block text-sm font-semibold text-neutral-100"
                 >
                   Business Name <span className="text-amber-400">*</span>
                 </label>
@@ -448,7 +472,7 @@ export default function RegisterPage() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Brahmaputra Artisanal Bakes"
                   maxLength={60}
-                  className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+                  className="w-full min-h-[48px] px-4 rounded-xl bg-[#0c0c10] border border-white/10 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 focus:bg-[#111116] transition-all"
                 />
               </div>
 
@@ -457,11 +481,15 @@ export default function RegisterPage() {
                 <div className="flex items-center justify-between gap-2">
                   <label
                     htmlFor="business-tagline"
-                    className="block text-sm font-medium text-neutral-100"
+                    className="block text-sm font-semibold text-neutral-100"
                   >
                     One-Line Description <span className="text-amber-400">*</span>
                   </label>
-                  <span className="text-[11px] text-neutral-400 tabular-nums">
+                  <span
+                    className={`text-[11px] tabular-nums ${
+                      tagline.length >= 100 ? "text-amber-400 font-semibold" : "text-neutral-400"
+                    }`}
+                  >
                     {tagline.length}/120
                   </span>
                 </div>
@@ -474,7 +502,7 @@ export default function RegisterPage() {
                   onChange={(e) => setTagline(e.target.value)}
                   placeholder="e.g. Specialty pour-over coffee & artisanal sourdough bakes"
                   maxLength={120}
-                  className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+                  className="w-full min-h-[48px] px-4 rounded-xl bg-[#0c0c10] border border-white/10 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 focus:bg-[#111116] transition-all"
                 />
               </div>
 
@@ -482,7 +510,7 @@ export default function RegisterPage() {
               <div className="space-y-1.5">
                 <label
                   htmlFor="business-category"
-                  className="block text-sm font-medium text-neutral-100"
+                  className="block text-sm font-semibold text-neutral-100"
                 >
                   Category (3D Building Archetype) <span className="text-amber-400">*</span>
                 </label>
@@ -494,7 +522,7 @@ export default function RegisterPage() {
               </div>
 
               {/* Divider separating identity from location */}
-              <hr className="border-neutral-800/80" />
+              <hr className="border-white/[0.08]" />
 
               {/* Interactive Location & Mini-Map Picker */}
               <LocationMapPicker
@@ -510,7 +538,7 @@ export default function RegisterPage() {
                 <div className="sm:col-span-2 space-y-1.5">
                   <label
                     htmlFor="business-city"
-                    className="block text-sm font-medium text-neutral-100"
+                    className="block text-sm font-semibold text-neutral-100"
                   >
                     City / Town <span className="text-amber-400">*</span>
                   </label>
@@ -523,14 +551,14 @@ export default function RegisterPage() {
                     onChange={(e) => setCity(e.target.value)}
                     placeholder="e.g. Guwahati"
                     maxLength={40}
-                    className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+                    className="w-full min-h-[48px] px-4 rounded-xl bg-[#0c0c10] border border-white/10 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 focus:bg-[#111116] transition-all"
                   />
                 </div>
 
                 <div className="space-y-1.5">
                   <label
                     htmlFor="business-pincode"
-                    className="block text-sm font-medium text-neutral-100"
+                    className="block text-sm font-semibold text-neutral-100"
                   >
                     PIN Code{" "}
                     <span className="text-xs font-normal text-neutral-400">
@@ -546,10 +574,10 @@ export default function RegisterPage() {
                       onChange={(e) => handlePincodeChange(e.target.value)}
                       placeholder="e.g. 781001"
                       maxLength={6}
-                      className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white font-mono tabular-nums placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+                      className="w-full min-h-[48px] px-4 rounded-xl bg-[#0c0c10] border border-white/10 text-sm text-white font-mono tabular-nums placeholder:text-neutral-500 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 focus:bg-[#111116] transition-all"
                     />
                     {pinLookupLoading && (
-                      <Loader2 className="w-4 h-4 text-amber-400 animate-spin absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <Loader2 className="w-4 h-4 text-amber-400 animate-spin absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     )}
                   </div>
                 </div>
@@ -559,7 +587,7 @@ export default function RegisterPage() {
             {/* Step 1 Completion Footer */}
             <div className="pt-2 space-y-3">
               {step1MissingHint && (
-                <p className="text-xs text-amber-400/90 leading-relaxed">
+                <p className="text-xs text-amber-400/90 leading-relaxed font-medium">
                   {step1MissingHint}
                 </p>
               )}
@@ -570,7 +598,7 @@ export default function RegisterPage() {
                   setErrorMsg(null);
                   setStep(2);
                 }}
-                className="w-full min-h-[48px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:bg-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed text-neutral-950 font-semibold text-sm flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                className="w-full min-h-[52px] px-5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 active:scale-[0.99] disabled:from-neutral-800 disabled:to-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed text-neutral-950 font-bold text-sm flex items-center justify-center gap-2 shadow-[0_4px_24px_rgba(245,158,11,0.2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
               >
                 <span>Continue to Rates &amp; Contact</span>
                 <ArrowRight className="w-4 h-4" />
@@ -595,37 +623,65 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-5 pt-1">
-              {/* Starting Price */}
-              <div className="space-y-1.5">
+              {/* Starting Price with Preset Chips */}
+              <div className="space-y-2">
                 <label
                   htmlFor="starting-price"
-                  className="block text-sm font-medium text-neutral-100"
+                  className="block text-sm font-semibold text-neutral-100"
                 >
                   Starting Price / Rate <span className="text-amber-400">*</span>
                 </label>
-                <input
-                  id="starting-price"
-                  type="text"
-                  required
-                  aria-required="true"
-                  value={startingPrice}
-                  onChange={(e) => setStartingPrice(e.target.value)}
-                  placeholder="e.g. Starts ₹499, ₹15,000 / day, ₹180 per loaf"
-                  maxLength={40}
-                  className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
-                />
+                <div className="flex items-stretch rounded-xl overflow-hidden border border-white/10 focus-within:border-amber-400 focus-within:ring-4 focus-within:ring-amber-500/10 transition-all">
+                  <span className="inline-flex items-center px-4 bg-[#141419] border-r border-white/10 text-sm font-bold text-amber-300">
+                    ₹
+                  </span>
+                  <input
+                    id="starting-price"
+                    type="text"
+                    required
+                    aria-required="true"
+                    value={startingPrice}
+                    onChange={(e) => setStartingPrice(e.target.value)}
+                    placeholder="e.g. Starts ₹499, ₹15,000 / day, ₹180 per loaf"
+                    maxLength={40}
+                    className="flex-1 min-h-[48px] px-4 bg-[#0c0c10] text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:bg-[#111116] transition-colors"
+                  />
+                </div>
+
+                {/* Quick Preset Chips for mobile */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5 text-xs">
+                  <span className="text-[11px] font-medium text-neutral-400 shrink-0">Suggestions:</span>
+                  {QUICK_PRICE_PRESETS.map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setStartingPrice(preset)}
+                      className="shrink-0 px-2.5 py-1 rounded-lg bg-[#141419] hover:bg-[#1c1c24] border border-white/10 hover:border-amber-500/40 text-[11px] font-medium text-neutral-300 hover:text-white transition-all active:scale-95"
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* WhatsApp Number */}
+              {/* WhatsApp Number with Live Verification Badge */}
               <div className="space-y-1.5">
-                <label
-                  htmlFor="whatsapp-phone"
-                  className="block text-sm font-medium text-neutral-100"
-                >
-                  WhatsApp Number (India) <span className="text-amber-400">*</span>
-                </label>
-                <div className="flex items-stretch">
-                  <span className="inline-flex items-center px-3.5 rounded-l-xl bg-[#18181c] border border-r-0 border-neutral-800 text-sm text-neutral-300 font-mono tabular-nums">
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="whatsapp-phone"
+                    className="block text-sm font-semibold text-neutral-100"
+                  >
+                    WhatsApp Number (India) <span className="text-amber-400">*</span>
+                  </label>
+                  {isValidPhone && (
+                    <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" />
+                      Valid WhatsApp
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-stretch rounded-xl overflow-hidden border border-white/10 focus-within:border-amber-400 focus-within:ring-4 focus-within:ring-amber-500/10 transition-all">
+                  <span className="inline-flex items-center px-4 bg-[#141419] border-r border-white/10 text-sm font-bold text-neutral-200 font-mono tabular-nums">
                     +91
                   </span>
                   <input
@@ -639,7 +695,7 @@ export default function RegisterPage() {
                       setWhatsapp(e.target.value.replace(/\D/g, "").slice(0, 10))
                     }
                     placeholder="9876543210"
-                    className="flex-1 min-h-[46px] px-3.5 rounded-r-xl bg-[#121215] border border-neutral-800 text-sm text-white font-mono tabular-nums placeholder:text-neutral-500 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+                    className="flex-1 min-h-[48px] px-4 bg-[#0c0c10] text-sm text-white font-mono tabular-nums placeholder:text-neutral-500 focus:outline-none focus:bg-[#111116] transition-colors"
                   />
                 </div>
                 {whatsapp.length > 0 && !isValidPhone && (
@@ -647,6 +703,9 @@ export default function RegisterPage() {
                     Enter a valid 10-digit Indian mobile number starting with 6–9.
                   </p>
                 )}
+                <p className="text-[11px] text-neutral-400 leading-relaxed">
+                  Visitors on your 3D plot tap to chat directly with you on WhatsApp with zero middleman commissions.
+                </p>
               </div>
 
               {/* Instagram + Website */}
@@ -654,15 +713,15 @@ export default function RegisterPage() {
                 <div className="space-y-1.5">
                   <label
                     htmlFor="instagram-handle"
-                    className="block text-sm font-medium text-neutral-100"
+                    className="block text-sm font-semibold text-neutral-100"
                   >
                     Instagram Profile{" "}
                     <span className="text-xs font-normal text-neutral-400">
                       (Optional)
                     </span>
                   </label>
-                  <div className="flex items-stretch">
-                    <span className="inline-flex items-center px-3 rounded-l-xl bg-[#18181c] border border-r-0 border-neutral-800 text-sm text-neutral-400">
+                  <div className="flex items-stretch rounded-xl overflow-hidden border border-white/10 focus-within:border-amber-400 focus-within:ring-4 focus-within:ring-amber-500/10 transition-all">
+                    <span className="inline-flex items-center px-3.5 bg-[#141419] border-r border-white/10 text-sm text-neutral-400">
                       @
                     </span>
                     <input
@@ -674,7 +733,7 @@ export default function RegisterPage() {
                       }
                       placeholder="yourbusiness"
                       maxLength={35}
-                      className="flex-1 min-h-[46px] px-3 rounded-r-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+                      className="flex-1 min-h-[48px] px-3.5 bg-[#0c0c10] text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:bg-[#111116] transition-colors"
                     />
                   </div>
                 </div>
@@ -682,7 +741,7 @@ export default function RegisterPage() {
                 <div className="space-y-1.5">
                   <label
                     htmlFor="website-url"
-                    className="block text-sm font-medium text-neutral-100"
+                    className="block text-sm font-semibold text-neutral-100"
                   >
                     Official Website{" "}
                     <span className="text-xs font-normal text-neutral-400">
@@ -697,7 +756,7 @@ export default function RegisterPage() {
                     onChange={(e) => setWebsiteUrl(e.target.value)}
                     placeholder="https://yourbusiness.in"
                     maxLength={160}
-                    className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+                    className="w-full min-h-[48px] px-4 rounded-xl bg-[#0c0c10] border border-white/10 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 focus:bg-[#111116] transition-all"
                   />
                 </div>
               </div>
@@ -706,7 +765,7 @@ export default function RegisterPage() {
               <div className="space-y-1.5">
                 <label
                   htmlFor="google-maps-url"
-                  className="block text-sm font-medium text-neutral-100"
+                  className="block text-sm font-semibold text-neutral-100"
                 >
                   Official Google Maps Link{" "}
                   <span className="text-xs font-normal text-neutral-400">
@@ -721,46 +780,50 @@ export default function RegisterPage() {
                   onChange={(e) => setGoogleMapsUrl(e.target.value)}
                   placeholder="https://maps.app.goo.gl/... (for direct directions & reviews)"
                   maxLength={300}
-                  className="w-full min-h-[46px] px-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-400/80 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+                  className="w-full min-h-[48px] px-4 rounded-xl bg-[#0c0c10] border border-white/10 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 focus:bg-[#111116] transition-all"
                 />
               </div>
 
-              {/* Business Owner Email (Required for plot claim & passwordless login) */}
-              <div className="space-y-1.5 pt-3 border-t border-neutral-800/80">
-                <div className="flex items-center justify-between">
-                  <label
-                    htmlFor="owner-email"
-                    className="block text-sm font-medium text-neutral-100"
-                  >
-                    Business Owner Email <span className="text-amber-400">*</span>
-                  </label>
-                  {ownerSessionEmail && (
-                    <span className="text-[11px] text-emerald-400 font-medium">
-                      Signed in
-                    </span>
+              {/* Business Owner Email (High Trust Plot Ownership Key Card) */}
+              <div className="space-y-2 pt-3 border-t border-neutral-800/80">
+                <div className="p-4 rounded-2xl bg-amber-500/[0.08] border border-amber-500/25 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-amber-300 font-semibold text-xs tracking-wide uppercase">
+                      <UserCheck className="w-4 h-4 text-amber-400" />
+                      <span>3D Plot Ownership Key</span>
+                    </div>
+                    {ownerSessionEmail ? (
+                      <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30">
+                        Signed in
+                      </span>
+                    ) : (
+                      <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 font-semibold border border-amber-500/30">
+                        Passwordless Claim
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-neutral-300 leading-relaxed">
+                    This email permanently owns this 3D plot on Spotlight Bazaar. You can manage your 3D storefront and analytics without passwords via instant email OTP.
+                  </p>
+                  <div className="relative pt-0.5">
+                    <Mail className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      id="owner-email"
+                      type="email"
+                      required
+                      aria-required="true"
+                      value={ownerEmailInput}
+                      onChange={(e) => setOwnerEmailInput(e.target.value)}
+                      placeholder="owner@yourbusiness.com"
+                      className="w-full min-h-[48px] pl-10 pr-4 rounded-xl bg-[#09090c] border border-white/10 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 focus:bg-[#111116] transition-all"
+                    />
+                  </div>
+                  {ownerEmailInput.length > 0 && !isValidEmail(ownerEmailInput) && (
+                    <p className="text-xs text-amber-400">
+                      Please enter a valid email address.
+                    </p>
                   )}
                 </div>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    id="owner-email"
-                    type="email"
-                    required
-                    aria-required="true"
-                    value={ownerEmailInput}
-                    onChange={(e) => setOwnerEmailInput(e.target.value)}
-                    placeholder="owner@yourbusiness.com"
-                    className="w-full min-h-[46px] pl-10 pr-3.5 rounded-xl bg-[#121215] border border-neutral-800 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500/75 focus:ring-2 focus:ring-amber-500/20 transition-colors"
-                  />
-                </div>
-                <p className="text-xs text-neutral-400 leading-relaxed">
-                  Ownership of this 3D plot is linked directly to this email. You can log into your Owner Dashboard anytime via passwordless Email OTP or password.
-                </p>
-                {ownerEmailInput.length > 0 && !isValidEmail(ownerEmailInput) && (
-                  <p className="text-xs text-amber-400">
-                    Please enter a valid email address.
-                  </p>
-                )}
               </div>
             </div>
 
@@ -771,7 +834,7 @@ export default function RegisterPage() {
                   setErrorMsg(null);
                   setStep(1);
                 }}
-                className="min-h-[48px] px-5 rounded-xl bg-[#121215] hover:bg-neutral-800 border border-neutral-800 text-sm font-medium text-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                className="min-h-[52px] px-5 rounded-xl bg-[#0c0c10] hover:bg-neutral-800 border border-white/10 text-sm font-semibold text-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
               >
                 Back
               </button>
@@ -782,7 +845,7 @@ export default function RegisterPage() {
                   setErrorMsg(null);
                   setStep(3);
                 }}
-                className="flex-1 min-h-[48px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:bg-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed text-neutral-950 font-semibold text-sm flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                className="flex-1 min-h-[52px] px-5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 active:scale-[0.99] disabled:from-neutral-800 disabled:to-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed text-neutral-950 font-bold text-sm flex items-center justify-center gap-2 shadow-[0_4px_24px_rgba(245,158,11,0.2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
               >
                 <span>Continue to Review &amp; Claim</span>
                 <ArrowRight className="w-4 h-4" />
@@ -806,94 +869,115 @@ export default function RegisterPage() {
               </p>
             </div>
 
-            {/* Clean Structured Review Sheet */}
-            <div className="rounded-2xl bg-[#121215] border border-neutral-800 divide-y divide-neutral-800/80 overflow-hidden">
+            {/* Official 3D Plot Deed Card */}
+            <div className="rounded-2xl bg-[#0c0c10] border border-amber-500/30 divide-y divide-white/[0.08] overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.85)]">
+              {/* Deed Banner Header */}
+              <div className="px-5 py-3 bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent flex items-center justify-between gap-3 border-b border-amber-500/20">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-amber-400" />
+                  <span className="font-mono text-xs font-bold tracking-wider text-amber-300 uppercase">
+                    Spotlight Bazaar · Commercial Plot Deed
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
+                  Live 3D Plot
+                </span>
+              </div>
+
               {/* Top Identity Row */}
-              <div className="p-4 sm:p-5 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 shadow-sm">
+              <div className="p-5 flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/35 flex items-center justify-center text-amber-400 shrink-0 shadow-md">
                   <Store className="w-6 h-6" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-base font-bold text-white truncate">{name}</h2>
-                  <p className="text-xs text-neutral-300 line-clamp-2 mt-0.5">
+                  <h2 className="text-lg font-bold text-white tracking-tight truncate">{name}</h2>
+                  <p className="text-xs text-neutral-300 line-clamp-2 mt-1 leading-relaxed">
                     {tagline}
                   </p>
                 </div>
               </div>
 
-              {/* 3D Plot Architecture Row */}
-              <div className="p-4 sm:px-5 flex items-start justify-between gap-4 text-sm">
-                <div className="flex items-start gap-2.5 min-w-0">
+              {/* 3D Plot Architecture Blueprint */}
+              <div className="p-5 flex items-start justify-between gap-4 text-sm bg-[#09090c]/60">
+                <div className="flex items-start gap-3 min-w-0">
                   <Building2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   <div className="min-w-0">
-                    <div className="font-medium text-neutral-100">
+                    <div className="font-semibold text-neutral-100">
                       {selectedPlotSpec.plotName}
                     </div>
                     <div className="text-xs text-neutral-400 mt-0.5">
                       {selectedCategoryObj.name} · {selectedPlotSpec.footprintLabel}
                     </div>
+                    <div className="text-[11px] text-amber-300/80 mt-1">
+                      {selectedPlotSpec.architecturalStyle}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center -space-x-1 shrink-0 pt-1" aria-hidden="true">
+                <div className="flex items-center -space-x-1.5 shrink-0 pt-1" aria-hidden="true">
                   {selectedPlotSpec.palette.map((hex, i) => (
                     <span
                       key={i}
                       style={{ backgroundColor: hex }}
-                      className="w-3.5 h-3.5 rounded-full border border-[#121215]"
+                      className="w-4 h-4 rounded-full border-2 border-[#0c0c10] shadow-sm"
                     />
                   ))}
                 </div>
               </div>
 
-              {/* Location & Contact Details */}
-              <dl className="p-4 sm:px-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              {/* Location & Coordinates */}
+              <dl className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div className="space-y-1">
-                  <dt className="text-neutral-400 flex items-center gap-1.5">
+                  <dt className="text-neutral-400 flex items-center gap-1.5 font-medium">
                     <MapPin className="w-3.5 h-3.5 text-amber-400" />
-                    Pinned Location
+                    Location &amp; Coordinates
                   </dt>
-                  <dd className="text-neutral-100 font-medium">
-                    {[city, stateName, pincode ? `PIN ${pincode}` : ""]
-                      .filter(Boolean)
-                      .join(", ")}
+                  <dd className="text-neutral-100 font-semibold text-sm">
+                    {[city, stateName, pincode ? `PIN ${pincode}` : ""].filter(Boolean).join(", ")}
                   </dd>
                   {hasPinnedCoords && (
-                    <dd className="font-mono text-[11px] text-neutral-400 tabular-nums">
+                    <dd className="font-mono text-[11px] text-amber-300/90 tabular-nums">
                       {lat.toFixed(5)}° N, {lon.toFixed(5)}° E
                     </dd>
                   )}
+                  <dd className="text-[11px] text-emerald-400 flex items-center gap-1 pt-0.5">
+                    <Check className="w-3 h-3" />
+                    Connected to OpenStreetMap street network
+                  </dd>
                 </div>
 
                 <div className="space-y-1">
-                  <dt className="text-neutral-400 flex items-center gap-1.5">
+                  <dt className="text-neutral-400 flex items-center gap-1.5 font-medium">
                     <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                    Direct WhatsApp &amp; Rate
+                    Direct Inquiries &amp; Starting Rate
                   </dt>
-                  <dd className="text-neutral-100 font-medium tabular-nums">
+                  <dd className="text-neutral-100 font-semibold text-sm tabular-nums">
                     +91 {cleanPhone}
                   </dd>
-                  <dd className="text-emerald-400 font-medium">{startingPrice}</dd>
+                  <dd className="text-amber-300 font-semibold text-sm">{startingPrice}</dd>
+                  <dd className="text-[11px] text-neutral-400 pt-0.5">
+                    Zero middleman fees · 100% direct customer revenue
+                  </dd>
                 </div>
               </dl>
 
-              {/* External Channels (Website, Instagram, Google Maps) */}
+              {/* Channels & Social Links */}
               {(websiteUrl || instagram || googleMapsUrl) && (
-                <div className="p-4 sm:px-5 flex flex-wrap gap-2 text-xs">
+                <div className="p-5 flex flex-wrap gap-2 text-xs bg-[#09090c]/40">
                   {websiteUrl && (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300">
-                      <Globe className="w-3 h-3 text-amber-400" />
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 border border-white/10 text-neutral-300">
+                      <Globe className="w-3.5 h-3.5 text-amber-400" />
                       Website linked
                     </span>
                   )}
                   {instagram && (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300">
-                      <InstagramIcon className="w-3 h-3 text-rose-400" />
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 border border-white/10 text-neutral-300">
+                      <InstagramIcon className="w-3.5 h-3.5 text-rose-400" />
                       @{instagram.replace(/^@/, "")}
                     </span>
                   )}
                   {googleMapsUrl && (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300">
-                      <Navigation className="w-3 h-3 text-sky-400" />
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 border border-white/10 text-neutral-300">
+                      <Navigation className="w-3.5 h-3.5 text-sky-400" />
                       Google Maps linked
                     </span>
                   )}
@@ -902,38 +986,38 @@ export default function RegisterPage() {
             </div>
 
             {/* Owner Account Claim Card */}
-            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start justify-between gap-3 text-xs">
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0 mt-0.5">
-                  <UserCheck className="w-4 h-4 text-amber-400" />
+            <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/[0.08] border border-amber-500/25 flex items-start justify-between gap-3 text-xs">
+              <div className="flex items-start gap-3.5 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                  <UserCheck className="w-5 h-5 text-amber-400" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-white">Plot Ownership Claim</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30">
+                    <span className="font-bold text-white text-sm">Plot Ownership Deed Claim</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30">
                       Claim Ready
                     </span>
                   </div>
-                  <p className="text-neutral-300 truncate mt-0.5">
-                    Claiming under <strong className="text-white">{ownerEmailInput.trim()}</strong>.
+                  <p className="text-neutral-300 truncate mt-1">
+                    Claiming deed under <strong className="text-white">{ownerEmailInput.trim()}</strong>.
                   </p>
                   <p className="text-[11px] text-neutral-400 mt-1 leading-relaxed">
                     Every plot on Spotlight Bazaar is owned and managed. You can log into your Owner Dashboard anytime via passwordless Email OTP or password.
                   </p>
                 </div>
               </div>
-              <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+              <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-1" />
             </div>
 
             {/* Directory Listing Consent */}
-            <label className="flex items-start gap-3 p-4 rounded-xl bg-[#121215]/70 border border-neutral-800 cursor-pointer hover:border-neutral-700 transition-colors">
+            <label className="flex items-start gap-3 p-4 rounded-xl bg-[#0c0c10] border border-white/10 cursor-pointer hover:border-amber-500/40 transition-colors">
               <input
                 type="checkbox"
                 checked={consent}
                 onChange={(e) => setConsent(e.target.checked)}
                 className="mt-0.5 w-4 h-4 rounded border-neutral-600 bg-neutral-900 accent-amber-500 cursor-pointer shrink-0"
               />
-              <span className="text-xs text-neutral-300 leading-relaxed">
+              <span className="text-xs text-neutral-300 leading-relaxed font-normal">
                 I confirm I am authorized to list this business on Spotlight Bazaar&apos;s open 3D map and display this WhatsApp contact for direct customer inquiries.
               </span>
             </label>
@@ -946,7 +1030,7 @@ export default function RegisterPage() {
                   setErrorMsg(null);
                   setStep(2);
                 }}
-                className="min-h-[48px] px-5 rounded-xl bg-[#121215] hover:bg-neutral-800 border border-neutral-800 text-sm font-medium text-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                className="min-h-[52px] px-5 rounded-xl bg-[#0c0c10] hover:bg-neutral-800 border border-white/10 text-sm font-semibold text-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
               >
                 Back
               </button>
@@ -954,7 +1038,7 @@ export default function RegisterPage() {
                 type="button"
                 disabled={!consent || submitting || !canProceedStep2}
                 onClick={handleSubmit}
-                className="flex-1 min-h-[48px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:bg-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed text-neutral-950 font-semibold text-sm flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                className="flex-1 min-h-[52px] px-5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 active:scale-[0.99] disabled:from-neutral-800 disabled:to-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed text-neutral-950 font-bold text-sm flex items-center justify-center gap-2 shadow-[0_4px_24px_rgba(245,158,11,0.25)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
               >
                 {submitting ? (
                   <>

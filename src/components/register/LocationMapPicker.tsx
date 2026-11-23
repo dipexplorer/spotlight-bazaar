@@ -62,6 +62,14 @@ const INDIA_MAX_BOUNDS: [[number, number], [number, number]] = [
   [108.0, 42.5],
 ];
 
+const QUICK_INDIA_JUMPS = [
+  { label: "Guwahati", lat: 26.185, lon: 91.750, zoom: 16.5, city: "Guwahati", state: "Assam" },
+  { label: "Delhi NCR", lat: 28.6139, lon: 77.2090, zoom: 16.0, city: "New Delhi", state: "Delhi" },
+  { label: "Mumbai", lat: 18.9220, lon: 72.8347, zoom: 16.0, city: "Mumbai", state: "Maharashtra" },
+  { label: "Bengaluru", lat: 12.9716, lon: 77.5946, zoom: 16.0, city: "Bengaluru", state: "Karnataka" },
+  { label: "Kolkata", lat: 22.5726, lon: 88.3639, zoom: 16.0, city: "Kolkata", state: "West Bengal" },
+] as const;
+
 interface GeoSuggestion {
   id: string;
   name: string;
@@ -632,6 +640,7 @@ export function LocationMapPicker({
       attributionControl: false,
       dragRotate: false,
       pitchWithRotate: false,
+      cooperativeGestures: true,
     });
 
     const ro = new ResizeObserver(() => {
@@ -902,6 +911,32 @@ export function LocationMapPicker({
     map.easeTo({ zoom: Math.min(19.5, Math.max(2.7, map.getZoom() + delta)), duration: 240 });
   };
 
+  const handleQuickJump = useCallback(
+    (jump: (typeof QUICK_INDIA_JUMPS)[number]) => {
+      const map = mapRef.current;
+      if (!map) return;
+      setSearchQuery("");
+      setSearchOpen(false);
+      setStatusMessage(null);
+      placeMarker(jump.lon, jump.lat);
+      map.flyTo({
+        center: [jump.lon, jump.lat],
+        zoom: jump.zoom,
+        duration: 900,
+        essential: true,
+      });
+      map.once("idle", () => {
+        const snapped = snapAndPlacePin(jump.lon, jump.lat, {
+          city: jump.city,
+          state: jump.state,
+          label: `${jump.city}, ${jump.state}`,
+        });
+        reverseGeocode(snapped.lat, snapped.lon);
+      });
+    },
+    [placeMarker, reverseGeocode, snapAndPlacePin]
+  );
+
   const hasPinned = typeof lat === "number" && typeof lon === "number";
 
   return (
@@ -936,7 +971,7 @@ export function LocationMapPicker({
       </div>
 
       {/* All-India Search Bar for jumping the mini-map */}
-      <div ref={searchWrapRef} className="relative">
+      <div ref={searchWrapRef} className="relative space-y-1.5">
         <div className="relative flex items-center">
           <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 pointer-events-none" />
           <input
@@ -1047,6 +1082,21 @@ export function LocationMapPicker({
           )}
         </div>
 
+        {/* Quick Metro Jumps on Mobile & Desktop */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-xs">
+          <span className="text-[11px] font-medium text-neutral-400 shrink-0">Quick jump:</span>
+          {QUICK_INDIA_JUMPS.map((jump) => (
+            <button
+              key={jump.label}
+              type="button"
+              onClick={() => handleQuickJump(jump)}
+              className="shrink-0 px-2.5 py-1 rounded-lg bg-[#141419] hover:bg-[#1c1c24] border border-white/10 hover:border-amber-500/40 text-[11px] font-medium text-neutral-300 hover:text-white transition-all active:scale-95"
+            >
+              {jump.label}
+            </button>
+          ))}
+        </div>
+
         {/* Autosuggestions Popover */}
         {searchOpen && combinedSuggestions.length > 0 && (
           <ul
@@ -1102,7 +1152,7 @@ export function LocationMapPicker({
               type="button"
               onClick={() => handleZoom(1.4)}
               aria-label="Zoom in map"
-              className="w-8 h-8 flex items-center justify-center text-neutral-200 hover:bg-neutral-800 hover:text-white transition-colors border-b border-neutral-800/90"
+              className="w-9 h-9 flex items-center justify-center text-neutral-200 hover:bg-neutral-800 hover:text-white transition-colors border-b border-neutral-800/90"
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -1110,7 +1160,7 @@ export function LocationMapPicker({
               type="button"
               onClick={() => handleZoom(-1.4)}
               aria-label="Zoom out map"
-              className="w-8 h-8 flex items-center justify-center text-neutral-200 hover:bg-neutral-800 hover:text-white transition-colors"
+              className="w-9 h-9 flex items-center justify-center text-neutral-200 hover:bg-neutral-800 hover:text-white transition-colors"
             >
               <Minus className="w-4 h-4" />
             </button>
@@ -1118,8 +1168,13 @@ export function LocationMapPicker({
         </div>
 
         {/* Live Snap Status Pill inside map */}
-        <div className="absolute top-3 left-3 z-10 pointer-events-none px-2.5 py-1 rounded-lg bg-[#09090b]/88 border border-neutral-800/90 backdrop-blur-md text-[11px] font-medium text-neutral-100 max-w-[260px] truncate">
-          {snapBadge || (hasPinned ? "Drag pin or click to refine" : "Click anywhere in India to drop pin")}
+        <div className="absolute top-3 left-3 z-10 pointer-events-none px-2.5 py-1 rounded-lg bg-[#09090b]/88 border border-neutral-800/90 backdrop-blur-md text-[11px] font-medium text-neutral-100 max-w-[260px] truncate shadow-md">
+          {snapBadge || (hasPinned ? "Drag pin or tap road to refine" : "Tap street to place 3D plot")}
+        </div>
+
+        {/* Cooperative gesture guide hint on mobile */}
+        <div className="absolute bottom-2 left-3 z-10 pointer-events-none px-2 py-0.5 rounded-md bg-[#09090b]/80 border border-white/5 backdrop-blur-sm text-[10px] text-neutral-400">
+          2 fingers to pan · 1 finger scrolls page
         </div>
 
         {/* Bottom Coordinate Bar */}
