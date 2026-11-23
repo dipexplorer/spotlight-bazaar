@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import confetti from "canvas-confetti";
 import {
   Store,
@@ -37,6 +36,7 @@ function InstagramIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
     </svg>
   );
 }
+
 import { BusinessStorefront } from "@/types";
 import { CATEGORY_MAP } from "@/lib/constants/categories";
 import {
@@ -107,9 +107,9 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
     setWavesCount((prev) => prev + 1);
 
     confetti({
-      particleCount: 40,
-      spread: 60,
-      origin: { y: 0.8 },
+      particleCount: 35,
+      spread: 55,
+      origin: { y: 0.75 },
     });
 
     try {
@@ -140,67 +140,72 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
 
   return (
     <>
-      {/* Invisible backdrop to dismiss on click outside */}
-      <div
-        onClick={onClose}
-        className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm transition-opacity"
-        aria-hidden="true"
-      />
-
-      {/* Floating Bottom Sheet Card */}
-      <div className="fixed inset-x-0 bottom-0 z-40 p-3 sm:p-5 pointer-events-none pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <div className="max-w-md mx-auto rounded-3xl bg-neutral-950/95 backdrop-blur-2xl border border-neutral-800 p-5 shadow-2xl shadow-black pointer-events-auto flex flex-col gap-4 transition-transform duration-300 ease-out">
-          {/* Subtle Mobile Drag Indicator */}
-          <div className="w-10 h-1 rounded-full bg-neutral-800 mx-auto -mt-1 sm:hidden" />
-
-          {/* Header Row */}
+      {/* 
+        SPATIAL BUSINESS INSPECTOR (Zero full-screen blur, 100% visible crystal-clear 3D world).
+        On Desktop (sm+): Elegantly docked to the top-left below the navbar, leaving the center 3D camera, buildings, and streets completely open.
+        On Mobile: Elegantly anchored to the bottom with safe-area spacing without whole-screen obscuration.
+      */}
+      <aside
+        aria-label={`Storefront dossier for ${storefront.name}`}
+        className="fixed z-30 pointer-events-auto transition-all duration-300 ease-out
+          inset-x-3 bottom-3 sm:inset-x-auto sm:bottom-auto sm:top-20 sm:left-5 sm:w-[390px]
+          max-h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar"
+      >
+        <div className="w-full rounded-3xl bg-neutral-950/80 hover:bg-neutral-950/90 backdrop-blur-2xl backdrop-saturate-150 p-4 sm:p-5 shadow-[0_24px_60px_rgba(0,0,0,0.65)] flex flex-col gap-3.5 transition-all">
+          {/* Header Row: Illuminated Medallion + Brand Soul + Action Controls */}
           <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-12 h-12 rounded-2xl bg-neutral-900 border border-neutral-800 overflow-hidden shrink-0 shadow-md">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+              {/* Illuminated 3D Logo / Storefront Medallion */}
+              <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/25 via-neutral-900/90 to-black p-0.5 shadow-[0_0_20px_rgba(245,158,11,0.25)] shrink-0 overflow-hidden flex items-center justify-center mt-0.5">
                 {storefront.logo_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={storefront.logo_url}
                     alt={storefront.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover rounded-xl"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-neutral-600">
+                  <div className="w-full h-full flex items-center justify-center text-amber-400">
                     <Store className="w-5 h-5" />
                   </div>
                 )}
               </div>
 
-              <div className="flex flex-col min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <h3 className="text-base font-bold text-white tracking-tight truncate">
+              <div className="flex flex-col min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h3 className="text-base sm:text-lg font-bold text-white tracking-tight leading-snug drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                     {storefront.name}
                   </h3>
                   {storefront.is_verified && (
-                    <span title="Verified Studio">
-                      <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span title="Verified Business Studio" className="inline-flex items-center">
+                      <ShieldCheck className="w-4 h-4 text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.5)] shrink-0" />
+                    </span>
+                  )}
+                  {storefront.is_featured && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-semibold shrink-0">
+                      Featured
                     </span>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 text-xs text-neutral-400 mt-0.5 truncate">
-                  <span className="inline-flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-2 text-xs text-neutral-300 mt-1 flex-wrap">
+                  <span className="inline-flex items-center gap-1 shrink-0 text-amber-300/90 font-medium">
                     <MapPin className="w-3 h-3 text-amber-400" />
                     {storefront.city_name}
                   </span>
-                  <span className="text-neutral-600">•</span>
-                  <span className="truncate">{category?.name || "Business"}</span>
+                  <span className="text-neutral-500">•</span>
+                  <span className="text-neutral-300 font-medium">{category?.name || "Open Business"}</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
               {/* Copy Shareable 3D Street Link */}
               <button
                 type="button"
                 onClick={handleShareLink}
                 title="Copy 3D Street Link"
-                className="p-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white transition-colors"
+                className="w-8 h-8 rounded-full bg-white/[0.08] hover:bg-white/[0.15] text-neutral-300 hover:text-white flex items-center justify-center transition-all"
                 aria-label="Share 3D Street Link"
               >
                 {copiedLink ? (
@@ -210,25 +215,26 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
                 )}
               </button>
 
+              {/* Close Button */}
               <button
                 type="button"
                 onClick={onClose}
-                className="p-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white transition-colors"
-                aria-label="Close storefront preview"
+                className="w-8 h-8 rounded-full bg-white/[0.08] hover:bg-white/[0.15] text-neutral-300 hover:text-white flex items-center justify-center transition-all"
+                aria-label="Close storefront inspector"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* Tagline */}
+          {/* Tagline / Business Focus */}
           {storefront.tagline && (
-            <p className="text-xs text-neutral-300 line-clamp-2 leading-relaxed">
+            <p className="text-xs text-neutral-300/90 leading-relaxed font-normal">
               {storefront.tagline}
             </p>
           )}
 
-          {/* Active Live Broadcast Banner (Deals, Coupons, Need Service, Hiring, Events) */}
+          {/* Active Live Broadcast Banner (Deals, Coupons, Urgent Services, Hiring, Events) */}
           {(() => {
             const activePost = (storefront.active_posts || []).find(
               (p) => new Date(p.expires_at).getTime() > Date.now()
@@ -243,9 +249,9 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
               couponCode: activePost.coupon_code,
             });
             return (
-              <div className={`p-3 rounded-2xl border ${bMeta.badgeBg} ${bMeta.badgeBorder} space-y-2`}>
+              <div className={`p-3 rounded-2xl ${bMeta.badgeBg} space-y-2 backdrop-blur-md`}>
                 <div className="flex items-center justify-between gap-2">
-                  <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide ${bMeta.badgeText}`}>
+                  <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${bMeta.badgeText}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${bMeta.dotColor}`} />
                     {bMeta.label}
                   </span>
@@ -268,7 +274,7 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
                         setCopiedCoupon(true);
                         setTimeout(() => setCopiedCoupon(false), 2200);
                       }}
-                      className="px-2.5 py-1.5 rounded-lg bg-black/45 hover:bg-black/65 border border-emerald-400/40 text-[11px] font-mono font-bold text-emerald-200 inline-flex items-center gap-1.5 transition-colors"
+                      className="px-2.5 py-1.5 rounded-lg bg-black/45 hover:bg-black/65 text-[11px] font-mono font-bold text-emerald-300 inline-flex items-center gap-1.5 transition-colors"
                     >
                       <span>{activePost.coupon_code}</span>
                       {copiedCoupon ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
@@ -281,7 +287,7 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
                     onClick={() => {
                       fetch(`/api/posts/${activePost.id}/click`, { method: "POST", keepalive: true }).catch(() => {});
                     }}
-                    className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] font-semibold text-white inline-flex items-center gap-1 transition-colors"
+                    className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold text-white inline-flex items-center gap-1 transition-colors"
                   >
                     <span>{bMeta.defaultCta}</span>
                     <ExternalLink className="w-3 h-3" />
@@ -291,96 +297,99 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
             );
           })()}
 
-          {/* Rate & Live Wave Bar */}
-          <div className="flex items-center justify-between gap-2 p-3 rounded-2xl bg-neutral-900/70 border border-neutral-800/90">
+          {/* Rate & Live Wave Bar — Pure Seamless Frosted Pill */}
+          <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-white/[0.04] backdrop-blur-md">
             <div className="flex flex-col">
-              <span className="text-[11px] text-neutral-400">Starting Rate</span>
-              <span className="text-sm font-semibold text-amber-400 tabular-nums">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">Starting Rate</span>
+              <span className="text-sm font-extrabold text-amber-400 tabular-nums drop-shadow-[0_0_12px_rgba(245,158,11,0.35)]">
                 {storefront.starting_price || "Rates on Request"}
               </span>
             </div>
 
-            {/* Social Wave / Like Button */}
+            {/* Social Wave / Like Button (Exponential ease scale micro-interaction, zero tacky bounce) */}
             <button
               type="button"
               onClick={handleWave}
-              className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 duration-200 ${
                 hasWaved
-                  ? "bg-rose-500/10 border-rose-500/30 text-rose-400"
-                  : "bg-neutral-800 hover:bg-neutral-750 border-neutral-700 text-white"
+                  ? "bg-rose-500/20 text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.3)]"
+                  : "bg-white/[0.08] hover:bg-white/[0.15] text-white"
               }`}
             >
               <Heart
-                className={`w-3.5 h-3.5 ${
-                  hasWaved ? "fill-rose-500 text-rose-500 animate-bounce" : "text-neutral-400"
+                className={`w-3.5 h-3.5 transition-colors ${
+                  hasWaved ? "fill-rose-400 text-rose-400" : "text-neutral-300"
                 }`}
               />
               <span>{hasWaved ? "Waved!" : "Wave"}</span>
-              <span className="text-[11px] font-mono text-neutral-400 tabular-nums">
+              <span className="text-[11px] font-mono text-neutral-300 tabular-nums">
                 ({wavesCount})
               </span>
             </button>
           </div>
 
-          {/* Direct Verified Business Channels (Official Site, Instagram, Directions) */}
+          {/* Direct Verified Business Channels — Balanced 3-Column Symmetrical Grid */}
           {(normalizeExternalUrl(storefront.website_url) ||
             getInstagramUrl(storefront.instagram_handle) ||
             getGoogleMapsUrl(storefront)) && (
-            <div className="flex flex-wrap items-center gap-2">
-              {normalizeExternalUrl(storefront.website_url) && (
+            <div className="grid grid-cols-3 gap-2">
+              {normalizeExternalUrl(storefront.website_url) ? (
                 <a
                   href={normalizeExternalUrl(storefront.website_url)!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 min-w-[140px] py-2 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 hover:text-amber-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                  title={`Visit ${formatWebsiteDisplay(storefront.website_url)}`}
+                  className="py-2 px-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 hover:text-amber-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm min-w-0"
                 >
                   <Globe className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span className="truncate">{formatWebsiteDisplay(storefront.website_url)}</span>
+                  <span className="truncate">Website</span>
                   <ExternalLink className="w-3 h-3 text-amber-400/80 shrink-0" />
                 </a>
-              )}
+              ) : <div />}
 
-              {getInstagramUrl(storefront.instagram_handle) && (
+              {getInstagramUrl(storefront.instagram_handle) ? (
                 <a
                   href={getInstagramUrl(storefront.instagram_handle)!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 min-w-[120px] py-2 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-neutral-200 hover:text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
+                  title="Follow on Instagram"
+                  className="py-2 px-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-rose-200 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors min-w-0"
                 >
                   <InstagramIcon className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                  <span className="truncate">@{storefront.instagram_handle?.replace(/^@/, "")}</span>
+                  <span className="truncate">Instagram</span>
                   <ExternalLink className="w-3 h-3 text-neutral-400 shrink-0" />
                 </a>
-              )}
+              ) : <div />}
 
-              {getGoogleMapsUrl(storefront) && (
+              {getGoogleMapsUrl(storefront) ? (
                 <a
                   href={getGoogleMapsUrl(storefront)!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 min-w-[110px] py-2 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-neutral-200 hover:text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
+                  title="Get Directions on Google Maps"
+                  className="py-2 px-2.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 hover:text-sky-200 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors min-w-0"
                 >
                   <Navigation className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-                  <span>Directions</span>
+                  <span className="truncate">Directions</span>
                   <ExternalLink className="w-3 h-3 text-neutral-400 shrink-0" />
                 </a>
-              )}
+              ) : <div />}
             </div>
           )}
 
-          {/* Primary High-Intent CTA */}
-          <div className="pt-1">
+          {/* Primary High-Conversion Luxury WhatsApp CTA */}
+          <div className="pt-0.5">
             <button
               type="button"
               onClick={handleWhatsApp}
-              className="w-full min-h-[46px] py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-950/50 focus-visible:ring-2 focus-visible:ring-emerald-400"
+              className="w-full h-11 px-5 rounded-2xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-[0.99] text-white font-bold text-xs tracking-wide flex items-center justify-center gap-2.5 shadow-[0_8px_24px_rgba(16,185,129,0.35)] transition-all focus-visible:ring-2 focus-visible:ring-emerald-400"
             >
-              <MessageCircle className="w-4 h-4 fill-white/20" />
+              <MessageCircle className="w-4 h-4 fill-white/25" />
               <span>Chat on WhatsApp · Direct Inquiry</span>
             </button>
           </div>
         </div>
-      </div>
+      </aside>
     </>
   );
 }

@@ -52,10 +52,10 @@ export function StorefrontDialogueModal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="relative w-full max-w-lg bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden p-6 text-white max-h-[85vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 pointer-events-none flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="relative w-full max-w-lg bg-neutral-950/85 backdrop-blur-2xl rounded-t-3xl sm:rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.65)] pointer-events-auto overflow-hidden p-6 text-white max-h-[85vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-start justify-between pb-4 border-b border-slate-800">
+        <div className="flex items-start justify-between pb-4 border-b border-white/10">
           <div>
             <div className="flex items-center gap-2">
               <span className="font-mono text-xs font-semibold text-amber-400">

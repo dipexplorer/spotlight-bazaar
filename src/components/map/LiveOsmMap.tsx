@@ -4145,7 +4145,7 @@ export function LiveOsmMap({
                 <button
                   type="button"
                   onClick={() => flyToStorefront(nearestToCenter.storefront)}
-                  className="px-3.5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md"
+                  className="px-3.5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Visit {nearestToCenter.storefront.name}</span>
@@ -4153,7 +4153,7 @@ export function LiveOsmMap({
               ) : (
                 <Link
                   href="/register"
-                  className="px-3.5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md"
+                  className="px-3.5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Claim First Plot</span>
@@ -4165,7 +4165,51 @@ export function LiveOsmMap({
 
         {/* STATE C: STREET / SINGLE BUSINESS PLOT VIEW (Dynamic for whichever business is focused — never falsely shows Nerqiva in another city!) */}
         {viewLevel === "street" && activeStreetBusiness && (
-          <>
+          activeStorefront ? (
+            /* When the left Storefront Dossier is open, render a compact floating exploration bar */
+            <div className="px-4 py-2 rounded-full bg-neutral-950/70 hover:bg-neutral-950/80 backdrop-blur-xl backdrop-saturate-150 shadow-[0_12px_36px_rgba(0,0,0,0.5)] flex items-center gap-2.5 pointer-events-auto transition-all">
+              <button
+                type="button"
+                onClick={() => {
+                  const nextWalk = !isWalkMode;
+                  if (nextWalk) {
+                    enterThirdPersonWalkMode(true);
+                    showToast("🚶 3rd-Person POV · W/S move · A/D turn · Shift sprint");
+                  } else {
+                    handleStopMove();
+                    handleResetCamera();
+                  }
+                }}
+                className={`h-8.5 px-3.5 rounded-full text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                  isWalkMode
+                    ? "bg-amber-500/25 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                    : "bg-white/[0.08] hover:bg-white/[0.15] text-white"
+                }`}
+              >
+                <Footprints className="w-3.5 h-3.5 text-amber-400" />
+                <span>{isWalkMode ? "Exit Walk" : "Walk (WASD)"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setDialogueStorefront(activeStreetBusiness)}
+                className="h-8.5 px-3 rounded-full bg-white/[0.08] hover:bg-white/[0.15] text-xs font-semibold text-white flex items-center justify-center gap-1.5 transition-all"
+                title={`Talk to ${activeStreetBusiness.name}`}
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
+                <span>Talk</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResetCamera}
+                title="Reset 3D Street View"
+                className="h-8.5 w-8.5 rounded-full bg-white/[0.08] hover:bg-white/[0.15] text-xs font-semibold text-neutral-300 hover:text-white flex items-center justify-center transition-all"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
             <div className="w-full max-w-lg p-3.5 sm:p-4 rounded-2xl bg-neutral-950/50 hover:bg-neutral-950/60 backdrop-blur-xl backdrop-saturate-150 shadow-[0_16px_40px_rgba(0,0,0,0.5)] flex flex-col gap-3 pointer-events-auto transition-all">
               {/* Status Row */}
               <div className="flex items-center justify-between gap-3">
@@ -4302,7 +4346,7 @@ export function LiveOsmMap({
                 </div>
               )}
             </div>
-          </>
+          )
         )}
 
         {/* STATE C2: STREET LEVEL ON AN UNCLAIMED AREA (e.g. searched PIN 400001 / Mumbai street) */}
@@ -4323,7 +4367,7 @@ export function LiveOsmMap({
             </div>
             <Link
               href="/register"
-              className="px-3.5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 shrink-0 transition-all"
+              className="px-3.5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold text-xs flex items-center gap-1.5 shrink-0 transition-all"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Claim First Plot</span>
