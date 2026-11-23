@@ -111,112 +111,116 @@ export function StorefrontView({ initialStorefront, slug }: StorefrontViewProps)
       )}
 
       {/* Top Navigation */}
-      <header className="max-w-3xl mx-auto px-4 py-3.5 flex items-center justify-between border-b border-neutral-800/80">
-        <Link
-          href={`/?city=${storefront.city_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}&shop=${storefront.slug}`}
-          className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4 text-neutral-400" />
-          <span>Back to <span className="text-white font-medium">{storefront.city_name} 3D Street</span></span>
-        </Link>
+      <header className="sticky top-0 z-20 bg-[#09090b]/92 backdrop-blur-xl border-b border-white/[0.08]">
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <Link
+            href={`/?city=${storefront.city_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}&shop=${storefront.slug}`}
+            className="inline-flex items-center gap-1.5 text-xs text-neutral-300 hover:text-white transition-colors truncate min-w-0"
+          >
+            <ArrowLeft className="w-4 h-4 text-neutral-400 shrink-0" />
+            <span className="truncate">Back to <strong className="text-white font-semibold">{storefront.city_name} Street</strong></span>
+          </Link>
 
-        <Link
-          href={`/?city=${storefront.city_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}&shop=${storefront.slug}`}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-semibold transition-all shadow-sm"
-        >
-          <Compass className="w-3.5 h-3.5 text-amber-400" />
-          <span>View on 3D Map</span>
-        </Link>
+          <Link
+            href={`/?city=${storefront.city_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}&shop=${storefront.slug}`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-bold transition-all shadow-sm shrink-0 active:scale-95"
+          >
+            <Compass className="w-3.5 h-3.5 text-amber-400" />
+            <span>View on 3D Map</span>
+          </Link>
+        </div>
       </header>
 
       {/* Main Container */}
-      <div className="max-w-3xl mx-auto p-4 md:p-6 flex flex-col gap-8">
+      <div className="max-w-3xl mx-auto p-4 sm:p-6 flex flex-col gap-6 sm:gap-8">
         {/* Hero Header Section */}
-        <section className="flex flex-col sm:flex-row items-start sm:items-center gap-5 pt-2">
-          <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br from-amber-500/25 via-neutral-900 to-black p-0.5 shadow-[0_0_24px_rgba(245,158,11,0.25)] shrink-0 overflow-hidden flex items-center justify-center">
-            {storefront.logo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={storefront.logo_url === "/mascot.jpg" ? "/mascot-avatar.png" : storefront.logo_url}
-                alt={storefront.name}
-                className="w-full h-full object-cover rounded-[22px]"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-amber-400">
-                <Store className="w-8 h-8" />
+        <section className="flex flex-col gap-3.5 pt-1">
+          <div className="flex items-start gap-3.5 sm:gap-4">
+            <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-amber-500/25 via-neutral-900 to-black p-0.5 shadow-[0_0_24px_rgba(245,158,11,0.2)] shrink-0 overflow-hidden flex items-center justify-center">
+              {storefront.logo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={storefront.logo_url === "/mascot.jpg" ? "/mascot-avatar.png" : storefront.logo_url}
+                  alt={storefront.name}
+                  className="w-full h-full object-cover rounded-[14px]"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-amber-400">
+                  <Store className="w-7 h-7" />
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white truncate">
+                  {storefront.name}
+                </h1>
+                {storefront.is_verified && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-semibold text-emerald-400 shrink-0">
+                    <ShieldCheck className="w-3 h-3" />
+                    <span>Verified Studio</span>
+                  </span>
+                )}
               </div>
-            )}
+
+              {storefront.tagline && (
+                <p className="text-xs sm:text-sm text-neutral-300 font-normal leading-relaxed mt-1">
+                  {storefront.tagline}
+                </p>
+              )}
+            </div>
           </div>
 
-          <div className="flex-1 flex flex-col gap-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-                {storefront.name}
-              </h1>
-              {storefront.is_verified && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-medium text-emerald-400">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Verified Studio</span>
-                </span>
-              )}
-            </div>
+          {/* Badges / Micro Channels in a clean horizontal wrap */}
+          <div className="flex flex-wrap items-center gap-1.5 text-xs pt-0.5">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#111116] border border-white/10 text-neutral-200">
+              <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
+              <span className="font-semibold">{storefront.city_name}</span>
+              {storefront.pincode && <span className="text-neutral-400 font-mono text-[11px]">({storefront.pincode})</span>}
+            </span>
 
-            {storefront.tagline && (
-              <p className="text-sm text-neutral-300 font-normal leading-relaxed">
-                {storefront.tagline}
-              </p>
+            <span className="px-2.5 py-1 rounded-lg bg-[#111116] border border-white/10 text-neutral-300 font-medium">
+              {category?.name || "Business"}
+            </span>
+
+            {storefront.instagram_handle && (
+              <a
+                href={`https://instagram.com/${storefront.instagram_handle}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#111116] border border-white/10 hover:border-pink-500/40 text-neutral-300 hover:text-white transition-colors"
+              >
+                <InstagramIcon className="w-3 h-3 text-pink-400" />
+                <span>@{storefront.instagram_handle}</span>
+              </a>
             )}
 
-            {/* Badges / Metadata */}
-            <div className="flex flex-wrap items-center gap-2.5 pt-1 text-xs text-neutral-300">
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-neutral-900 border border-neutral-800">
-                <MapPin className="w-3.5 h-3.5 text-amber-400" />
-                <span>{storefront.city_name}</span>
-                {storefront.pincode && <span className="text-neutral-400 font-mono">({storefront.pincode})</span>}
-              </span>
+            {normalizeExternalUrl(storefront.website_url) && (
+              <a
+                href={normalizeExternalUrl(storefront.website_url)!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/12 border border-amber-500/35 hover:bg-amber-500/20 text-amber-300 transition-colors"
+              >
+                <Globe className="w-3 h-3 text-amber-400" />
+                <span>{formatWebsiteDisplay(storefront.website_url)}</span>
+                <ExternalLink className="w-2.5 h-2.5 ml-0.5" />
+              </a>
+            )}
 
-              <span className="px-2.5 py-1 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-300">
-                {category?.name || "Business"}
-              </span>
-
-              {storefront.instagram_handle && (
-                <a
-                  href={`https://instagram.com/${storefront.instagram_handle}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-neutral-300 hover:text-white transition-colors"
-                >
-                  <InstagramIcon className="w-3.5 h-3.5 text-pink-400" />
-                  <span>@{storefront.instagram_handle}</span>
-                </a>
-              )}
-
-              {normalizeExternalUrl(storefront.website_url) && (
-                <a
-                  href={normalizeExternalUrl(storefront.website_url)!}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/12 border border-amber-500/35 hover:bg-amber-500/20 text-amber-300 transition-colors"
-                >
-                  <Globe className="w-3.5 h-3.5 text-amber-400" />
-                  <span>{formatWebsiteDisplay(storefront.website_url)}</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
-
-              {getGoogleMapsUrl(storefront) && (
-                <a
-                  href={getGoogleMapsUrl(storefront)!}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-sky-500/10 border border-sky-500/30 hover:bg-sky-500/20 text-sky-300 transition-colors"
-                >
-                  <Navigation className="w-3.5 h-3.5 text-sky-400" />
-                  <span>{storefront.google_maps_url ? "Google Maps" : "Directions"}</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
-            </div>
+            {getGoogleMapsUrl(storefront) && (
+              <a
+                href={getGoogleMapsUrl(storefront)!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-500/10 border border-sky-500/30 hover:bg-sky-500/20 text-sky-300 transition-colors"
+              >
+                <Navigation className="w-3 h-3 text-sky-400" />
+                <span>Directions</span>
+                <ExternalLink className="w-2.5 h-2.5 ml-0.5" />
+              </a>
+            )}
           </div>
         </section>
 
@@ -297,57 +301,59 @@ export function StorefrontView({ initialStorefront, slug }: StorefrontViewProps)
           );
         })()}
 
-        {/* Rate Card & Discovery Activity */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        {/* Rate Card & Discovery Activity: Side-by-side on mobile! */}
+        <section className="grid grid-cols-2 gap-2.5 sm:gap-4">
           {/* Starting Rate Card */}
-          <div className="p-4 sm:p-5 rounded-3xl bg-neutral-950/80 border border-neutral-800 flex flex-col justify-between shadow-lg backdrop-blur-sm">
-            <span className="text-xs text-neutral-400">
+          <div className="p-3.5 sm:p-5 rounded-2xl bg-[#0c0c10] border border-white/10 flex flex-col justify-between shadow-sm">
+            <span className="text-[10px] sm:text-xs font-semibold text-neutral-400 uppercase tracking-wider">
               Starting Package
             </span>
-            <div className="my-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-amber-400 tabular-nums">
+            <div className="my-1.5">
+              <span className="text-sm sm:text-2xl font-bold text-amber-400 tabular-nums leading-snug">
                 {storefront.starting_price || "Rates on Request"}
               </span>
             </div>
-            <p className="text-[11px] text-neutral-400">
-              Transparent rate tier. Direct client booking with zero middleman commissions.
+            <p className="text-[10px] sm:text-xs text-neutral-400 line-clamp-1">
+              Zero middleman commissions
             </p>
           </div>
 
           {/* Social Discovery Proof */}
-          <div className="p-4 sm:p-5 rounded-3xl bg-neutral-950/80 border border-neutral-800 flex flex-col justify-between shadow-lg backdrop-blur-sm">
-            <span className="text-xs text-neutral-400">
-              Activity & Discovery
+          <div className="p-3.5 sm:p-5 rounded-2xl bg-[#0c0c10] border border-white/10 flex flex-col justify-between shadow-sm">
+            <span className="text-[10px] sm:text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+              Activity &amp; Discovery
             </span>
-            <div className="my-2 flex items-center gap-2">
-              <Eye className="w-5 h-5 text-amber-400" />
-              <span className="text-2xl font-bold text-white tabular-nums">
+            <div className="my-1.5 flex items-center gap-1.5">
+              <Eye className="w-4 h-4 text-amber-400 shrink-0" />
+              <span className="text-sm sm:text-2xl font-bold text-white tabular-nums leading-snug">
                 {storefront.total_views || 1}
               </span>
-              <span className="text-xs text-neutral-400">clients viewed this month</span>
+              <span className="text-[10px] sm:text-xs text-neutral-400 truncate">views</span>
             </div>
-            <p className="text-[11px] text-neutral-400">
-              Inquiries are routed directly to the business owner on WhatsApp.
+            <p className="text-[10px] sm:text-xs text-neutral-400 line-clamp-1">
+              Direct owner inquiries
             </p>
           </div>
         </section>
 
         {/* Immersive 3D Street Location Banner */}
-        <section className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-neutral-950 via-neutral-900 to-amber-950/30 border border-amber-500/25 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+        <section className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#0c0c10] via-[#121218] to-amber-950/20 border border-amber-500/25 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 shadow-md">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
               <Compass className="w-5 h-5" />
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-white">Located on {storefront.city_name} 3D High Street</h3>
-              <p className="text-xs text-neutral-400">
-                Explore surrounding shops, walkable street view, and spatial architecture.
+            <div className="min-w-0">
+              <h3 className="text-xs sm:text-sm font-bold text-white truncate">
+                Located on {storefront.city_name} 3D High Street
+              </h3>
+              <p className="text-[11px] sm:text-xs text-neutral-400 mt-0.5 line-clamp-1">
+                Explore surrounding shops and walkable spatial architecture.
               </p>
             </div>
           </div>
           <Link
             href={`/?city=${storefront.city_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}&shop=${storefront.slug}`}
-            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shrink-0"
+            className="w-full sm:w-auto min-h-[44px] px-5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 shrink-0"
           >
             <span>Fly to 3D Plot</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -356,11 +362,11 @@ export function StorefrontView({ initialStorefront, slug }: StorefrontViewProps)
 
         {/* About Business Section */}
         {storefront.description && (
-          <section className="flex flex-col gap-2.5">
-            <h2 className="text-sm font-semibold text-white tracking-tight">
+          <section className="space-y-2">
+            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-neutral-400">
               About the Business
             </h2>
-            <p className="text-sm text-neutral-300 leading-relaxed whitespace-pre-line p-5 rounded-3xl bg-neutral-950 border border-neutral-800 shadow-md">
+            <p className="text-xs sm:text-sm text-neutral-200 leading-relaxed whitespace-pre-line p-4 sm:p-5 rounded-2xl bg-[#0c0c10] border border-white/10 shadow-sm">
               {storefront.description}
             </p>
           </section>
@@ -369,10 +375,10 @@ export function StorefrontView({ initialStorefront, slug }: StorefrontViewProps)
         {/* Portfolio Showcase Gallery */}
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-white tracking-tight">
+            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-neutral-400">
               Selected Work ({storefront.portfolio?.length || 0})
             </h2>
-            <span className="text-xs text-neutral-400">Tap to enlarge</span>
+            <span className="text-[11px] text-neutral-400">Tap to enlarge</span>
           </div>
 
           <PortfolioLightbox
@@ -382,10 +388,10 @@ export function StorefrontView({ initialStorefront, slug }: StorefrontViewProps)
         </section>
 
         {/* Trust Guarantee Banner */}
-        <section className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 flex items-start gap-3 text-xs text-neutral-300">
+        <section className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex items-start gap-3 text-xs text-neutral-300">
           <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
           <div className="flex flex-col gap-0.5">
-            <span className="font-semibold text-emerald-300">Direct Client Guarantee</span>
+            <span className="font-bold text-emerald-300">Direct Client Guarantee</span>
             <p className="text-[11px] text-neutral-400 leading-relaxed">
               When you message this business, your inquiry is sent directly and exclusively to their official WhatsApp. We never sell your contact info to call centers or competitors.
             </p>
