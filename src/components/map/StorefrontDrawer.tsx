@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import confetti from "canvas-confetti";
 import {
   Store,
@@ -16,6 +17,8 @@ import {
   Navigation,
   Copy,
   Clock,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
 
 function InstagramIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
@@ -148,8 +151,8 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
       <aside
         aria-label={`Storefront dossier for ${storefront.name}`}
         className="fixed z-30 pointer-events-auto transition-all duration-300 ease-out
-          inset-x-3 bottom-3 sm:inset-x-auto sm:bottom-auto sm:top-20 sm:left-5 sm:w-[390px]
-          max-h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar"
+          inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] sm:inset-x-auto sm:bottom-auto sm:top-20 sm:left-5 sm:w-[390px]
+          max-h-[80vh] sm:max-h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar"
       >
         <div className="w-full rounded-3xl bg-neutral-950/80 hover:bg-neutral-950/90 backdrop-blur-2xl backdrop-saturate-150 p-4 sm:p-5 shadow-[0_24px_60px_rgba(0,0,0,0.65)] flex flex-col gap-3.5 transition-all">
           {/* Header Row: Illuminated Medallion + Brand Soul + Action Controls */}
@@ -160,7 +163,7 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
                 {storefront.logo_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={storefront.logo_url}
+                    src={storefront.logo_url === "/mascot.jpg" ? "/mascot-avatar.png" : storefront.logo_url}
                     alt={storefront.name}
                     className="w-full h-full object-cover rounded-xl"
                   />
@@ -328,22 +331,22 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
             </button>
           </div>
 
-          {/* Direct Verified Business Channels — Balanced 3-Column Symmetrical Grid */}
+          {/* Direct Verified Business Channels — Symmetrical, Responsive Grid */}
           {(normalizeExternalUrl(storefront.website_url) ||
             getInstagramUrl(storefront.instagram_handle) ||
             getGoogleMapsUrl(storefront)) && (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
               {normalizeExternalUrl(storefront.website_url) ? (
                 <a
                   href={normalizeExternalUrl(storefront.website_url)!}
                   target="_blank"
                   rel="noopener noreferrer"
                   title={`Visit ${formatWebsiteDisplay(storefront.website_url)}`}
-                  className="py-2 px-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 hover:text-amber-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm min-w-0"
+                  className="py-2 px-1.5 sm:px-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 hover:text-amber-200 font-semibold text-xs flex items-center justify-center gap-1 sm:gap-1.5 transition-colors shadow-sm min-w-0"
                 >
                   <Globe className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                   <span className="truncate">Website</span>
-                  <ExternalLink className="w-3 h-3 text-amber-400/80 shrink-0" />
+                  <ExternalLink className="w-3 h-3 text-amber-400/80 shrink-0 hidden xs:inline" />
                 </a>
               ) : <div />}
 
@@ -353,11 +356,12 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
                   target="_blank"
                   rel="noopener noreferrer"
                   title="Follow on Instagram"
-                  className="py-2 px-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-rose-200 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors min-w-0"
+                  className="py-2 px-1.5 sm:px-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-rose-200 font-medium text-xs flex items-center justify-center gap-1 sm:gap-1.5 transition-colors min-w-0"
                 >
                   <InstagramIcon className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                  <span className="truncate">Instagram</span>
-                  <ExternalLink className="w-3 h-3 text-neutral-400 shrink-0" />
+                  <span className="truncate sm:inline hidden">Instagram</span>
+                  <span className="truncate sm:hidden inline">Insta</span>
+                  <ExternalLink className="w-3 h-3 text-neutral-400 shrink-0 hidden xs:inline" />
                 </a>
               ) : <div />}
 
@@ -367,25 +371,67 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
                   target="_blank"
                   rel="noopener noreferrer"
                   title="Get Directions on Google Maps"
-                  className="py-2 px-2.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 hover:text-sky-200 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors min-w-0"
+                  className="py-2 px-1.5 sm:px-2.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 hover:text-sky-200 font-medium text-xs flex items-center justify-center gap-1 sm:gap-1.5 transition-colors min-w-0"
                 >
                   <Navigation className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-                  <span className="truncate">Directions</span>
-                  <ExternalLink className="w-3 h-3 text-neutral-400 shrink-0" />
+                  <span className="truncate sm:inline hidden">Directions</span>
+                  <span className="truncate sm:hidden inline">Maps</span>
+                  <ExternalLink className="w-3 h-3 text-neutral-400 shrink-0 hidden xs:inline" />
                 </a>
               ) : <div />}
             </div>
           )}
 
-          {/* Primary High-Conversion Luxury WhatsApp CTA */}
-          <div className="pt-0.5">
+          {/* Portfolio Showcase Mini-Strip */}
+          {storefront.portfolio && storefront.portfolio.length > 0 && (
+            <div className="flex flex-col gap-1.5 pt-0.5">
+              <div className="flex items-center justify-between text-[11px] text-neutral-400 px-0.5">
+                <span className="font-medium text-neutral-300">Selected Work</span>
+                <Link
+                  href={`/b/${storefront.slug}`}
+                  className="text-amber-400 hover:text-amber-300 font-medium flex items-center gap-1 transition-colors"
+                >
+                  <span>All {storefront.portfolio.length} Projects</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {storefront.portfolio.slice(0, 3).map((item, idx) => (
+                  <Link
+                    key={item.id || idx}
+                    href={`/b/${storefront.slug}`}
+                    className="relative aspect-video rounded-xl overflow-hidden bg-neutral-900 border border-white/5 hover:border-amber-500/40 transition-colors group"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.image_url}
+                      alt={item.caption || "Portfolio preview"}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Primary High-Conversion Dual CTAs: Full Showroom + WhatsApp */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+            <Link
+              href={`/b/${storefront.slug}`}
+              className="h-11 px-4 rounded-2xl bg-white/[0.08] hover:bg-white/[0.14] active:scale-[0.99] text-white font-semibold text-xs tracking-wide flex items-center justify-center gap-2 transition-all shadow-sm border border-white/5"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>Full Showroom &amp; Work</span>
+              <ExternalLink className="w-3 h-3 text-neutral-400 shrink-0" />
+            </Link>
+
             <button
               type="button"
               onClick={handleWhatsApp}
-              className="w-full h-11 px-5 rounded-2xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-[0.99] text-white font-bold text-xs tracking-wide flex items-center justify-center gap-2.5 shadow-[0_8px_24px_rgba(16,185,129,0.35)] transition-all focus-visible:ring-2 focus-visible:ring-emerald-400"
+              className="h-11 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-[0.99] text-white font-bold text-xs tracking-wide flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(16,185,129,0.35)] transition-all focus-visible:ring-2 focus-visible:ring-emerald-400"
             >
-              <MessageCircle className="w-4 h-4 fill-white/25" />
-              <span>Chat on WhatsApp · Direct Inquiry</span>
+              <MessageCircle className="w-4 h-4 fill-white/25 shrink-0" />
+              <span>Chat on WhatsApp</span>
             </button>
           </div>
         </div>

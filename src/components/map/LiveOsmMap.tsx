@@ -3710,10 +3710,10 @@ export function LiveOsmMap({
       <div ref={mapContainerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
       {/* 2. TOP UNIFIED COMMAND BAR (Bespoke Seamless Translucent Spatial Architecture) */}
-      <header className="absolute top-3 sm:top-4 inset-x-3 sm:inset-x-5 z-20 pointer-events-none flex justify-center">
-        <div className="w-full max-w-screen-2xl h-14 px-3.5 sm:px-5 rounded-2xl bg-neutral-950/40 hover:bg-neutral-950/50 backdrop-blur-xl backdrop-saturate-150 shadow-[0_12px_36px_rgba(0,0,0,0.35)] flex items-center justify-between gap-3 sm:gap-5 pointer-events-auto transition-all">
+      <header className="absolute top-2.5 sm:top-4 inset-x-2.5 sm:inset-x-5 z-20 pointer-events-none flex justify-center">
+        <div className="w-full max-w-screen-2xl h-13 sm:h-14 px-2.5 sm:px-5 rounded-2xl bg-neutral-950/40 hover:bg-neutral-950/50 backdrop-blur-xl backdrop-saturate-150 shadow-[0_12px_36px_rgba(0,0,0,0.35)] flex items-center justify-between gap-1.5 sm:gap-4 pointer-events-auto transition-all">
           {/* Left: Brand Identity & Spatial Breadcrumb (Zero clutter, zero lines) */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <Link
               href="/"
               onClick={(e) => {
@@ -3722,10 +3722,10 @@ export function LiveOsmMap({
                   handleResetToIndia();
                 }
               }}
-              className="flex items-center gap-2.5 px-1 py-1 rounded-xl hover:bg-white/[0.08] transition-all group shrink-0"
+              className="flex items-center gap-2 sm:gap-2.5 px-1 py-1 rounded-xl hover:bg-white/[0.08] transition-all group shrink-0"
             >
               {/* Illuminated 3D Mascot Medallion — High-craft, visible, crystal-clear brand soul */}
-              <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-amber-500/35 via-neutral-900/90 to-black/80 p-0.5 shadow-[0_0_16px_rgba(245,158,11,0.35)] group-hover:shadow-[0_0_22px_rgba(245,158,11,0.55)] transition-all shrink-0 overflow-hidden flex items-center justify-center backdrop-blur-sm">
+              <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-amber-500/35 via-neutral-900/90 to-black/80 p-0.5 shadow-[0_0_16px_rgba(245,158,11,0.35)] group-hover:shadow-[0_0_22px_rgba(245,158,11,0.55)] transition-all shrink-0 overflow-hidden flex items-center justify-center backdrop-blur-sm">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-white/15 pointer-events-none z-10" />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -3735,8 +3735,8 @@ export function LiveOsmMap({
                 />
               </div>
 
-              <span className="text-base sm:text-lg font-bold text-white tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                Spotlight <span className="text-amber-400 font-extrabold drop-shadow-[0_0_10px_rgba(245,158,11,0.4)]">Bazaar</span>
+              <span className="text-sm sm:text-base md:text-lg font-bold text-white tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                Spotlight <span className="hidden sm:inline text-amber-400 font-extrabold drop-shadow-[0_0_10px_rgba(245,158,11,0.4)]">Bazaar</span>
               </span>
             </Link>
 
@@ -3745,7 +3745,7 @@ export function LiveOsmMap({
                 type="button"
                 onClick={handleResetToIndia}
                 title="Return to 3D All-India Overview"
-                className="h-8.5 px-2.5 sm:px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-200 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm shrink-0 backdrop-blur-sm"
+                className="h-8 sm:h-8.5 px-2 sm:px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-200 text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-all shadow-sm shrink-0 backdrop-blur-sm"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">All India</span>
@@ -3754,15 +3754,15 @@ export function LiveOsmMap({
           </div>
 
           {/* Center: Unconstrained Omnibox Command Search (Seamless Borderless Frosted Glass) */}
-          <div ref={searchBoxRef} className="relative flex-1 max-w-xl lg:max-w-2xl min-w-[240px] mx-2 sm:mx-4">
+          <div ref={searchBoxRef} className="relative flex-1 max-w-xl lg:max-w-2xl min-w-0 mx-1 sm:mx-4">
             <div className="relative flex items-center">
-              <Search className="absolute left-3.5 w-4 h-4 text-neutral-300 pointer-events-none group-focus-within:text-amber-400 transition-colors" />
+              <Search className="absolute left-2.5 sm:left-3.5 w-3.5 sm:w-4 h-3.5 sm:h-4 text-neutral-300 pointer-events-none group-focus-within:text-amber-400 transition-colors" />
               <input
                 id="spotlight-bazaar-search"
                 name="searchQuery"
                 type="text"
                 aria-label="Search business, city, state, area, or PIN code"
-                placeholder="Search business, city, state, or PIN..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -3790,7 +3790,7 @@ export function LiveOsmMap({
                     if (chosen) selectSuggestion(chosen);
                   }
                 }}
-                className="w-full pl-10 pr-12 h-10 rounded-xl bg-black/30 hover:bg-black/45 focus:bg-black/60 text-white text-xs sm:text-[13px] placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-amber-500/40 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)] backdrop-blur-md"
+                className="w-full pl-7 sm:pl-10 pr-7 sm:pr-12 h-9 sm:h-10 rounded-xl bg-black/30 hover:bg-black/45 focus:bg-black/60 text-white text-xs sm:text-[13px] placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-amber-500/40 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)] backdrop-blur-md"
               />
               {searchQuery ? (
                 <button
@@ -3966,11 +3966,11 @@ export function LiveOsmMap({
             {/* Primary Commercial CTA */}
             <Link
               href="/register"
-              className="flex items-center gap-1.5 h-9.5 px-3.5 sm:px-4 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:via-amber-400 hover:to-amber-500 text-neutral-950 font-extrabold text-xs shadow-[0_2px_14px_rgba(245,158,11,0.4)] hover:shadow-[0_4px_22px_rgba(245,158,11,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0"
+              className="flex items-center gap-1 sm:gap-1.5 h-8.5 sm:h-9.5 px-2.5 sm:px-4 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:via-amber-400 hover:to-amber-500 text-neutral-950 font-extrabold text-xs shadow-[0_2px_14px_rgba(245,158,11,0.4)] hover:shadow-[0_4px_22px_rgba(245,158,11,0.6)] active:scale-[0.98] transition-all shrink-0"
             >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <Plus className="w-3.5 sm:w-4 h-3.5 sm:h-4 stroke-[2.5]" />
               <span className="hidden sm:inline">Open a Shop</span>
-              <span className="sm:hidden">Open</span>
+              <span className="sm:hidden font-bold">Open</span>
             </Link>
           </div>
         </div>
@@ -3979,7 +3979,7 @@ export function LiveOsmMap({
       {/* 2B. FLOATING SPATIAL MAP CONTROLS DOCK (Right Edge — Seamless Frosted Glass, No Line) */}
       <aside
         aria-label="3D Map Viewport Controls"
-        className="absolute top-20 sm:top-22 right-3 sm:right-5 z-20 flex flex-col items-center gap-1.5 p-1 rounded-2xl bg-neutral-950/40 hover:bg-neutral-950/50 backdrop-blur-xl backdrop-saturate-150 shadow-[0_12px_36px_rgba(0,0,0,0.35)] pointer-events-auto transition-all"
+        className="absolute top-18 sm:top-22 right-2.5 sm:right-5 z-20 flex flex-col items-center gap-1.5 p-1 rounded-2xl bg-neutral-950/40 hover:bg-neutral-950/50 backdrop-blur-xl backdrop-saturate-150 shadow-[0_12px_36px_rgba(0,0,0,0.35)] pointer-events-auto transition-all"
       >
         {/* 3D Physical Relief Toggle */}
         <button

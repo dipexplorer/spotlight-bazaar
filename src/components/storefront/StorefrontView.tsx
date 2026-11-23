@@ -17,6 +17,8 @@ import {
   Copy,
   Check,
   MessageCircle,
+  Compass,
+  ArrowRight,
 } from "lucide-react";
 import { BusinessStorefront } from "@/types";
 import { CATEGORY_MAP } from "@/lib/constants/categories";
@@ -109,42 +111,38 @@ export function StorefrontView({ initialStorefront, slug }: StorefrontViewProps)
       )}
 
       {/* Top Navigation */}
-      <header className="max-w-3xl mx-auto p-4 flex items-center justify-between border-b border-neutral-850">
+      <header className="max-w-3xl mx-auto px-4 py-3.5 flex items-center justify-between border-b border-neutral-800/80">
         <Link
-          href={`/?city=${storefront.city_name.toLowerCase()}&shop=${storefront.slug}`}
-          className="inline-flex items-center gap-2 text-xs text-neutral-400 hover:text-white transition-colors"
+          href={`/?city=${storefront.city_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}&shop=${storefront.slug}`}
+          className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-white transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to {storefront.city_name} 3D Street</span>
+          <ArrowLeft className="w-4 h-4 text-neutral-400" />
+          <span>Back to <span className="text-white font-medium">{storefront.city_name} 3D Street</span></span>
         </Link>
 
-        <div className="flex items-center gap-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/brand/mascot.jpg"
-            alt="Spotlight"
-            className="w-5 h-5 rounded-md object-cover border border-neutral-700"
-          />
-          <span className="text-xs text-neutral-400 font-mono">
-            {storefront.city_name} High Street
-          </span>
-        </div>
+        <Link
+          href={`/?city=${storefront.city_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}&shop=${storefront.slug}`}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-semibold transition-all shadow-sm"
+        >
+          <Compass className="w-3.5 h-3.5 text-amber-400" />
+          <span>View on 3D Map</span>
+        </Link>
       </header>
 
       {/* Main Container */}
       <div className="max-w-3xl mx-auto p-4 md:p-6 flex flex-col gap-8">
         {/* Hero Header Section */}
-        <section className="flex flex-col sm:flex-row items-start sm:items-center gap-5 pt-4">
-          <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-neutral-900 border border-neutral-800 overflow-hidden shrink-0 shadow-xl shadow-black/80">
+        <section className="flex flex-col sm:flex-row items-start sm:items-center gap-5 pt-2">
+          <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br from-amber-500/25 via-neutral-900 to-black p-0.5 shadow-[0_0_24px_rgba(245,158,11,0.25)] shrink-0 overflow-hidden flex items-center justify-center">
             {storefront.logo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={storefront.logo_url}
+                src={storefront.logo_url === "/mascot.jpg" ? "/mascot-avatar.png" : storefront.logo_url}
                 alt={storefront.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover rounded-[22px]"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-neutral-600">
+              <div className="w-full h-full flex items-center justify-center text-amber-400">
                 <Store className="w-8 h-8" />
               </div>
             )}
@@ -302,7 +300,7 @@ export function StorefrontView({ initialStorefront, slug }: StorefrontViewProps)
         {/* Rate Card & Discovery Activity */}
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           {/* Starting Rate Card */}
-          <div className="p-5 rounded-3xl bg-neutral-950 border border-neutral-800 flex flex-col justify-between shadow-lg">
+          <div className="p-4 sm:p-5 rounded-3xl bg-neutral-950/80 border border-neutral-800 flex flex-col justify-between shadow-lg backdrop-blur-sm">
             <span className="text-xs text-neutral-400">
               Starting Package
             </span>
@@ -317,7 +315,7 @@ export function StorefrontView({ initialStorefront, slug }: StorefrontViewProps)
           </div>
 
           {/* Social Discovery Proof */}
-          <div className="p-5 rounded-3xl bg-neutral-950 border border-neutral-800 flex flex-col justify-between shadow-lg">
+          <div className="p-4 sm:p-5 rounded-3xl bg-neutral-950/80 border border-neutral-800 flex flex-col justify-between shadow-lg backdrop-blur-sm">
             <span className="text-xs text-neutral-400">
               Activity & Discovery
             </span>
@@ -332,6 +330,28 @@ export function StorefrontView({ initialStorefront, slug }: StorefrontViewProps)
               Inquiries are routed directly to the business owner on WhatsApp.
             </p>
           </div>
+        </section>
+
+        {/* Immersive 3D Street Location Banner */}
+        <section className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-neutral-950 via-neutral-900 to-amber-950/30 border border-amber-500/25 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+              <Compass className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white">Located on {storefront.city_name} 3D High Street</h3>
+              <p className="text-xs text-neutral-400">
+                Explore surrounding shops, walkable street view, and spatial architecture.
+              </p>
+            </div>
+          </div>
+          <Link
+            href={`/?city=${storefront.city_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}&shop=${storefront.slug}`}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shrink-0"
+          >
+            <span>Fly to 3D Plot</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </section>
 
         {/* About Business Section */}

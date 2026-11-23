@@ -38,7 +38,7 @@ export function WhatsAppStickyCTA({
   };
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/?shop=${slug}`;
+    const url = `${window.location.origin}/b/${slug}`;
     if (navigator.share) {
       try {
         await navigator.share({

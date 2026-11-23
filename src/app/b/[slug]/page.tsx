@@ -1,8 +1,9 @@
 import { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { getStorefronts } from "@/lib/data/seedStorefronts";
 import { createServerClient } from "@/lib/supabase/server";
 import { BusinessStorefront } from "@/types";
+import { StorefrontView } from "@/components/storefront/StorefrontView";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -94,13 +95,49 @@ export default async function StorefrontPage({ params }: PageProps) {
   const { slug } = await params;
   const storefront = await getStorefront(slug);
 
-  const citySlug = storefront?.city_name
-    ? storefront.city_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")
+  // LocalBusiness Schema.org JSON-LD for rich Google search indexation
+  const jsonLd = storefront
+    ? {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        name: storefront.name,
+        description: storefront.description || storefront.tagline,
+        address: {
+          "@type": "PostalAddress",
+          addressLocality: storefront.city_name,
+          addressRegion: storefront.state_name,
+          postalCode: storefront.pincode,
+          addressCountry: "IN",
+        },
+        geo: {
+          "@type": "GeoCoordinates",
+          latitude: storefront.lat,
+          longitude: storefront.lon,
+        },
+        telephone: `+91${storefront.whatsapp_phone}`,
+        priceRange: storefront.starting_price,
+        image: storefront.logo_url || storefront.portfolio?.[0]?.image_url,
+      }
     : null;
 
-  if (citySlug && citySlug !== "all") {
-    redirect(`/?city=${citySlug}&shop=${encodeURIComponent(slug)}`);
-  }
-  redirect(`/?shop=${encodeURIComponent(slug)}`);
+  return (
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-[#09090b] flex items-center justify-center text-xs text-neutral-500 font-mono">
+            Loading digital showroom...
+          </div>
+        }
+      >
+        <StorefrontView initialStorefront={storefront} slug={slug} />
+      </Suspense>
+    </>
+  );
 }
 

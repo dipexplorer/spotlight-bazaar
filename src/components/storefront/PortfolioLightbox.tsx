@@ -105,17 +105,22 @@ export function PortfolioLightbox({ portfolio, businessName }: PortfolioLightbox
             </button>
           )}
 
-          {/* Main Photo */}
+          {/* Main Photo & Caption */}
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative max-w-3xl max-h-[82vh] w-full rounded-2xl overflow-hidden border border-neutral-800 flex items-center justify-center bg-black"
+            className="relative max-w-3xl max-h-[82vh] w-full rounded-2xl overflow-hidden border border-neutral-800 flex flex-col items-center justify-center bg-black"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={portfolio[selectedIdx].image_url}
               alt={portfolio[selectedIdx].caption || `${businessName} full view`}
-              className="max-h-[82vh] w-auto max-w-full object-contain"
+              className="max-h-[75vh] w-auto max-w-full object-contain"
             />
+            {portfolio[selectedIdx].caption && (
+              <div className="w-full px-4 py-3 bg-neutral-950 border-t border-neutral-800 text-xs text-neutral-300 text-center font-medium">
+                {portfolio[selectedIdx].caption}
+              </div>
+            )}
           </div>
 
           {/* Right Arrow */}

@@ -17,7 +17,7 @@ export const SEED_STOREFRONTS: BusinessStorefront[] = [
     instagram_handle: "nerqivastudio",
     website_url: "https://www.nerqivastudio.in/",
     starting_price: "Builds from ₹11,000",
-    logo_url: "/mascot.jpg",
+    logo_url: "/mascot-avatar.png",
     is_verified: true,
     is_featured: true,
     owner_email: "nerqiva.studio@gmail.com",
