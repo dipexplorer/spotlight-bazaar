@@ -1,6 +1,3 @@
-import Link from "next/link";
-import Image from "next/image";
-import { Plus } from "lucide-react";
 import { getStorefronts } from "@/lib/data/seedStorefronts";
 import { createServerClient } from "@/lib/supabase/server";
 import { BusinessStorefront } from "@/types";

@@ -173,6 +173,32 @@ class BazaarAudioEngine {
   }
 
   /**
+   * Soft pavement footstep sound for walking mode
+   */
+  public playFootstep() {
+    if (this.isMuted) return;
+    const ctx = this.initCtx();
+    if (!ctx) return;
+
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(80, t);
+    osc.frequency.exponentialRampToValueAtTime(32, t + 0.04);
+
+    gain.gain.setValueAtTime(0.035, t);
+    gain.gain.exponentialRampToValueAtTime(0.0008, t + 0.05);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(t);
+    osc.stop(t + 0.06);
+  }
+
+  /**
    * Confetti celebration burst
    */
   public playConfettiPop() {
@@ -255,4 +281,3 @@ class BazaarAudioEngine {
 }
 
 export const bazaarAudio = new BazaarAudioEngine();
-

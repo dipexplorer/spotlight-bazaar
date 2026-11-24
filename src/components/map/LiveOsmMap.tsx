@@ -38,6 +38,8 @@ import {
   Mountain,
   Layers,
   Tag,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import {
   INDIA_GEOGRAPHY_REGIONS_GEOJSON,
@@ -91,7 +93,6 @@ import {
   resolveAllStorefrontPlacements,
   SnappedPlotPlacement,
 } from "@/lib/geo/plotSnapper";
-import { QuickTalkModal } from "@/components/map3d/QuickTalkModal";
 import { StorefrontDialogueModal } from "@/components/map3d/StorefrontDialogueModal";
 import { bazaarAudio } from "@/lib/audio/bazaarAudio";
 import * as THREE from "three";
@@ -628,10 +629,11 @@ export function LiveOsmMap({
   const searchPinMarkerRef = useRef<Marker | null>(null);
   const searchBoxRef = useRef<HTMLDivElement>(null);
 
-  // Proximity Talk & Live Broadcasts Drawer
-  const [showQuickTalkModal, setShowQuickTalkModal] = useState(false);
+  // Proximity Dialogue & Live Audio Atmosphere
+  const [isSoundMuted, setIsSoundMuted] = useState(false);
   const [dialogueStorefront, setDialogueStorefront] = useState<BusinessStorefront | null>(null);
   const [showBroadcastsDrawer, setShowBroadcastsDrawer] = useState(false);
+  const footstepCadenceRef = useRef<number>(0);
 
   // 3D Player Avatar Position on approach road outside Nerqiva Studio front gate, facing the studio
   const initRoadAngle = -2.0179;
@@ -860,6 +862,12 @@ export function LiveOsmMap({
       let nextZ = playerLocalPosRef.current.z;
 
       if (forward || backward) {
+        footstepCadenceRef.current += dt * (isRun ? 1.6 : 1.0);
+        if (footstepCadenceRef.current >= 0.42) {
+          footstepCadenceRef.current = 0;
+          bazaarAudio.playFootstep();
+        }
+
         const dirSign = forward ? 1 : -1;
         const fwdColX = Math.sin(nextHeading);
         const fwdColZ = Math.cos(nextHeading);
@@ -3209,12 +3217,34 @@ export function LiveOsmMap({
     });
   }, [is3DMode]);
 
+  useEffect(() => {
+    setIsSoundMuted(bazaarAudio.getMuted());
+  }, []);
+
+  // Sync Audio Atmosphere Toggle
+  const handleToggleAudio = useCallback(() => {
+    const nextMuted = bazaarAudio.toggleMute();
+    setIsSoundMuted(nextMuted);
+    if (!nextMuted) {
+      bazaarAudio.playStorefrontChime();
+      bazaarAudio.startAmbient(isNightModeRef.current);
+      showToast("🔊 Bazaar Audio Active · Indian Street Atmosphere");
+    } else {
+      bazaarAudio.stopAmbient();
+      showToast("🔇 Bazaar Audio Muted");
+    }
+  }, [showToast]);
+
   // Sync Night / Day Mode
   const toggleNightMode = useCallback(() => {
     if (!mapRef.current) return;
     const nextNight = !isNightMode;
     setIsNightMode(nextNight);
     isNightModeRef.current = nextNight;
+
+    if (!bazaarAudio.getMuted()) {
+      bazaarAudio.startAmbient(nextNight);
+    }
 
     setCurrentWeather((prev) => {
       if (!prev) return prev;
@@ -4406,6 +4436,20 @@ export function LiveOsmMap({
           {isNightMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-cyan-400" />}
         </button>
 
+        {/* Bazaar Audio Atmosphere */}
+        <button
+          onClick={handleToggleAudio}
+          title={isSoundMuted ? "Unmute Bazaar Audio Atmosphere" : "Mute Bazaar Audio Atmosphere"}
+          aria-label={isSoundMuted ? "Unmute Bazaar Audio Atmosphere" : "Mute Bazaar Audio Atmosphere"}
+          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+            !isSoundMuted
+              ? "text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.25)]"
+              : "text-neutral-400 hover:text-white hover:bg-white/10"
+          }`}
+        >
+          {!isSoundMuted ? <Volume2 className="w-4 h-4 text-emerald-400" /> : <VolumeX className="w-4 h-4 text-neutral-400" />}
+        </button>
+
         {/* Dynamic Recenter & Reset */}
         <button
           onClick={handleDynamicResetView}
@@ -4803,16 +4847,7 @@ export function LiveOsmMap({
         )}
       </div>
 
-      {/* QUICK TALK & DIALOGUE MODALS */}
-      <QuickTalkModal
-        isOpen={showQuickTalkModal}
-        onClose={() => setShowQuickTalkModal(false)}
-        onSelectPhrase={(phrase) => {
-          showToast(`💬 "${phrase}"`);
-          bazaarAudio.playStorefrontChime();
-        }}
-      />
-
+      {/* STOREFRONT SPATIAL DOSSIER DIALOGUE MODAL */}
       <StorefrontDialogueModal
         storefront={dialogueStorefront}
         isOpen={Boolean(dialogueStorefront)}
