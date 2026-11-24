@@ -12,6 +12,16 @@ export const metadata: Metadata = {
     locale: "en_IN",
     type: "website",
   },
+  icons: {
+    icon: "/icon.svg",
+    apple: "/mascot-avatar.png",
+  },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Spotlight Bazaar",
+  },
 };
 
 export const viewport: Viewport = {
