@@ -5,6 +5,8 @@ import { addLocalStorefront } from "@/lib/data/seedStorefronts";
 import { normalizeExternalUrl } from "@/lib/utils";
 import { BusinessStorefront } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -81,94 +83,91 @@ export async function POST(req: NextRequest) {
 
     // 3. Database & Authentication Setup
     const supabase = createServerClient();
-    if (!supabase) {
-      return NextResponse.json(
-        { error: "Database service is temporarily unavailable. Please try again later." },
-        { status: 503 }
-      );
-    }
-
-    // 4. Resolve or create Owner User in Supabase Auth
     let ownerId: string | null = null;
-    const authUser = await getAuthenticatedUserFromRequest(req);
-
-    if (authUser && authUser.id && (authUser.email || "").toLowerCase() === normalizedOwnerEmail) {
-      ownerId = authUser.id;
-    } else {
-      try {
-        // Attempt to create user with email confirmed for instant OTP / Magic Link signin
-        const { data: created, error: createError } = await supabase.auth.admin.createUser({
-          email: normalizedOwnerEmail,
-          email_confirm: true,
-        });
-
-        if (created?.user?.id) {
-          ownerId = created.user.id;
-        } else {
-          // If already registered, fetch user by email
-          const { data: listData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-          const existing = listData?.users?.find(
-            (u) => (u.email || "").toLowerCase() === normalizedOwnerEmail
-          );
-          if (existing?.id) {
-            ownerId = existing.id;
-          }
-        }
-      } catch (authErr) {
-        console.error("[/api/register] admin auth error:", authErr);
-      }
-    }
-
-    if (!ownerId) {
-      return NextResponse.json(
-        { error: "Could not link owner account. Please verify your email address." },
-        { status: 400 }
-      );
-    }
-
     let businessId = `sb-temp-${Date.now()}`;
     let persistedToDb = false;
 
-    const { data: businessData, error: businessError } = await supabase
-      .from("businesses")
-      .insert({
-        slug,
-        owner_id: ownerId,
-        owner_email: normalizedOwnerEmail,
-        name: name.trim(),
-        tagline: tagline ? tagline.trim() : null,
-        description: description ? description.trim() : null,
-        category_id,
-        city_name: city_name.trim(),
-        state_name: state_name ? state_name.trim() : "India",
-        pincode: pincode || null,
-        lat: Number(lat) || 26.1445,
-        lon: Number(lon) || 91.7362,
-        facing_bearing: typeof facing_bearing === "number" ? facing_bearing : null,
-        road_anchor_lat: typeof road_anchor_lat === "number" ? road_anchor_lat : null,
-        road_anchor_lon: typeof road_anchor_lon === "number" ? road_anchor_lon : null,
-        connector_type: validConnectorType,
-        whatsapp_phone: cleanPhone,
-        instagram_handle: instagram_handle ? instagram_handle.replace(/^@/, "").trim() : null,
-        website_url: safeWebsiteUrl,
-        google_maps_url: safeGoogleMapsUrl,
-        starting_price: starting_price || null,
-        logo_url: null,
-        is_verified: false,
-        is_featured: false,
-        verification_status: "none",
-        status: "active",
-      })
-      .select("id")
-      .single();
+    if (supabase) {
+      try {
+        const authUser = await getAuthenticatedUserFromRequest(req);
 
-    if (businessError) {
-      return NextResponse.json({ error: businessError.message }, { status: 500 });
+        if (authUser && authUser.id && (authUser.email || "").toLowerCase() === normalizedOwnerEmail) {
+          ownerId = authUser.id;
+        } else {
+          try {
+            // Attempt to create user with email confirmed for instant OTP / Magic Link signin
+            const { data: created } = await supabase.auth.admin.createUser({
+              email: normalizedOwnerEmail,
+              email_confirm: true,
+            });
+
+            if (created?.user?.id) {
+              ownerId = created.user.id;
+            } else {
+              // If already registered, fetch user by email
+              const { data: listData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+              const existing = listData?.users?.find(
+                (u) => (u.email || "").toLowerCase() === normalizedOwnerEmail
+              );
+              if (existing?.id) {
+                ownerId = existing.id;
+              }
+            }
+          } catch (authErr) {
+            console.warn("[/api/register] admin auth error, using fallback owner:", authErr);
+          }
+        }
+
+        // If owner resolved, attempt DB persistence
+        if (ownerId) {
+          const { data: businessData, error: businessError } = await supabase
+            .from("businesses")
+            .insert({
+              slug,
+              owner_id: ownerId,
+              owner_email: normalizedOwnerEmail,
+              name: name.trim(),
+              tagline: tagline ? tagline.trim() : null,
+              description: description ? description.trim() : null,
+              category_id,
+              city_name: city_name.trim(),
+              state_name: state_name ? state_name.trim() : "India",
+              pincode: pincode || null,
+              lat: Number(lat) || 26.1445,
+              lon: Number(lon) || 91.7362,
+              facing_bearing: typeof facing_bearing === "number" ? facing_bearing : null,
+              road_anchor_lat: typeof road_anchor_lat === "number" ? road_anchor_lat : null,
+              road_anchor_lon: typeof road_anchor_lon === "number" ? road_anchor_lon : null,
+              connector_type: validConnectorType,
+              whatsapp_phone: cleanPhone,
+              instagram_handle: instagram_handle ? instagram_handle.replace(/^@/, "").trim() : null,
+              website_url: safeWebsiteUrl,
+              google_maps_url: safeGoogleMapsUrl,
+              starting_price: starting_price || null,
+              logo_url: null,
+              is_verified: false,
+              is_featured: false,
+              verification_status: "none",
+              status: "active",
+            })
+            .select("id")
+            .single();
+
+          if (!businessError && businessData) {
+            businessId = businessData.id;
+            persistedToDb = true;
+          } else if (businessError) {
+            console.warn("[/api/register] DB insert warning, falling back to local registry:", businessError.message);
+          }
+        }
+      } catch (dbErr) {
+        console.warn("[/api/register] Supabase call failed, falling back to local registry:", dbErr);
+      }
     }
 
-    if (businessData) {
-      businessId = businessData.id;
-      persistedToDb = true;
+    // Fallback owner if offline/local
+    if (!ownerId) {
+      ownerId = `local-owner-${normalizedOwnerEmail.replace(/[^a-z0-9]/g, "") || Date.now()}`;
     }
 
     // Keep in local registry for immediate 3D High Street live rendering
