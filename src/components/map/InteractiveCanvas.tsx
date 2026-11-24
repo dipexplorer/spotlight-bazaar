@@ -118,7 +118,7 @@ export default function InteractiveCanvas({ initialStorefronts }: InteractiveCan
     }
   };
 
-  const handleStorefrontClick = (storefront: BusinessStorefront) => {
+  const handleStorefrontClick = (storefront: BusinessStorefront | null) => {
     setActiveStorefront(storefront);
   };
 

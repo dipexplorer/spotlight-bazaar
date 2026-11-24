@@ -110,7 +110,7 @@ interface LiveOsmMapProps {
   selectedCity: City | null;
   activeStorefront?: BusinessStorefront | null;
   onCitySelect: (city: City | null) => void;
-  onStorefrontSelect?: (storefront: BusinessStorefront) => void;
+  onStorefrontSelect?: (storefront: BusinessStorefront | null) => void;
   onToggle3DMap?: () => void;
 }
 
@@ -4579,7 +4579,10 @@ export function LiveOsmMap({
 
               <button
                 type="button"
-                onClick={() => setDialogueStorefront(activeStreetBusiness)}
+                onClick={() => {
+                  if (onStorefrontSelect) onStorefrontSelect(null);
+                  setDialogueStorefront(activeStreetBusiness);
+                }}
                 className="h-8.5 px-3 rounded-full bg-white/[0.08] hover:bg-white/[0.15] text-xs font-semibold text-white flex items-center justify-center gap-1.5 transition-all"
                 title={`Talk to ${activeStreetBusiness.name}`}
               >
@@ -4703,7 +4706,10 @@ export function LiveOsmMap({
 
                 <button
                   type="button"
-                  onClick={() => setDialogueStorefront(activeStreetBusiness)}
+                  onClick={() => {
+                    if (onStorefrontSelect) onStorefrontSelect(null);
+                    setDialogueStorefront(activeStreetBusiness);
+                  }}
                   className="h-9 px-3.5 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all bg-white/[0.06] hover:bg-white/[0.12] text-neutral-200 hover:text-white border border-white/10"
                   title={`Talk to ${activeStreetBusiness.name}`}
                 >

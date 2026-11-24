@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   MessageCircle,
   X,
-  Heart,
   Share2,
   Check,
   Globe,
@@ -110,9 +109,9 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
     setWavesCount((prev) => prev + 1);
 
     confetti({
-      particleCount: 35,
-      spread: 55,
-      origin: { y: 0.75 },
+      particleCount: 40,
+      spread: 60,
+      origin: { y: 0.7 },
     });
 
     try {
@@ -144,22 +143,25 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
   return (
     <>
       {/* 
-        SPATIAL BUSINESS INSPECTOR (Zero full-screen blur, 100% visible crystal-clear 3D world).
-        On Desktop (sm+): Elegantly docked to the top-left below the navbar, leaving the center 3D camera, buildings, and streets completely open.
-        On Mobile: Elegantly anchored to the bottom with safe-area spacing without whole-screen obscuration.
+        SPATIAL BUSINESS DOSSIER (Pure Obsidian Glass HUD · Zero Full-Screen Blur · 100% Interactive 3D World)
+        - Desktop: Elegantly docked at top-left below the omnibar, keeping center 3D camera & street fully visible.
+        - Mobile: Floating tactile bottom sheet with clear drag handle and safe-area geometry.
       */}
       <aside
         aria-label={`Storefront dossier for ${storefront.name}`}
         className="fixed z-30 pointer-events-auto transition-all duration-300 ease-out
-          inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] sm:inset-x-auto sm:bottom-auto sm:top-20 sm:left-5 sm:w-[390px]
-          max-h-[80vh] sm:max-h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar"
+          inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] sm:inset-x-auto sm:bottom-auto sm:top-20 sm:left-5 sm:w-[400px]
+          max-h-[82vh] sm:max-h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar"
       >
-        <div className="w-full rounded-3xl bg-neutral-950/80 hover:bg-neutral-950/90 backdrop-blur-2xl backdrop-saturate-150 p-4 sm:p-5 shadow-[0_24px_60px_rgba(0,0,0,0.65)] flex flex-col gap-3.5 transition-all">
-          {/* Header Row: Illuminated Medallion + Brand Soul + Action Controls */}
+        <div className="w-full rounded-3xl bg-[#0a0c10]/94 hover:bg-[#0a0c10]/98 backdrop-blur-2xl backdrop-saturate-150 p-4 sm:p-5 border border-white/10 border-t-white/20 shadow-[0_30px_70px_rgba(0,0,0,0.85),0_0_1px_rgba(255,255,255,0.15)_inset] flex flex-col gap-3.5 transition-all">
+          {/* Mobile Sheet Visual Indicator */}
+          <div className="w-10 h-1 rounded-full bg-white/20 mx-auto -mt-1 sm:hidden shrink-0" aria-hidden="true" />
+
+          {/* Header Row: Hallmark Medallion + Brand Identity + Action Controls */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3 min-w-0 flex-1">
-              {/* Illuminated 3D Logo / Storefront Medallion */}
-              <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/25 via-neutral-900/90 to-black p-0.5 shadow-[0_0_20px_rgba(245,158,11,0.25)] shrink-0 overflow-hidden flex items-center justify-center mt-0.5">
+              {/* Architectural Medallion Logo */}
+              <div className="relative w-12 h-12 rounded-2xl bg-neutral-900 border border-white/10 p-0.5 shadow-lg shrink-0 overflow-hidden flex items-center justify-center mt-0.5">
                 {storefront.logo_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -176,27 +178,28 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
 
               <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <h3 className="text-base sm:text-lg font-bold text-white tracking-tight leading-snug drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                  <h3 className="text-base sm:text-lg font-bold text-white tracking-tight leading-snug">
                     {storefront.name}
                   </h3>
                   {storefront.is_verified && (
-                    <span title="Verified Business Studio" className="inline-flex items-center">
-                      <ShieldCheck className="w-4 h-4 text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.5)] shrink-0" />
+                    <span title="Verified 3D Storefront" className="inline-flex items-center gap-1 text-[11px] font-mono font-medium text-amber-400/90 bg-amber-400/10 px-1.5 py-0.5 rounded-md border border-amber-400/25 shrink-0">
+                      <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Verified</span>
                     </span>
                   )}
                   {storefront.is_featured && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-semibold shrink-0">
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-white/10 text-neutral-300 font-semibold shrink-0">
                       Featured
                     </span>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 text-xs text-neutral-300 mt-1 flex-wrap">
+                <div className="flex items-center gap-1.5 text-xs text-neutral-400 mt-1 flex-wrap">
                   <span className="inline-flex items-center gap-1 shrink-0 text-amber-300/90 font-medium">
                     <MapPin className="w-3 h-3 text-amber-400" />
                     {storefront.city_name}
                   </span>
-                  <span className="text-neutral-500">•</span>
+                  <span className="text-neutral-600">·</span>
                   <span className="text-neutral-300 font-medium">{category?.name || "Open Business"}</span>
                 </div>
               </div>
@@ -208,13 +211,13 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
                 type="button"
                 onClick={handleShareLink}
                 title="Copy 3D Street Link"
-                className="w-8 h-8 rounded-full bg-white/[0.08] hover:bg-white/[0.15] text-neutral-300 hover:text-white flex items-center justify-center transition-all"
+                className="w-8 h-8 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-neutral-300 hover:text-white flex items-center justify-center transition-all active:scale-95"
                 aria-label="Share 3D Street Link"
               >
                 {copiedLink ? (
-                  <Check className="w-4 h-4 text-emerald-400" />
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
                 ) : (
-                  <Share2 className="w-4 h-4" />
+                  <Share2 className="w-3.5 h-3.5" />
                 )}
               </button>
 
@@ -222,7 +225,7 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
               <button
                 type="button"
                 onClick={onClose}
-                className="w-8 h-8 rounded-full bg-white/[0.08] hover:bg-white/[0.15] text-neutral-300 hover:text-white flex items-center justify-center transition-all"
+                className="w-8 h-8 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-neutral-300 hover:text-white flex items-center justify-center transition-all active:scale-95"
                 aria-label="Close storefront inspector"
               >
                 <X className="w-4 h-4" />
@@ -237,7 +240,7 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
             </p>
           )}
 
-          {/* Active Live Broadcast Banner (Deals, Coupons, Urgent Services, Hiring, Events) */}
+          {/* Active Live Broadcast Banner (Deals, Announcements, Urgent Bookings) */}
           {(() => {
             const activePost = (storefront.active_posts || []).find(
               (p) => new Date(p.expires_at).getTime() > Date.now()
@@ -252,20 +255,20 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
               couponCode: activePost.coupon_code,
             });
             return (
-              <div className={`p-3 rounded-2xl ${bMeta.badgeBg} space-y-2 backdrop-blur-md`}>
+              <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2 backdrop-blur-md">
                 <div className="flex items-center justify-between gap-2">
-                  <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${bMeta.badgeText}`}>
+                  <span className={`inline-flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider ${bMeta.badgeText}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${bMeta.dotColor}`} />
                     {bMeta.label}
                   </span>
-                  <span className="inline-flex items-center gap-1 text-[10px] text-neutral-300 tabular-nums">
-                    <Clock className="w-3 h-3" />
+                  <span className="inline-flex items-center gap-1 text-[10px] text-neutral-400 font-mono tabular-nums">
+                    <Clock className="w-3 h-3 text-neutral-400" />
                     {formatTimeRemaining(activePost.expires_at)}
                   </span>
                 </div>
                 <div className="text-xs font-bold text-white leading-snug">{activePost.title}</div>
                 {activePost.details && (
-                  <p className="text-[11px] text-neutral-200/90 leading-relaxed">{activePost.details}</p>
+                  <p className="text-[11px] text-neutral-300 leading-relaxed">{activePost.details}</p>
                 )}
                 <div className="flex flex-wrap items-center gap-2 pt-0.5">
                   {activePost.coupon_code && (
@@ -277,7 +280,7 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
                         setCopiedCoupon(true);
                         setTimeout(() => setCopiedCoupon(false), 2200);
                       }}
-                      className="px-2.5 py-1.5 rounded-lg bg-black/45 hover:bg-black/65 text-[11px] font-mono font-bold text-emerald-300 inline-flex items-center gap-1.5 transition-colors"
+                      className="px-2.5 py-1.5 rounded-lg bg-black/60 hover:bg-black/80 border border-white/10 text-[11px] font-mono font-bold text-emerald-300 inline-flex items-center gap-1.5 transition-colors"
                     >
                       <span>{activePost.coupon_code}</span>
                       {copiedCoupon ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
@@ -290,63 +293,58 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
                     onClick={() => {
                       fetch(`/api/posts/${activePost.id}/click`, { method: "POST", keepalive: true }).catch(() => {});
                     }}
-                    className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold text-white inline-flex items-center gap-1 transition-colors"
+                    className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 text-[11px] font-semibold text-white inline-flex items-center gap-1 transition-colors"
                   >
                     <span>{bMeta.defaultCta}</span>
-                    <ExternalLink className="w-3 h-3" />
+                    <ExternalLink className="w-3 h-3 text-neutral-400" />
                   </a>
                 </div>
               </div>
             );
           })()}
 
-          {/* Rate & Live Wave Bar — Pure Seamless Frosted Pill */}
-          <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-white/[0.04] backdrop-blur-md">
+          {/* Rate & Live Wave Instrument — Unified Obsidian Card */}
+          <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-md">
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">Starting Rate</span>
-              <span className="text-sm font-extrabold text-amber-400 tabular-nums drop-shadow-[0_0_12px_rgba(245,158,11,0.35)]">
-                {storefront.starting_price || "Rates on Request"}
+              <span className="text-[10px] uppercase font-mono tracking-widest text-neutral-400 block mb-0.5">Starting Rate</span>
+              <span className="text-sm font-bold font-mono text-amber-300 tabular-nums">
+                {storefront.starting_price || "Custom Quote"}
               </span>
             </div>
 
-            {/* Social Wave / Like Button (Exponential ease scale micro-interaction, zero tacky bounce) */}
+            {/* Social Wave Micro-Interaction */}
             <button
               type="button"
               onClick={handleWave}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 duration-200 ${
                 hasWaved
-                  ? "bg-rose-500/20 text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.3)]"
-                  : "bg-white/[0.08] hover:bg-white/[0.15] text-white"
+                  ? "bg-amber-500/15 border border-amber-500/30 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)]"
+                  : "bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-neutral-200 hover:text-white"
               }`}
             >
-              <Heart
-                className={`w-3.5 h-3.5 transition-colors ${
-                  hasWaved ? "fill-rose-400 text-rose-400" : "text-neutral-300"
-                }`}
-              />
-              <span>{hasWaved ? "Waved!" : "Wave"}</span>
-              <span className="text-[11px] font-mono text-neutral-300 tabular-nums">
+              <span>{hasWaved ? "✨ Waved!" : "👋 Wave"}</span>
+              <span className="text-[11px] font-mono text-neutral-400 tabular-nums">
                 ({wavesCount})
               </span>
             </button>
           </div>
 
-          {/* Direct Verified Business Channels — Symmetrical, Responsive Grid */}
+          {/* Direct Verified Business Channels — Disciplined Obsidian Trio (No Rainbow Pills) */}
           {(normalizeExternalUrl(storefront.website_url) ||
             getInstagramUrl(storefront.instagram_handle) ||
             getGoogleMapsUrl(storefront)) && (
-            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {normalizeExternalUrl(storefront.website_url) ? (
                 <a
                   href={normalizeExternalUrl(storefront.website_url)!}
                   target="_blank"
                   rel="noopener noreferrer"
                   title={`Visit ${formatWebsiteDisplay(storefront.website_url)}`}
-                  className="py-2 px-1.5 sm:px-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 hover:text-amber-200 font-semibold text-xs flex items-center justify-center gap-1 sm:gap-1.5 transition-colors shadow-sm min-w-0"
+                  className="py-2.5 px-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.09] active:bg-white/[0.12] border border-white/[0.08] hover:border-white/20 text-neutral-300 hover:text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-all group min-w-0"
                 >
-                  <Globe className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <Globe className="w-3.5 h-3.5 text-neutral-400 group-hover:text-amber-400 shrink-0 transition-colors" />
                   <span className="truncate">Website</span>
-                  <ExternalLink className="w-3 h-3 text-amber-400/80 shrink-0 hidden xs:inline" />
+                  <ExternalLink className="w-3 h-3 text-neutral-500 group-hover:text-neutral-300 shrink-0 hidden xs:inline transition-colors" />
                 </a>
               ) : <div />}
 
@@ -356,12 +354,12 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
                   target="_blank"
                   rel="noopener noreferrer"
                   title="Follow on Instagram"
-                  className="py-2 px-1.5 sm:px-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-rose-200 font-medium text-xs flex items-center justify-center gap-1 sm:gap-1.5 transition-colors min-w-0"
+                  className="py-2.5 px-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.09] active:bg-white/[0.12] border border-white/[0.08] hover:border-white/20 text-neutral-300 hover:text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-all group min-w-0"
                 >
-                  <InstagramIcon className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                  <InstagramIcon className="w-3.5 h-3.5 text-neutral-400 group-hover:text-rose-400 shrink-0 transition-colors" />
                   <span className="truncate sm:inline hidden">Instagram</span>
                   <span className="truncate sm:hidden inline">Insta</span>
-                  <ExternalLink className="w-3 h-3 text-neutral-400 shrink-0 hidden xs:inline" />
+                  <ExternalLink className="w-3 h-3 text-neutral-500 group-hover:text-neutral-300 shrink-0 hidden xs:inline transition-colors" />
                 </a>
               ) : <div />}
 
@@ -371,12 +369,12 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
                   target="_blank"
                   rel="noopener noreferrer"
                   title="Get Directions on Google Maps"
-                  className="py-2 px-1.5 sm:px-2.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 hover:text-sky-200 font-medium text-xs flex items-center justify-center gap-1 sm:gap-1.5 transition-colors min-w-0"
+                  className="py-2.5 px-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.09] active:bg-white/[0.12] border border-white/[0.08] hover:border-white/20 text-neutral-300 hover:text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-all group min-w-0"
                 >
-                  <Navigation className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                  <Navigation className="w-3.5 h-3.5 text-neutral-400 group-hover:text-sky-400 shrink-0 transition-colors" />
                   <span className="truncate sm:inline hidden">Directions</span>
                   <span className="truncate sm:hidden inline">Maps</span>
-                  <ExternalLink className="w-3 h-3 text-neutral-400 shrink-0 hidden xs:inline" />
+                  <ExternalLink className="w-3 h-3 text-neutral-500 group-hover:text-neutral-300 shrink-0 hidden xs:inline transition-colors" />
                 </a>
               ) : <div />}
             </div>
@@ -385,11 +383,11 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
           {/* Portfolio Showcase Mini-Strip */}
           {storefront.portfolio && storefront.portfolio.length > 0 && (
             <div className="flex flex-col gap-1.5 pt-0.5">
-              <div className="flex items-center justify-between text-[11px] text-neutral-400 px-0.5">
-                <span className="font-medium text-neutral-300">Selected Work</span>
+              <div className="flex items-center justify-between text-[11px] px-0.5">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-400">Selected Work</span>
                 <Link
                   href={`/b/${storefront.slug}`}
-                  className="text-amber-400 hover:text-amber-300 font-medium flex items-center gap-1 transition-colors"
+                  className="text-amber-400 hover:text-amber-300 font-medium text-xs flex items-center gap-1 transition-colors"
                 >
                   <span>All {storefront.portfolio.length} Projects</span>
                   <ArrowRight className="w-3 h-3" />
@@ -400,7 +398,7 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
                   <Link
                     key={item.id || idx}
                     href={`/b/${storefront.slug}`}
-                    className="relative aspect-video rounded-xl overflow-hidden bg-neutral-900 border border-white/5 hover:border-amber-500/40 transition-colors group"
+                    className="relative aspect-video rounded-xl overflow-hidden bg-neutral-900 border border-white/10 hover:border-amber-400/50 transition-colors group"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -414,24 +412,24 @@ export function StorefrontDrawer({ storefront, onClose }: StorefrontDrawerProps)
             </div>
           )}
 
-          {/* Primary High-Conversion Dual CTAs: Full Showroom + WhatsApp */}
+          {/* Primary Dual CTAs: Full Showroom & WhatsApp Inquiry */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
             <Link
               href={`/b/${storefront.slug}`}
-              className="h-11 px-4 rounded-2xl bg-white/[0.08] hover:bg-white/[0.14] active:scale-[0.99] text-white font-semibold text-xs tracking-wide flex items-center justify-center gap-2 transition-all shadow-sm border border-white/5"
+              className="h-11 sm:h-12 px-4 rounded-xl bg-white/[0.07] hover:bg-white/[0.13] active:scale-[0.98] border border-white/10 text-white font-semibold text-xs tracking-wide flex items-center justify-center gap-2 transition-all shadow-sm"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span>Full Showroom &amp; Work</span>
-              <ExternalLink className="w-3 h-3 text-neutral-400 shrink-0" />
+              <span>Enter Showroom</span>
+              <ArrowRight className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
             </Link>
 
             <button
               type="button"
               onClick={handleWhatsApp}
-              className="h-11 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-[0.99] text-white font-bold text-xs tracking-wide flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(16,185,129,0.35)] transition-all focus-visible:ring-2 focus-visible:ring-emerald-400"
+              className="h-11 sm:h-12 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-bold text-xs tracking-wide flex items-center justify-center gap-2 shadow-[0_6px_20px_rgba(16,185,129,0.35)] transition-all focus-visible:ring-2 focus-visible:ring-emerald-400"
             >
-              <MessageCircle className="w-4 h-4 fill-white/25 shrink-0" />
-              <span>Chat on WhatsApp</span>
+              <MessageCircle className="w-4 h-4 fill-white/20 shrink-0" />
+              <span>Inquire on WhatsApp</span>
             </button>
           </div>
         </div>
