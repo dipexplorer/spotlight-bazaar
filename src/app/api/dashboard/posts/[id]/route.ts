@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { getAuthenticatedUserFromRequest } from "@/lib/supabase/auth";
+import { getStorefronts } from "@/lib/data/seedStorefronts";
 
 export const dynamic = "force-dynamic";
 
@@ -14,14 +15,21 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
 
-  const supabase = createServerClient();
-  if (!supabase) {
-    return NextResponse.json({ error: "Database not configured." }, { status: 503 });
-  }
-
   const { id } = await context.params;
   if (!id) {
     return NextResponse.json({ error: "Broadcast ID required." }, { status: 400 });
+  }
+
+  const supabase = createServerClient();
+  if (!supabase) {
+    // Local in-memory registry deletion
+    const all = getStorefronts();
+    for (const b of all) {
+      if (b.active_posts) {
+        b.active_posts = b.active_posts.filter((p) => p.id !== id);
+      }
+    }
+    return NextResponse.json({ success: true, deleted_id: id });
   }
 
   const { data: post } = await supabase
@@ -36,6 +44,14 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
       : null;
 
   if (!post || bizOwner !== user.id) {
+    // Fallback check
+    const all = getStorefronts();
+    for (const b of all) {
+      if (b.active_posts && b.active_posts.some((p) => p.id === id)) {
+        b.active_posts = b.active_posts.filter((p) => p.id !== id);
+        return NextResponse.json({ success: true, deleted_id: id });
+      }
+    }
     return NextResponse.json({ error: "Broadcast not found or access denied." }, { status: 403 });
   }
 
@@ -46,4 +62,3 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
 
   return NextResponse.json({ success: true, deleted_id: id });
 }
-

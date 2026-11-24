@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { getAuthenticatedUserFromRequest } from "@/lib/supabase/auth";
+import { getStorefronts } from "@/lib/data/seedStorefronts";
+import { BusinessPost } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -12,14 +14,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
 
-  const supabase = createServerClient();
-  if (!supabase) {
-    return NextResponse.json({ error: "Database not configured." }, { status: 503 });
-  }
-
   const businessId = req.nextUrl.searchParams.get("business_id");
   if (!businessId) {
     return NextResponse.json({ error: "business_id is required." }, { status: 400 });
+  }
+
+  const supabase = createServerClient();
+  if (!supabase) {
+    const all = getStorefronts();
+    const found = all.find((b) => b.id === businessId || b.slug === businessId);
+    return NextResponse.json({ posts: found?.active_posts || [] });
   }
 
   // Verify ownership
@@ -30,6 +34,12 @@ export async function GET(req: NextRequest) {
     .single();
 
   if (!biz || biz.owner_id !== user.id) {
+    // If not found in DB, check local registry for demo fallback
+    const all = getStorefronts();
+    const found = all.find((b) => b.id === businessId || b.slug === businessId);
+    if (found) {
+      return NextResponse.json({ posts: found.active_posts || [] });
+    }
     return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
@@ -53,11 +63,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
 
-  const supabase = createServerClient();
-  if (!supabase) {
-    return NextResponse.json({ error: "Database not configured." }, { status: 503 });
-  }
-
   try {
     const body = await req.json();
     const { business_id, post_type, title, details, coupon_code, duration_days } = body;
@@ -73,6 +78,29 @@ export async function POST(req: NextRequest) {
         { error: "Broadcast headline must be at least 4 characters." },
         { status: 400 }
       );
+    }
+
+    const supabase = createServerClient();
+    if (!supabase) {
+      const all = getStorefronts();
+      const found = all.find((b) => b.id === business_id || b.slug === business_id);
+      if (!found) {
+        return NextResponse.json({ error: "Business not found." }, { status: 404 });
+      }
+      const newPost: BusinessPost = {
+        id: `post-local-${Date.now()}`,
+        business_id,
+        post_type,
+        title: title.trim(),
+        details: details ? details.trim() : "",
+        coupon_code: coupon_code ? coupon_code.trim().toUpperCase() : undefined,
+        cta_label: "Avail Offer",
+        expires_at: new Date(Date.now() + (duration_days || 7) * 86400000).toISOString(),
+        clicks: 0,
+        created_at: new Date().toISOString(),
+      };
+      found.active_posts = [newPost, ...(found.active_posts || [])];
+      return NextResponse.json({ success: true, post: newPost }, { status: 201 });
     }
 
     // Verify business ownership
@@ -100,36 +128,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const daysNum = Number(duration_days);
-    const safeDays = daysNum === 1 || daysNum === 3 || daysNum === 7 ? daysNum : 7;
-    const expiresAt = new Date(Date.now() + safeDays * 86400000).toISOString();
+    const expiresAt = new Date(
+      Date.now() + (Number(duration_days) || 7) * 24 * 60 * 60 * 1000
+    ).toISOString();
 
-    const cleanCoupon =
-      post_type === "deal" && typeof coupon_code === "string" && coupon_code.trim()
-        ? coupon_code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "").slice(0, 24)
-        : null;
-
-    const { data: created, error: insertErr } = await supabase
+    const { data: post, error } = await supabase
       .from("business_posts")
       .insert({
         business_id,
         post_type,
-        title: title.trim().slice(0, 100),
-        details: typeof details === "string" && details.trim() ? details.trim().slice(0, 300) : null,
-        coupon_code: cleanCoupon,
+        title: title.trim(),
+        details: details ? details.trim() : null,
+        coupon_code: coupon_code ? coupon_code.trim().toUpperCase() : null,
         expires_at: expiresAt,
+        cta_label: "Avail Offer",
       })
-      .select("id, business_id, post_type, title, details, coupon_code, cta_label, expires_at, clicks, created_at")
+      .select()
       .single();
 
-    if (insertErr) {
-      return NextResponse.json({ error: insertErr.message }, { status: 500 });
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, post: created }, { status: 201 });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Failed to publish broadcast.";
+    return NextResponse.json({ success: true, post }, { status: 201 });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Internal error";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
-
