@@ -1816,9 +1816,9 @@ export function LiveOsmMap({
           l.id.startsWith("road_") || l.id.startsWith("bridge_") || l.id.startsWith("tunnel_") || l.id === "3d-city-buildings"
         )?.id;
 
-        const satBrightnessMax = isDark ? 0.42 : 1.0;
-        const satContrast = isDark ? 0.32 : 0.14;
-        const satSaturation = isDark ? -0.30 : 0.10;
+        const satBrightnessMax = isDark ? 0.78 : 1.0;
+        const satContrast = isDark ? 0.22 : 0.16;
+        const satSaturation = isDark ? -0.05 : 0.14;
         const satOpacity: any = [
           "interpolate", ["linear"], ["zoom"],
           3.5, 0.95,
@@ -1873,10 +1873,10 @@ export function LiveOsmMap({
                 source: "elevation-hillshade-source",
                 maxzoom: 12.0,
                 paint: {
-                  "hillshade-exaggeration": 0.85,
-                  "hillshade-shadow-color": isDark ? "#020612" : "#1e293b",
-                  "hillshade-highlight-color": isDark ? "#94a3b8" : "#ffffff",
-                  "hillshade-accent-color": isDark ? "#09152b" : "#334155",
+                  "hillshade-exaggeration": isDark ? 1.15 : 1.25,
+                  "hillshade-shadow-color": isDark ? "#000000" : "#0f172a",
+                  "hillshade-highlight-color": isDark ? "#cbd5e1" : "#ffffff",
+                  "hillshade-accent-color": isDark ? "#030712" : "#1e293b",
                   "hillshade-illumination-direction": 315,
                   "hillshade-illumination-anchor": "viewport",
                 },
@@ -1884,9 +1884,10 @@ export function LiveOsmMap({
               roadBeforeLayer || undefined
             );
           } else {
-            map.setPaintProperty("terrain-hillshading", "hillshade-shadow-color", isDark ? "#020612" : "#1e293b");
-            map.setPaintProperty("terrain-hillshading", "hillshade-highlight-color", isDark ? "#94a3b8" : "#ffffff");
-            map.setPaintProperty("terrain-hillshading", "hillshade-accent-color", isDark ? "#09152b" : "#334155");
+            map.setPaintProperty("terrain-hillshading", "hillshade-exaggeration", isDark ? 1.15 : 1.25);
+            map.setPaintProperty("terrain-hillshading", "hillshade-shadow-color", isDark ? "#000000" : "#0f172a");
+            map.setPaintProperty("terrain-hillshading", "hillshade-highlight-color", isDark ? "#cbd5e1" : "#ffffff");
+            map.setPaintProperty("terrain-hillshading", "hillshade-accent-color", isDark ? "#030712" : "#1e293b");
           }
         } catch (hillErr) {
           console.warn("[LiveOsmMap] Hillshading layer warning:", hillErr);
@@ -2288,7 +2289,9 @@ export function LiveOsmMap({
           if (!map.getStyle()) return;
 
           const isDarkNow = isNightModeRef.current || Boolean(map.getStyle()?.name?.toLowerCase().includes("dark"));
-          const oceanColor = isDarkNow ? "#030c1b" : "#071b30";
+          const oceanColor = isDarkNow ? "#020612" : "#030d1d";
+          const shelfOuterColor = isDarkNow ? "#061a30" : "#082a4d";
+          const shelfInnerColor = isDarkNow ? "#0a365c" : "#0c4975";
 
           if (!map.getSource("india-ocean-mask-source")) {
             map.addSource("india-ocean-mask-source", {
@@ -2334,27 +2337,29 @@ export function LiveOsmMap({
                 source: "india-land-source",
                 layout: { "line-join": "round", "line-cap": "round" },
                 paint: {
-                  "line-color": "#0369a1",
+                  "line-color": shelfOuterColor,
                   "line-width": [
                     "interpolate", ["linear"], ["zoom"],
-                    3.5, 14,
-                    6.5, 10,
-                    9.0, 4,
+                    3.5, 26,
+                    6.5, 16,
+                    9.0, 6,
                   ],
-                  "line-blur": 6.0,
+                  "line-blur": 16.0,
                   "line-opacity": [
                     "interpolate", ["linear"], ["zoom"],
-                    3.5, 0.30,
-                    8.0, 0.18,
+                    3.5, 0.45,
+                    8.0, 0.25,
                     9.5, 0.0,
                   ],
                 },
               },
               beforeCustom3D
             );
+          } else {
+            map.setPaintProperty("india-coastal-shelf-outer", "line-color", shelfOuterColor);
           }
 
-          // Layer: Natural subtle coastal shallow shelf (soft tropical aqua, zero neon blur)
+          // Layer: Natural subtle coastal shallow shelf (soft marine sapphire, zero neon cyan)
           if (!map.getLayer("india-coastal-shelf")) {
             map.addLayer(
               {
@@ -2363,27 +2368,29 @@ export function LiveOsmMap({
                 source: "india-land-source",
                 layout: { "line-join": "round", "line-cap": "round" },
                 paint: {
-                  "line-color": "#0284c7",
+                  "line-color": shelfInnerColor,
                   "line-width": [
                     "interpolate", ["linear"], ["zoom"],
-                    3.5, 6,
-                    6.5, 4,
+                    3.5, 10,
+                    6.5, 6,
                     9.0, 2,
                   ],
-                  "line-blur": 3.0,
+                  "line-blur": 6.0,
                   "line-opacity": [
                     "interpolate", ["linear"], ["zoom"],
-                    3.5, 0.45,
-                    8.0, 0.3,
+                    3.5, 0.35,
+                    8.0, 0.20,
                     9.5, 0.0,
                   ],
                 },
               },
               beforeCustom3D
             );
+          } else {
+            map.setPaintProperty("india-coastal-shelf", "line-color", shelfInnerColor);
           }
 
-          // Layer: Clean delicate border casing (ultra-thin 1px semi-transparent sky line)
+          // Layer: Clean delicate cartographic border casing (ultra-thin 0.75px semi-transparent warm silver line)
           if (!map.getLayer("india-border-fine")) {
             map.addLayer(
               {
@@ -2392,18 +2399,20 @@ export function LiveOsmMap({
                 source: "india-land-source",
                 layout: { "line-join": "round", "line-cap": "round" },
                 paint: {
-                  "line-color": "rgba(224, 242, 254, 0.45)",
-                  "line-width": 1.0,
+                  "line-color": "rgba(255, 255, 255, 0.16)",
+                  "line-width": 0.75,
                   "line-opacity": [
                     "interpolate", ["linear"], ["zoom"],
-                    3.5, 0.6,
-                    8.0, 0.4,
+                    3.5, 0.45,
+                    8.0, 0.25,
                     9.5, 0.0,
                   ],
                 },
               },
               beforeCustom3D
             );
+          } else {
+            map.setPaintProperty("india-border-fine", "line-color", "rgba(255, 255, 255, 0.16)");
           }
 
           // Ensure Major Indian Metros and Geography HUD layers remain on top of the mask
