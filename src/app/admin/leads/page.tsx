@@ -794,7 +794,8 @@ export default function AdminLeadsPage() {
             <div className="flex items-center gap-2 min-w-0">
               <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
               <span className="text-xs font-bold text-white tracking-tight truncate">
-                NERQIVA COMMAND
+                <span className="hidden sm:inline">NERQIVA COMMAND</span>
+                <span className="sm:hidden inline">Command</span>
               </span>
               <span className="hidden md:inline text-[11px] px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-400 font-mono">
                 Storefront Operations
@@ -806,10 +807,11 @@ export default function AdminLeadsPage() {
             <button
               type="button"
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-1.5 min-h-[38px] px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs transition-colors"
+              className="inline-flex items-center gap-1.5 min-h-[38px] px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs transition-colors shadow-sm"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Add Business</span>
+              <span className="hidden sm:inline">Add Business</span>
+              <span className="sm:hidden inline">Add</span>
             </button>
 
             <Link
@@ -1077,14 +1079,14 @@ export default function AdminLeadsPage() {
                         </Link>
                       </div>
 
-                      <div className="pt-2 flex items-center justify-between gap-2 border-t border-neutral-800/60">
-                        <div className="flex items-center gap-1.5">
+                      <div className="pt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-neutral-800/60">
+                        <div className="flex items-center gap-1.5 shrink-0">
                           <button
                             type="button"
                             disabled={isUpdating}
                             onClick={() => handleToggleVerified(lead)}
                             title={lead.isVerified ? "Revoke Verified Badge" : "Grant Verified Badge"}
-                            className={`min-h-[38px] min-w-[38px] p-2 rounded-xl border inline-flex items-center justify-center transition-colors ${
+                            className={`min-h-[38px] min-w-[38px] p-2 rounded-xl border inline-flex items-center justify-center transition-colors active:scale-95 ${
                               lead.isVerified
                                 ? "bg-cyan-500/15 border-cyan-500/50 text-cyan-400"
                                 : "bg-[#09090b] border-neutral-800 text-neutral-500"
@@ -1098,7 +1100,7 @@ export default function AdminLeadsPage() {
                             disabled={isUpdating}
                             onClick={() => handleToggleFeatured(lead)}
                             title={lead.isFeatured ? "Unpin Featured" : "Pin Featured"}
-                            className={`min-h-[38px] min-w-[38px] p-2 rounded-xl border inline-flex items-center justify-center transition-colors ${
+                            className={`min-h-[38px] min-w-[38px] p-2 rounded-xl border inline-flex items-center justify-center transition-colors active:scale-95 ${
                               lead.isFeatured
                                 ? "bg-amber-500/15 border-amber-500/50 text-amber-400"
                                 : "bg-[#09090b] border-neutral-800 text-neutral-500"
@@ -1114,7 +1116,7 @@ export default function AdminLeadsPage() {
                               handleChangeStatus(lead, e.target.value as "active" | "pending" | "suspended")
                             }
                             aria-label={`Status for ${lead.name}`}
-                            className="px-2 py-1.5 rounded-lg text-xs font-semibold border bg-[#09090b] border-neutral-800 text-neutral-300"
+                            className="px-2 py-1.5 rounded-lg text-xs font-semibold border bg-[#09090b] border-neutral-800 text-neutral-300 focus:outline-none"
                           >
                             <option value="active">Active</option>
                             <option value="pending">Pending</option>
@@ -1122,11 +1124,11 @@ export default function AdminLeadsPage() {
                           </select>
                         </div>
 
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 ml-auto">
                           <button
                             type="button"
                             onClick={() => openLeadDrawer(lead, "edit")}
-                            className="min-h-[38px] px-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-medium text-xs inline-flex items-center gap-1 transition-colors"
+                            className="min-h-[38px] px-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-white font-medium text-xs inline-flex items-center gap-1 transition-all"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                             <span>Edit</span>
@@ -1135,7 +1137,7 @@ export default function AdminLeadsPage() {
                           <button
                             type="button"
                             onClick={() => openLeadDrawer(lead, "outreach")}
-                            className="min-h-[38px] px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs inline-flex items-center gap-1 transition-colors"
+                            className="min-h-[38px] px-3 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-neutral-950 font-bold text-xs inline-flex items-center gap-1 transition-all shadow-sm"
                           >
                             <Zap className="w-3.5 h-3.5" />
                             <span>Outreach</span>
