@@ -28,3 +28,4 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ["business", "shopping", "navigation", "lifestyle"],
   };
 }
+

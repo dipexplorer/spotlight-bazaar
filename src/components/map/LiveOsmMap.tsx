@@ -40,6 +40,8 @@ import {
   Tag,
   Volume2,
   VolumeX,
+  Smartphone,
+  Download,
 } from "lucide-react";
 import {
   INDIA_GEOGRAPHY_REGIONS_GEOJSON,
@@ -634,6 +636,11 @@ export function LiveOsmMap({
   const [dialogueStorefront, setDialogueStorefront] = useState<BusinessStorefront | null>(null);
   const [showBroadcastsDrawer, setShowBroadcastsDrawer] = useState(false);
   const footstepCadenceRef = useRef<number>(0);
+
+  // PWA Install State
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [showIosInstallGuide, setShowIosInstallGuide] = useState(false);
 
   // 3D Player Avatar Position on approach road outside Nerqiva Studio front gate, facing the studio
   const initRoadAngle = -2.0179;
@@ -3219,7 +3226,54 @@ export function LiveOsmMap({
 
   useEffect(() => {
     setIsSoundMuted(bazaarAudio.getMuted());
+    if (typeof window !== "undefined") {
+      const isApp =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+      setIsStandalone(isApp);
+
+      const handleBeforeInstall = (e: Event) => {
+        e.preventDefault();
+        setInstallPrompt(e);
+      };
+      window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+      return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+    }
   }, []);
+
+  const handleTriggerInstall = useCallback(async () => {
+    if (isStandalone) {
+      showToast("✓ Spotlight Bazaar is running in native standalone app mode.");
+      return;
+    }
+
+    if (installPrompt) {
+      try {
+        installPrompt.prompt();
+        const { outcome } = await installPrompt.userChoice;
+        if (outcome === "accepted") {
+          showToast("🎉 Spotlight Bazaar installed successfully!");
+          setInstallPrompt(null);
+          setIsStandalone(true);
+        }
+      } catch (err) {
+        console.warn("Install prompt error:", err);
+      }
+      return;
+    }
+
+    // iOS Safari check
+    const isIos =
+      typeof navigator !== "undefined" &&
+      /iPhone|iPad|iPod/i.test(navigator.userAgent) &&
+      !(window as unknown as { MSStream?: unknown }).MSStream;
+    if (isIos) {
+      setShowIosInstallGuide(true);
+      return;
+    }
+
+    showToast("📱 Tap browser menu (⋮) -> 'Install App' or 'Add to Home Screen'");
+  }, [installPrompt, isStandalone, showToast]);
 
   // Sync Audio Atmosphere Toggle
   const handleToggleAudio = useCallback(() => {
@@ -4212,6 +4266,62 @@ export function LiveOsmMap({
                         </div>
                       </div>
                     )}
+
+                    {/* Platform Quick Actions */}
+                    <div className="space-y-1.5 pt-1 border-t border-white/5">
+                      <div className="px-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
+                        <Sparkles className="w-3 h-3 text-amber-400" />
+                        <span>Platform Quick Actions</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onPointerDown={(e) => {
+                            e.preventDefault();
+                            setSearchFocused(false);
+                            handleTriggerInstall();
+                          }}
+                          className="text-left px-2.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 hover:border-amber-500/30 transition-all flex items-center gap-2 group min-h-[44px]"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                            <Smartphone className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-xs font-semibold text-white truncate">
+                              {isStandalone ? "App Installed ✓" : "Install App"}
+                            </span>
+                            <span className="text-[10px] text-neutral-400 truncate">
+                              {isStandalone ? "Standalone 60 FPS mode" : "Add to home screen"}
+                            </span>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onPointerDown={(e) => {
+                            e.preventDefault();
+                            handleToggleAudio();
+                          }}
+                          className="text-left px-2.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 hover:border-emerald-500/30 transition-all flex items-center gap-2 group min-h-[44px]"
+                        >
+                          <div
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
+                              !isSoundMuted ? "bg-emerald-500/15 text-emerald-400" : "bg-white/10 text-neutral-400"
+                            }`}
+                          >
+                            {!isSoundMuted ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-xs font-semibold text-white truncate">
+                              {!isSoundMuted ? "Audio: Active" : "Audio: Muted"}
+                            </span>
+                            <span className="text-[10px] text-neutral-400 truncate">
+                              {!isSoundMuted ? "Procedural street sounds" : "Tap to unmute"}
+                            </span>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
                   </>
                 ) : (
                   /* State B: Active Query Search Results */
@@ -4327,6 +4437,62 @@ export function LiveOsmMap({
                         )}
                       </div>
                     )}
+
+                    {/* Platform Quick Actions */}
+                    <div className="space-y-1.5 pt-1 border-t border-white/5">
+                      <div className="px-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
+                        <Sparkles className="w-3 h-3 text-amber-400" />
+                        <span>Platform Quick Actions</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onPointerDown={(e) => {
+                            e.preventDefault();
+                            setSearchFocused(false);
+                            handleTriggerInstall();
+                          }}
+                          className="text-left px-2.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 hover:border-amber-500/30 transition-all flex items-center gap-2 group min-h-[44px]"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                            <Smartphone className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-xs font-semibold text-white truncate">
+                              {isStandalone ? "App Installed ✓" : "Install App"}
+                            </span>
+                            <span className="text-[10px] text-neutral-400 truncate">
+                              {isStandalone ? "Standalone 60 FPS mode" : "Add to home screen"}
+                            </span>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onPointerDown={(e) => {
+                            e.preventDefault();
+                            handleToggleAudio();
+                          }}
+                          className="text-left px-2.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 hover:border-emerald-500/30 transition-all flex items-center gap-2 group min-h-[44px]"
+                        >
+                          <div
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
+                              !isSoundMuted ? "bg-emerald-500/15 text-emerald-400" : "bg-white/10 text-neutral-400"
+                            }`}
+                          >
+                            {!isSoundMuted ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-xs font-semibold text-white truncate">
+                              {!isSoundMuted ? "Audio: Active" : "Audio: Muted"}
+                            </span>
+                            <span className="text-[10px] text-neutral-400 truncate">
+                              {!isSoundMuted ? "Procedural street sounds" : "Tap to unmute"}
+                            </span>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
                   </>
                 )}
               </div>
@@ -4368,6 +4534,19 @@ export function LiveOsmMap({
                   );
                 })()}
               </div>
+            )}
+
+            {/* Install App Quick Action (Header) */}
+            {!isStandalone && (
+              <button
+                type="button"
+                onClick={handleTriggerInstall}
+                title="Install Spotlight Bazaar as Desktop/Mobile App"
+                className="hidden xl:flex items-center gap-1.5 h-9 px-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-neutral-200 hover:text-white font-medium text-xs border border-white/5 transition-all drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+              >
+                <Download className="w-3.5 h-3.5 text-amber-400" />
+                <span>Install App</span>
+              </button>
             )}
 
             {/* My Business Dashboard Link */}
@@ -4863,6 +5042,69 @@ export function LiveOsmMap({
         entries={liveBroadcastEntries}
         onFlyToStorefront={(shop) => flyToStorefront(shop)}
       />
+
+      {/* IOS SAFARI PWA INSTALL GUIDE BOTTOM SHEET */}
+      {showIosInstallGuide && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Install Spotlight Bazaar on iOS"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowIosInstallGuide(false)}
+        >
+          <div
+            className="relative w-full max-w-sm rounded-3xl bg-neutral-950/95 border border-white/10 p-5 shadow-[0_25px_60px_rgba(0,0,0,0.8)] backdrop-blur-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-tight">Install Spotlight Bazaar</h3>
+                  <p className="text-[11px] text-neutral-400">Standalone 60 FPS spatial experience</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowIosInstallGuide(false)}
+                className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-neutral-400 hover:text-white flex items-center justify-center transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2.5 rounded-2xl bg-white/[0.03] border border-white/5 p-3.5 text-xs text-neutral-300">
+              <div className="flex items-center gap-2.5">
+                <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 font-bold text-[11px] flex items-center justify-center shrink-0">
+                  1
+                </span>
+                <span className="flex-1">
+                  Tap the <strong className="text-white">Share</strong> icon (<Share2 className="w-3.5 h-3.5 inline mx-0.5 text-amber-400" />) in Safari&apos;s bottom bar
+                </span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 font-bold text-[11px] flex items-center justify-center shrink-0">
+                  2
+                </span>
+                <span className="flex-1">
+                  Scroll down and tap <strong className="text-white">Add to Home Screen</strong> (<Plus className="w-3.5 h-3.5 inline mx-0.5 text-amber-400" />)
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowIosInstallGuide(false)}
+              className="w-full h-11 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center justify-center transition-all shadow-[0_2px_12px_rgba(245,158,11,0.3)] active:scale-[0.98]"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
